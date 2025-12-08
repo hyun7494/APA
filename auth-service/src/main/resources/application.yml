@@ -13,5 +13,7 @@ logging:
   level:
     root: INFO
     org.springframework.web: INFO
-
+jwt:
+  secret: "test1234test1234test1234test1234test1234test1234"  # 32바이트 이상 임의 문자열
+  token-validity: 3600000   # 1시간 (1000 * 60 * 60)
 
