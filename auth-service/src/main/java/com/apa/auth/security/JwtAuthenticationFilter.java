@@ -1,6 +1,6 @@
 package com.apa.auth.security;
 
-import com.apa.auth.jwt.JwtTokenProvider;
+import com.apa.auth.security.jwt.JwtTokenProvider;
 import jakarta.servlet.FilterChain;
 import jakarta.servlet.ServletException;
 import jakarta.servlet.http.HttpServletRequest;
