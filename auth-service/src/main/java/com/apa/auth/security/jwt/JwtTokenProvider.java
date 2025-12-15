@@ -1,4 +1,4 @@
-package com.apa.auth.jwt;
+package com.apa.auth.security.jwt;
 
 import io.jsonwebtoken.Claims;
 import io.jsonwebtoken.JwtException;
@@ -15,33 +15,32 @@ import java.util.Date;
 public class JwtTokenProvider {
 
     private final Key key;
-    private final long validityInMilliseconds;
+    private final long expiration;
 
-    // application.yml에서 값 가져오기
     public JwtTokenProvider(
             @Value("${jwt.secret}") String secretKey,
-            @Value("${jwt.token-validity}") long validityInMilliseconds
+            @Value("${jwt.expiration}") long expiration
     ) {
         this.key = Keys.hmacShaKeyFor(secretKey.getBytes());
-        this.validityInMilliseconds = validityInMilliseconds;
+        this.expiration = expiration;
     }
 
-    // 토큰 생성
     public String createToken(String username) {
-        Claims claims = Jwts.claims().setSubject(username);
-
         Date now = new Date();
-        Date validity = new Date(now.getTime() + validityInMilliseconds);
+        Date expiry = new Date(now.getTime() + expiration);
 
         return Jwts.builder()
-                .setClaims(claims)
+                .setSubject(username)
                 .setIssuedAt(now)
-                .setExpiration(validity)
+                .setExpiration(expiry)
                 .signWith(key, SignatureAlgorithm.HS256)
                 .compact();
     }
 
-    // 토큰 유효성 검사
+    public long getExpiration() {
+        return expiration / 1000;
+    }
+
     public boolean validateToken(String token) {
         try {
             Jwts.parserBuilder()
@@ -49,13 +48,11 @@ public class JwtTokenProvider {
                     .build()
                     .parseClaimsJws(token);
             return true;
-
         } catch (JwtException | IllegalArgumentException e) {
             return false;
         }
     }
 
-    // 토큰에서 username 추출
     public String getUsername(String token) {
         Claims claims = Jwts.parserBuilder()
                 .setSigningKey(key)
