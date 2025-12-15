@@ -1,6 +1,6 @@
 package com.apa.auth.controller;
 
-import com.apa.auth.jwt.JwtTokenProvider;
+import com.apa.auth.security.jwt.JwtTokenProvider;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.RestController;
 
