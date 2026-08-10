@@ -1,11 +1,5 @@
 rootProject.name = 'APA'
 
-include 'api-gateway'
-include 'auth-service'
-include 'user-service'
-include 'market-service'
-include 'portfolio-service'
-include 'trading-service'
-include 'analysis-service'
-include 'news-service'
 include 'common-lib'
+include 'auth-service'
+include 'app-fishing'
