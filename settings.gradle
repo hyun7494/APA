@@ -1,9 +1,5 @@
 rootProject.name = 'APA'
 
 include 'common-lib'
-include 'board-lib'
 include 'auth-service'
-include 'app-mountain'
-include 'app-recall'
-include 'app-meal'
-include 'content-service'
+include 'app-fishing'
