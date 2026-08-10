@@ -2,9 +2,19 @@ spring:
   application:
     name: auth-service
 
-  autoconfigure:
-    exclude:
-      - org.springframework.boot.autoconfigure.jdbc.DataSourceAutoConfiguration #현재 DB를 사용하지 않아 임시 조치
+  datasource:
+    url: jdbc:postgresql://localhost:5432/apa?currentSchema=auth
+    username: apa_user
+    password: ${DB_PASSWORD}
+
+  jpa:
+    hibernate:
+      ddl-auto: validate
+    open-in-view: false
+
+  flyway:
+    schemas: auth
+    default-schema: auth
 
 server:
   port: 8081
@@ -13,7 +23,7 @@ logging:
   level:
     root: INFO
     org.springframework.web: INFO
-jwt:
-  secret: "test1234test1234test1234test1234test1234test1234"  # 32바이트 이상 임의 문자열
-  expiration: 3600000 # 1시간 (1000 * 60 * 60)
 
+jwt:
+  secret: ${JWT_SECRET:test1234test1234test1234test1234test1234test1234}  # 32바이트 이상. 운영은 JWT_SECRET 환경변수로 주입
+  expiration: 3600000 # 1시간 (1000 * 60 * 60)
