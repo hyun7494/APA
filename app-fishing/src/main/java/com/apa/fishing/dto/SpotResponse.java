@@ -38,7 +38,7 @@ public record SpotResponse(
                 spot.getName(),
                 spot.getRegion().getId(),
                 spot.getRegion().getName(),
-                spot.getRating(),
+                spot.getRating().name(),
                 toDouble(spot.getWaterTemp()),
                 toDouble(spot.getWaveHeight()),
                 toDouble(spot.getWindSpeed()),

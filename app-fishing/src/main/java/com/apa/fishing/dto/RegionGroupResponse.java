@@ -22,7 +22,7 @@ public record RegionGroupResponse(
                 region.getId(),
                 region.getName(),
                 region.getArea(),
-                firstSpot == null ? null : firstSpot.getRating(),
+                firstSpot == null ? null : firstSpot.getRating().name(),
                 firstSpot == null || firstSpot.getWaterTemp() == null
                         ? null : firstSpot.getWaterTemp().doubleValue(),
                 spotCount

@@ -2,6 +2,8 @@ package com.apa.fishing.domain;
 
 import jakarta.persistence.Column;
 import jakarta.persistence.Entity;
+import jakarta.persistence.EnumType;
+import jakarta.persistence.Enumerated;
 import jakarta.persistence.FetchType;
 import jakarta.persistence.GeneratedValue;
 import jakarta.persistence.GenerationType;
@@ -56,9 +58,9 @@ public class FishingSpot {
     @Column(name = "khoa_obs_code")
     private String khoaObsCode;
 
-    /** VERY_GOOD | GOOD | NORMAL | BAD. 프론트가 문자열 코드로 매칭한다. */
-    @Column(nullable = false)
-    private String rating;
+    @Enumerated(EnumType.STRING)
+    @Column(nullable = false, length = 10)
+    private Rating rating;
 
     @Column(name = "water_temp")
     private BigDecimal waterTemp;
