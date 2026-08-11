@@ -3,10 +3,12 @@ package com.apa.fishing.config;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
 import org.springframework.http.HttpMethod;
+import org.springframework.http.HttpStatus;
 import org.springframework.security.config.Customizer;
 import org.springframework.security.config.annotation.web.builders.HttpSecurity;
 import org.springframework.security.config.http.SessionCreationPolicy;
 import org.springframework.security.web.SecurityFilterChain;
+import org.springframework.security.web.authentication.HttpStatusEntryPoint;
 import org.springframework.web.cors.CorsConfiguration;
 import org.springframework.web.cors.CorsConfigurationSource;
 import org.springframework.web.cors.UrlBasedCorsConfigurationSource;
@@ -29,6 +31,10 @@ public class SecurityConfig {
             .formLogin(form -> form.disable())
             .httpBasic(basic -> basic.disable())
             .sessionManagement(s -> s.sessionCreationPolicy(SessionCreationPolicy.STATELESS))
+            // formLogin·httpBasic을 끄면 기본 진입점이 Http403ForbiddenEntryPoint라 비로그인에 403이 나간다.
+            // 프론트는 401만 "로그인 안 됨"으로 삼키고(그 외는 rethrow), 토큰 갱신도 401 기준이라 401로 못박는다.
+            .exceptionHandling(e -> e.authenticationEntryPoint(
+                    new HttpStatusEntryPoint(HttpStatus.UNAUTHORIZED)))
             .authorizeHttpRequests(auth -> auth
                 .requestMatchers("/fishing/me/**").authenticated()
                 .requestMatchers(HttpMethod.POST, "/fishing/board/**").authenticated()
