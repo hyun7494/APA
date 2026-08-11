@@ -19,11 +19,12 @@ public class BoardController {
     private final BoardService boardService;
 
     /**
-     * regionGroupId 는 계약서에 있지만 현재 프론트가 보내지 않고, 지역별 필터도 Step 8에서
-     * 실제 테이블이 생긴 뒤에 붙인다. 지금 받아도 무시되므로 파라미터를 두지 않는다.
+     * regionGroupId 는 계약서에 있지만 프론트가 아직 보내지 않는다 (지역별 필터 UI 미구현).
+     * 게시글에 지역이 생겼으므로 서버 쪽은 지금 지원해둔다.
      */
     @GetMapping
-    public List<PostResponse> list(@RequestParam(required = false) String tag) {
-        return boardService.findPosts(tag);
+    public List<PostResponse> list(@RequestParam(required = false) String tag,
+                                   @RequestParam(required = false) Long regionGroupId) {
+        return boardService.findPosts(tag, regionGroupId);
     }
 }
