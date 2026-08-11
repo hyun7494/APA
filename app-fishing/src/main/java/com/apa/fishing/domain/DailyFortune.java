@@ -2,11 +2,15 @@ package com.apa.fishing.domain;
 
 import jakarta.persistence.Column;
 import jakarta.persistence.Entity;
+import jakarta.persistence.EnumType;
+import jakarta.persistence.Enumerated;
 import jakarta.persistence.GeneratedValue;
 import jakarta.persistence.GenerationType;
 import jakarta.persistence.Id;
 import jakarta.persistence.Table;
 import lombok.AccessLevel;
+import lombok.AllArgsConstructor;
+import lombok.Builder;
 import lombok.Getter;
 import lombok.NoArgsConstructor;
 
@@ -16,7 +20,9 @@ import java.time.LocalDate;
 @Entity
 @Table(name = "fishing_daily_fortune")
 @Getter
+@Builder
 @NoArgsConstructor(access = AccessLevel.PROTECTED)
+@AllArgsConstructor(access = AccessLevel.PRIVATE)
 public class DailyFortune {
 
     @Id
@@ -26,9 +32,9 @@ public class DailyFortune {
     @Column(name = "fortune_date", nullable = false)
     private LocalDate fortuneDate;
 
-    /** RAT ~ PIG 대문자 코드. 한글로 들어가면 프론트가 전부 RAT 으로 매칭한다. */
-    @Column(nullable = false)
-    private String zodiac;
+    @Enumerated(EnumType.STRING)
+    @Column(nullable = false, length = 10)
+    private Zodiac zodiac;
 
     @Column(nullable = false)
     private int score;
