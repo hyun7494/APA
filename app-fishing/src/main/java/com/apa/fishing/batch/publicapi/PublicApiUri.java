@@ -1,4 +1,4 @@
-package com.apa.fishing.batch.kma;
+package com.apa.fishing.batch.publicapi;
 
 import java.net.URI;
 import java.net.URLEncoder;

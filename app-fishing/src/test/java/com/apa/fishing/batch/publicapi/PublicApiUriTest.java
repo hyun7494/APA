@@ -1,4 +1,4 @@
-package com.apa.fishing.batch.kma;
+package com.apa.fishing.batch.publicapi;
 
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;

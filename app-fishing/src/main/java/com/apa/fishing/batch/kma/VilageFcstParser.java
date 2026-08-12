@@ -1,7 +1,7 @@
 package com.apa.fishing.batch.kma;
 
+import com.apa.fishing.batch.publicapi.PublicApiResponse;
 import com.fasterxml.jackson.databind.JsonNode;
-import com.fasterxml.jackson.databind.ObjectMapper;
 
 import java.time.LocalDate;
 import java.time.format.DateTimeFormatter;
@@ -27,7 +27,7 @@ public final class VilageFcstParser {
     private VilageFcstParser() {
     }
 
-    private static final ObjectMapper MAPPER = new ObjectMapper();
+    private static final String LABEL = "단기예보";
 
     /** 출조 시간대. 이 바깥의 새벽·야간 값은 카드 지수에 반영하지 않는다. */
     private static final int WINDOW_START_HOUR = 6;
@@ -102,36 +102,20 @@ public final class VilageFcstParser {
     }
 
     private static JsonNode readItems(String body) {
-        if (body == null || body.isBlank()) {
-            throw new KmaApiException("단기예보 응답이 비어 있다");
-        }
-        // 게이트웨이 오류는 dataType=JSON 을 무시하고 XML 로 온다
-        if (body.stripLeading().startsWith("<")) {
-            throw new KmaApiException("단기예보 게이트웨이 오류 응답: " + summarize(body));
-        }
+        JsonNode root = PublicApiResponse.readRoot(body, LABEL, KmaApiException::new);
 
-        JsonNode root;
-        try {
-            root = MAPPER.readTree(body);
-        } catch (Exception e) {
-            throw new KmaApiException("단기예보 응답을 JSON 으로 읽지 못했다: " + summarize(body), e);
-        }
-
-        if (root.has("OpenAPI_ServiceResponse")) {
-            throw new KmaApiException("단기예보 게이트웨이 오류 응답: "
-                    + root.path("OpenAPI_ServiceResponse").path("cmmMsgHeader").path("errMsg").asText());
-        }
-
+        // 기상청은 header/body 를 response 로 한 번 더 감싼다 (국립해양조사원은 안 감싼다)
         JsonNode header = root.path("response").path("header");
         String resultCode = header.path("resultCode").asText();
         if (!RESULT_CODE_OK.equals(resultCode)) {
-            throw new KmaApiException("단기예보 오류 resultCode=" + resultCode
+            throw new KmaApiException(LABEL + " 오류 resultCode=" + resultCode
                     + " (" + header.path("resultMsg").asText() + ")");
         }
 
         JsonNode items = root.path("response").path("body").path("items").path("item");
         if (!items.isArray()) {
-            throw new KmaApiException("단기예보 응답에 item 배열이 없다: " + summarize(body));
+            throw new KmaApiException(LABEL + " 응답에 item 배열이 없다: "
+                    + PublicApiResponse.summarize(body));
         }
         return items;
     }
@@ -173,9 +157,5 @@ public final class VilageFcstParser {
         }
         return Comparator.comparingInt(WEATHER_SEVERITY::indexOf)
                 .compare(candidate, current) > 0 ? candidate : current;
-    }
-
-    private static String summarize(String body) {
-        return body.length() <= 200 ? body : body.substring(0, 200) + "…";
     }
 }

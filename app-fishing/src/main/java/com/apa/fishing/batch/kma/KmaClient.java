@@ -1,6 +1,7 @@
 package com.apa.fishing.batch.kma;
 
 import com.apa.fishing.batch.KmaBaseTime;
+import com.apa.fishing.batch.publicapi.PublicApiUri;
 import com.apa.fishing.config.PublicApiProperties;
 import org.springframework.stereotype.Component;
 import org.springframework.web.reactive.function.client.WebClient;
