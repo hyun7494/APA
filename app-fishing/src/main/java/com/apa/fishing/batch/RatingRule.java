@@ -16,9 +16,14 @@ public final class RatingRule {
     private RatingRule() {
     }
 
-    /** 비·눈이면 한 단계 낮춘다. */
-    private static final String RAIN = "비";
-    private static final String SNOW = "눈";
+    /**
+     * 강수가 있으면 한 단계 낮춘다.
+     *
+     * <p>'소나기'가 따로 있는 이유: 기상청 PTY 코드 4의 표기가 '소나기'인데 여기엔 '비'도 '눈'도
+     * 안 들어간다. 부분 문자열만 보면 <b>소나기가 조용히 맑은 날 취급</b>된다.
+     * 시드에는 없던 값이라 Step 6 배치가 붙기 전까지 드러나지 않던 구멍이다.
+     */
+    private static final String[] PRECIPITATION = {"비", "눈", "소나기"};
 
     public static Rating evaluate(double waveHeight, double windSpeed, String weather) {
         Rating base = byWaveAndWind(waveHeight, windSpeed);
@@ -39,7 +44,15 @@ public final class RatingRule {
     }
 
     private static boolean isBadWeather(String weather) {
-        return weather != null && (weather.contains(RAIN) || weather.contains(SNOW));
+        if (weather == null) {
+            return false;
+        }
+        for (String token : PRECIPITATION) {
+            if (weather.contains(token)) {
+                return true;
+            }
+        }
+        return false;
     }
 
     private static Rating downgrade(Rating rating) {

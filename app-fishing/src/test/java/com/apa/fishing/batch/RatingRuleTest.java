@@ -39,6 +39,17 @@ class RatingRuleTest {
     }
 
     @Test
+    @DisplayName("기상청 PTY 표기를 그대로 넣어도 강수로 인식한다")
+    void recognisesKmaPrecipitationLabels() {
+        // '소나기'에는 '비'도 '눈'도 안 들어간다 — 부분 문자열만 보면 맑은 날로 새어나간다.
+        assertThat(RatingRule.evaluate(0.4, 2.1, "소나기")).isEqualTo(Rating.GOOD);
+        assertThat(RatingRule.evaluate(0.4, 2.1, "비/눈")).isEqualTo(Rating.GOOD);
+        // 강수가 아닌 표기는 등급을 안 건드린다.
+        assertThat(RatingRule.evaluate(0.4, 2.1, "구름많음")).isEqualTo(Rating.VERY_GOOD);
+        assertThat(RatingRule.evaluate(0.4, 2.1, "흐림")).isEqualTo(Rating.VERY_GOOD);
+    }
+
+    @Test
     @DisplayName("weather 가 null 이어도 터지지 않는다 — 공공 API 는 일부 필드를 빼먹기도 한다")
     void nullWeatherIsSafe() {
         assertThat(RatingRule.evaluate(0.4, 2.1, null)).isEqualTo(Rating.VERY_GOOD);
