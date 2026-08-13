@@ -86,6 +86,21 @@ class FishingIndexParserTest {
     }
 
     @Test
+    @DisplayName("어종명 '-'는 추천에서 뺀다 — 어종 구분이 없는 장소가 쓰는 표기다")
+    void excludesTheDashPlaceholder() {
+        // 2026-08-13 전수 조회: '인천항 서측(24km)' 등 10행짜리 장소는 어종을 '-' 하나로만 준다.
+        // 거르지 않으면 프론트 추천 어종 칸에 '-' 가 그대로 뜬다.
+        String body = envelope(
+                item("2026-08-12", "오전", "-", "좋음"),
+                item("2026-08-12", "오후", "-", "보통"));
+
+        KhoaFishingIndex index = FishingIndexParser.parse(body, TARGET);
+
+        assertThat(index.rating()).isEqualTo(Rating.GOOD);   // 등급은 그대로 쓴다
+        assertThat(index.recommendedFish()).isEmpty();
+    }
+
+    @Test
     @DisplayName("5일치가 한 응답에 오므로 대상 날짜만 골라낸다")
     void filtersByTargetDate() {
         String body = envelope(

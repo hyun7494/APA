@@ -37,6 +37,16 @@ public class KhoaClient {
     /** {@code reqDate} 는 yyyyMMdd 인데 응답의 {@code predcYmd} 는 yyyy-MM-dd 다. 헷갈리기 쉽다. */
     private static final DateTimeFormatter REQ_DATE = DateTimeFormatter.BASIC_ISO_DATE;
 
+    /**
+     * 필수 파라미터라 보내야 하지만 <b>결과를 바꾸지 않는다.</b>
+     *
+     * <p>2026-08-13 에 5개 해역을 {@code 갯바위} / {@code 선상} 으로 각각 받아
+     * (날짜 × 오전·오후 × 어종) 키로 맞춰 비교했더니 <b>차이 0건 / 동일 240건</b>이었다.
+     * 파고·풍속·수온·{@code totalIndex} 가 전부 같다. 그래서 포인트 종류로 분기하지 않는다.
+     * 기관이 나중에 실제로 갈라놓으면 이 상수부터 인자로 되돌릴 것.
+     */
+    private static final String GUBUN = "갯바위";
+
     private final WebClient webClient;
     private final PublicApiProperties properties;
 
@@ -48,11 +58,11 @@ public class KhoaClient {
     /**
      * 장소 한 곳의 {@code targetDate} 요약을 가져온다.
      *
-     * @param placeName KHOA 의 {@code seafsPstnNm}. 우리 포인트명과 다를 수 있다
-     * @param shore     갯바위면 true, 선상이면 false ({@code gubun} 은 필수 파라미터다)
+     * @param placeName KHOA 의 {@code seafsPstnNm}. <b>낚시 포인트명이 아니라 해역명</b>이다
+     *                  (전국 49곳). 우리 포인트에는 좌표 거리로 붙였다 — V6 마이그레이션 주석 참고
      * @throws KhoaApiException 키 미설정·호출 실패·응답 오류. 배치는 포인트별로 이걸 잡고 넘어간다
      */
-    public KhoaFishingIndex fetch(String placeName, boolean shore, LocalDate targetDate) {
+    public KhoaFishingIndex fetch(String placeName, LocalDate targetDate) {
         if (!properties.hasKhoaKey()) {
             throw new KhoaApiException("KHOA_SERVICE_KEY 가 비어 있다");
         }
@@ -60,7 +70,7 @@ public class KhoaClient {
         URI uri = PublicApiUri.of(ENDPOINT)
                 .param("serviceKey", properties.khoaServiceKey())
                 .param("type", "json")
-                .param("gubun", shore ? "갯바위" : "선상")
+                .param("gubun", GUBUN)
                 .param("reqDate", targetDate.format(REQ_DATE))
                 .param("placeName", placeName)
                 .param("numOfRows", NUM_OF_ROWS)
