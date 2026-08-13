@@ -18,6 +18,7 @@ import org.hibernate.annotations.JdbcTypeCode;
 import org.hibernate.type.SqlTypes;
 
 import java.math.BigDecimal;
+import java.math.RoundingMode;
 import java.time.LocalDateTime;
 import java.util.List;
 
@@ -55,8 +56,14 @@ public class FishingSpot {
     @Column(name = "grid_ny")
     private Integer gridNy;
 
-    @Column(name = "khoa_obs_code")
-    private String khoaObsCode;
+    /**
+     * KHOA 바다낚시지수의 {@code seafsPstnNm}. <b>관측소 코드가 아니라 해역명이다.</b>
+     *
+     * <p>NULL 이면 그 포인트는 KHOA 로 못 채운다는 뜻이고, 배치가 기상청 + {@code RatingRule}
+     * 폴백으로 등급을 낸다 (영종도 선착장이 그렇다). 자세한 사정은 V6 마이그레이션 주석 참고.
+     */
+    @Column(name = "khoa_place_name", length = 40)
+    private String khoaPlaceName;
 
     @Enumerated(EnumType.STRING)
     @Column(nullable = false, length = 10)
@@ -92,4 +99,51 @@ public class FishingSpot {
 
     @Column(name = "updated_at", nullable = false)
     private LocalDateTime updatedAt;
+
+    /**
+     * 공공 API 배치 결과를 반영한다.
+     *
+     * <p><b>null 인 인자는 덮어쓰지 않고 기존 값을 남긴다.</b> 두 API 가 항목을 제각각 주기
+     * 때문이다 — 예를 들어 KHOA 가 안 붙는 영종도는 수온·물때가 늘 null 로 온다. 이걸 그대로
+     * 써서 컬럼을 비우면 {@code SpotResponse.toDouble(null)} 이 <b>0.0 을 내보내</b>
+     * 화면에 "0.0℃"가 뜬다. 값이 없는 것과 0 은 완전히 다른 뜻이라 기존 값을 남기는 쪽을 택했다.
+     * (그 대가로 영종도의 수온·물때는 시드 값에 머문다 — 알고 있는 한계다.)
+     *
+     * <p>DECIMAL 스케일 변환도 여기서 한다. 컬럼 정의 바로 옆이라야 어긋나지 않는다.
+     */
+    public void applyIndex(Rating rating,
+                           List<String> recommendedFish,
+                           Double waterTemp,
+                           Double waveHeight,
+                           Double windSpeed,
+                           String weather,
+                           String tideInfo,
+                           LocalDateTime updatedAt) {
+        if (rating != null) {
+            this.rating = rating;
+        }
+        if (recommendedFish != null) {
+            this.recommendedFish = recommendedFish;
+        }
+        if (waterTemp != null) {
+            this.waterTemp = scaled(waterTemp);      // DECIMAL(4,1)
+        }
+        if (waveHeight != null) {
+            this.waveHeight = scaled(waveHeight);    // DECIMAL(3,1)
+        }
+        if (windSpeed != null) {
+            this.windSpeed = scaled(windSpeed);      // DECIMAL(4,1)
+        }
+        if (weather != null) {
+            this.weather = weather;
+        }
+        if (tideInfo != null) {
+            this.tideInfo = tideInfo;
+        }
+        this.updatedAt = updatedAt;
+    }
+
+    private static BigDecimal scaled(double value) {
+        return BigDecimal.valueOf(value).setScale(1, RoundingMode.HALF_UP);
+    }
 }
