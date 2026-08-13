@@ -118,6 +118,7 @@ public class FishingSpot {
                            Double windSpeed,
                            String weather,
                            String tideInfo,
+                           String comment,
                            LocalDateTime updatedAt) {
         if (rating != null) {
             this.rating = rating;
@@ -139,6 +140,9 @@ public class FishingSpot {
         }
         if (tideInfo != null) {
             this.tideInfo = tideInfo;
+        }
+        if (comment != null && !comment.isBlank()) {
+            this.comment = comment;
         }
         this.updatedAt = updatedAt;
     }

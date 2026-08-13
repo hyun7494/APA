@@ -40,6 +40,7 @@ public class SpotIndexWriter {
                 update.windSpeed(),
                 update.weather(),
                 update.tideInfo(),
+                update.comment(),
                 updatedAt);
     }
 }

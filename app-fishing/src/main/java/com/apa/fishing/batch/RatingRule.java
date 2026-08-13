@@ -43,6 +43,14 @@ public final class RatingRule {
         return Rating.VERY_GOOD;      // 학리 0.4m / 2.1㎧
     }
 
+    /**
+     * 강수 여부. {@link SpotComment} 가 경고 문구에 쓰려고 같이 본다 —
+     * 판정 기준이 갈리면 <b>등급은 내려갔는데 문구는 비 얘기를 안 하는</b> 식으로 어긋난다.
+     */
+    public static boolean isPrecipitation(String weather) {
+        return isBadWeather(weather);
+    }
+
     private static boolean isBadWeather(String weather) {
         if (weather == null) {
             return false;

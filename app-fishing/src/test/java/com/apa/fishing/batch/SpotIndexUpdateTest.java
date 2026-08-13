@@ -20,7 +20,45 @@ class SpotIndexUpdateTest {
     }
 
     @Test
-    @DisplayName("KHOA 가 있으면 등급·어종·수온·물때는 KHOA 것을 쓴다")
+    @DisplayName("기상이 험해도 등급은 KHOA 것을 유지하고 경고는 코멘트로 낸다 (구룡포 사례)")
+    void keepsKhoaRatingAndWarnsInComment() {
+        // 2026-08-14 구룡포 실측: 풍속 8.3㎧ 인데 KHOA 는 '보통'이었다.
+        // 어황('무느냐')과 안전('나가도 되느냐')은 다른 얘기라 등급을 덮지 않는다.
+        SpotIndexUpdate update = SpotIndexUpdate.combine(
+                khoa(Rating.NORMAL, 0.8, 8.3),
+                new KmaForecast("흐림", 8.3, 0.8));
+
+        assertThat(update.rating()).isEqualTo(Rating.NORMAL);        // 어황 그대로
+        assertThat(update.recommendedFish()).containsExactly("감성돔");
+        assertThat(update.comment())
+                .contains("8.3")                                     // 수치를 박는다
+                .contains("강풍")
+                .contains("출조를 권하지 않습니다");
+    }
+
+    @Test
+    @DisplayName("기상이 등급만큼 나쁘지 않으면 경고 없이 평범한 코멘트가 붙는다")
+    void writesPlainCommentWhenConditionsAreCalm() {
+        SpotIndexUpdate update = SpotIndexUpdate.combine(
+                khoa(Rating.GOOD, 0.3, 2.0),
+                new KmaForecast("맑음", 2.0, 0.3));
+
+        assertThat(update.rating()).isEqualTo(Rating.GOOD);
+        assertThat(update.comment()).doesNotContain("유의").doesNotContain("권하지");
+    }
+
+    @Test
+    @DisplayName("파고·풍속이 없으면 대조할 수 없으니 KHOA 등급을 그대로 둔다")
+    void keepsKhoaRatingWhenNumbersAreMissing() {
+        SpotIndexUpdate update = SpotIndexUpdate.combine(khoa(Rating.GOOD, null, null), null);
+
+        assertThat(update.rating()).isEqualTo(Rating.GOOD);
+        assertThat(update.waveHeight()).isNull();
+        assertThat(update.comment()).isNotBlank();
+    }
+
+    @Test
+    @DisplayName("KHOA 가 있으면 어종·수온·물때는 KHOA 것을 쓴다")
     void prefersKhoa() {
         SpotIndexUpdate update = SpotIndexUpdate.combine(
                 khoa(Rating.GOOD, 0.7, 4.9),

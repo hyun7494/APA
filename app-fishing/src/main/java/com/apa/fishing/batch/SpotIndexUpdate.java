@@ -13,6 +13,9 @@ import java.util.List;
  * <ul>
  *   <li><b>KHOA</b> — 등급·추천 어종·수온·파고·풍속·물때. 해상 관측 기반이라 이쪽이 낫다
  *   <li><b>KMA</b> — 날씨 표기(맑음/흐림/비) 하나. 파고·풍속은 KHOA 가 없을 때만 쓴다
+ *   <li><b>코멘트</b> — 파고·풍속이 등급보다 험하면 {@link SpotComment} 가 경고 문구를 만든다.
+ *       <b>등급은 건드리지 않는다</b> — 어황('무느냐')과 안전('나가도 되느냐')은 다른 얘기라
+ *       한 배지에 욱여넣으면 둘 다 못 읽게 된다
  * </ul>
  *
  * <p><b>null 은 "값 없음"이고 0 이 아니다.</b> 여기서 0.0 으로 채우면 결측이 "잔잔한 날"로
@@ -25,12 +28,14 @@ public record SpotIndexUpdate(
         Double waveHeight,
         Double windSpeed,
         String weather,
-        String tideInfo) {
+        String tideInfo,
+        String comment) {
 
     /**
      * 받아온 것들로 갱신 내용을 만든다.
      *
-     * <p>KHOA 가 있으면 그쪽이 기준이다. 없으면(= {@code khoa_place_name} 이 NULL 이거나 호출
+     * <p>KHOA 가 있으면 항목 대부분이 그쪽 값이다(등급만은 자체 규칙과 대조해 나쁜 쪽을 쓴다).
+     * 없으면(= {@code khoa_place_name} 이 NULL 이거나 호출
      * 실패) 기상청 파고·풍속으로 {@link RatingRule} 을 돌리는 <b>폴백</b>이다. 영종도 선착장이
      * 상시 이 경로를 탄다 — 가장 가까운 KHOA 해역이 19.7km 밖 먼바다라 붙이지 않았다.
      *
@@ -40,14 +45,18 @@ public record SpotIndexUpdate(
         String weather = kma == null ? null : kma.weather();
 
         if (khoa != null) {
+            Double waveHeight = firstNonNull(khoa.waveHeight(), waveHeightOf(kma));
+            Double windSpeed = firstNonNull(khoa.windSpeed(), windSpeedOf(kma));
+
             return new SpotIndexUpdate(
                     khoa.rating(),
                     khoa.recommendedFish(),
                     khoa.waterTemp(),
-                    firstNonNull(khoa.waveHeight(), waveHeightOf(kma)),
-                    firstNonNull(khoa.windSpeed(), windSpeedOf(kma)),
+                    waveHeight,
+                    windSpeed,
                     weather,
-                    khoa.tideInfo());
+                    khoa.tideInfo(),
+                    SpotComment.describe(khoa.rating(), waveHeight, windSpeed, weather));
         }
 
         // 폴백. RatingRule 은 원시 double 을 받으므로 둘 다 있어야 돌릴 수 있다.
@@ -59,14 +68,16 @@ public record SpotIndexUpdate(
             return null;
         }
 
+        Rating rating = RatingRule.evaluate(waveHeight, windSpeed, weather);
         return new SpotIndexUpdate(
-                RatingRule.evaluate(waveHeight, windSpeed, weather),
+                rating,
                 null,           // 어종 정보는 기상청에 없다. 기존 값을 남긴다
                 null,           // 수온도 마찬가지
                 waveHeight,
                 windSpeed,
                 weather,
-                null);          // 물때도 마찬가지
+                null,           // 물때도 마찬가지
+                SpotComment.describe(rating, waveHeight, windSpeed, weather));
     }
 
     private static Double waveHeightOf(KmaForecast kma) {
