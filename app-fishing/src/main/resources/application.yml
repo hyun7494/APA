@@ -20,6 +20,13 @@ spring:
 server:
   port: 8086
 
+jwt:
+  # ⚠️ auth-service 와 **같은 값이어야 한다** — HS256 대칭키라 발급(auth-service)과
+  #    검증(여기)이 키를 공유하지 않으면 로그인해도 /fishing/me/** 가 전부 401 이다.
+  #    운영은 두 모듈에 같은 JWT_SECRET 환경변수를 주입할 것.
+  secret: ${JWT_SECRET:test1234test1234test1234test1234test1234test1234}
+  # expiration 은 발급할 때만 쓰므로 여기 없다 (기본값 1시간)
+
 logging:
   level:
     root: INFO

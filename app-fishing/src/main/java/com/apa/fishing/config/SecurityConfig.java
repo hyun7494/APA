@@ -1,7 +1,11 @@
 package com.apa.fishing.config;
 
+import com.apa.common.security.AppAuthFilter;
+import com.apa.common.security.JwtSecurityConfig;
+import com.apa.common.security.JwtTokenProvider;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
+import org.springframework.context.annotation.Import;
 import org.springframework.http.HttpMethod;
 import org.springframework.http.HttpStatus;
 import org.springframework.security.config.Customizer;
@@ -9,6 +13,7 @@ import org.springframework.security.config.annotation.web.builders.HttpSecurity;
 import org.springframework.security.config.http.SessionCreationPolicy;
 import org.springframework.security.web.SecurityFilterChain;
 import org.springframework.security.web.authentication.HttpStatusEntryPoint;
+import org.springframework.security.web.authentication.UsernamePasswordAuthenticationFilter;
 import org.springframework.web.cors.CorsConfiguration;
 import org.springframework.web.cors.CorsConfigurationSource;
 import org.springframework.web.cors.UrlBasedCorsConfigurationSource;
@@ -21,10 +26,12 @@ import java.util.List;
  * (앱 전체가 401 → 빈 화면).
  */
 @Configuration
+@Import(JwtSecurityConfig.class)
 public class SecurityConfig {
 
     @Bean
-    public SecurityFilterChain filterChain(HttpSecurity http) throws Exception {
+    public SecurityFilterChain filterChain(HttpSecurity http,
+                                           JwtTokenProvider jwtTokenProvider) throws Exception {
         http
             .cors(Customizer.withDefaults())
             .csrf(csrf -> csrf.disable())
@@ -39,7 +46,11 @@ public class SecurityConfig {
                 .requestMatchers("/fishing/me/**").authenticated()
                 .requestMatchers(HttpMethod.POST, "/fishing/board/**").authenticated()
                 .anyRequest().permitAll()      // 조회는 전부 공개
-            );
+            )
+            // 토큰이 없거나 상해도 이 필터는 통과시킨다 — 위 매처가 401 을 낸다.
+            // 빈으로 두지 않는 이유는 AppAuthFilter 주석 참고 (서블릿 체인에 중복 등록된다).
+            .addFilterBefore(new AppAuthFilter(jwtTokenProvider),
+                    UsernamePasswordAuthenticationFilter.class);
         return http.build();
     }
 
