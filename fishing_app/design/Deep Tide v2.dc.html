@@ -1,0 +1,620 @@
+<!DOCTYPE html>
+<html>
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<script src="./support.js"></script>
+</head>
+<body>
+<x-dc>
+<helmet data-dc-atomics>
+<meta name="design_doc_mode" content="canvas">
+<title>Deep Tide v2 · 국내 앱 문법으로</title>
+<link rel="stylesheet" href="https://cdn.jsdelivr.net/gh/orioncactus/pretendard@v1.3.9/dist/web/variable/pretendardvariable-dynamic-subset.min.css">
+<style>
+  *,*::before,*::after{box-sizing:border-box}
+  body{margin:0;background:#F1F2F4;color:#111417;font-family:"Pretendard Variable",Pretendard,-apple-system,BlinkMacSystemFont,system-ui,sans-serif;-webkit-font-smoothing:antialiased}
+  svg{display:block}
+  a{color:#0B9E82;text-decoration:none}
+  a:hover{color:#0A8A72}
+</style>
+</helmet>
+
+<svg width="0" height="0" style="position:absolute" aria-hidden="true" focusable="false">
+  <defs>
+    <symbol id="v-wave" viewBox="0 0 24 24"><path fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" d="M2.8 9.4C4.8 6.4 6.8 12.4 8.8 9.4C10.8 6.4 12.8 12.4 14.8 9.4C16.8 6.4 19.2 12.4 21.2 9.4M2.8 15.4C4.8 12.4 6.8 18.4 8.8 15.4C10.8 12.4 12.8 18.4 14.8 15.4C16.8 12.4 19.2 18.4 21.2 15.4"/></symbol>
+    <symbol id="v-book" viewBox="0 0 24 24"><path fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round" d="M12 6.8C10.3 5.1 8.1 4.5 4.6 4.5V18.2C8.1 18.2 10.3 18.9 12 20.5C13.7 18.9 15.9 18.2 19.4 18.2V4.5C15.9 4.5 13.7 5.1 12 6.8Z"/><path fill="none" stroke="currentColor" stroke-width="1.9" d="M12 6.8V20.5"/></symbol>
+    <symbol id="v-home" viewBox="0 0 24 24"><path fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round" d="M4 10.4L12 3.8L20 10.4V20H14.6V14.6H9.4V20H4Z"/></symbol>
+    <symbol id="v-chat" viewBox="0 0 24 24"><path fill="none" stroke="currentColor" stroke-width="1.9" stroke-linejoin="round" d="M6.6 4.4H17.4A3.6 3.6 0 0 1 21 8V12.6A3.6 3.6 0 0 1 17.4 16.2H12.9L8.6 19.9V16.2H6.6A3.6 3.6 0 0 1 3 12.6V8A3.6 3.6 0 0 1 6.6 4.4Z"/></symbol>
+    <symbol id="v-user" viewBox="0 0 24 24"><circle fill="none" stroke="currentColor" stroke-width="1.9" cx="12" cy="8.4" r="3.5"/><path fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" d="M4.8 20.2C4.8 16.2 8.1 14.4 12 14.4C15.9 14.4 19.2 16.2 19.2 20.2"/></symbol>
+    <symbol id="v-fish" viewBox="0 0 24 24"><path fill="none" stroke="currentColor" stroke-width="1.8" stroke-linejoin="round" d="M2.8 12C6.1 6.6 12.5 5.6 16 8.3C17.4 9.4 18.2 10.7 18.6 12C18.2 13.3 17.4 14.6 16 15.7C12.5 18.4 6.1 17.4 2.8 12Z"/><path fill="none" stroke="currentColor" stroke-width="1.8" stroke-linejoin="round" d="M18.6 12L21.3 8.5L21.3 15.5Z"/><circle cx="7.3" cy="10.7" r="1" fill="currentColor"/></symbol>
+    <symbol id="v-thermo" viewBox="0 0 24 24"><path fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" d="M12 4.8V14.2"/><circle fill="none" stroke="currentColor" stroke-width="1.8" cx="12" cy="17.4" r="3.2"/></symbol>
+    <symbol id="v-swell" viewBox="0 0 24 24"><path fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" d="M2.8 17.4C4.9 14.6 6.9 20.2 9 17.4C11.1 14.6 13.1 20.2 15.2 17.4C17.3 14.6 19.3 20.2 21.2 17.4M12 4.2V12.6M9.7 10.4L12 12.7L14.3 10.4"/></symbol>
+    <symbol id="v-wind" viewBox="0 0 24 24"><path fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" d="M2.8 8.6H12.6C15.3 8.6 16.3 5.5 14.4 4.3M2.8 13.2H16.3C19.2 13.2 20.2 16.5 18.1 17.7M2.8 17.8H9.8"/></symbol>
+    <symbol id="v-moon" viewBox="0 0 24 24"><path fill="none" stroke="currentColor" stroke-width="1.8" stroke-linejoin="round" d="M20.6 12.8A8.6 8.6 0 1 1 11.2 3.4A6.8 6.8 0 0 0 20.6 12.8Z"/></symbol>
+    <symbol id="v-sun" viewBox="0 0 24 24"><path fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" d="M7.6 15.2A4.5 4.5 0 0 1 16.4 15.2M3 19H21M12 3V5.6M5 6.6L6.8 8.4M19 6.6L17.2 8.4"/></symbol>
+    <symbol id="v-pin" viewBox="0 0 24 24"><path fill="none" stroke="currentColor" stroke-width="1.8" stroke-linejoin="round" d="M12 21C12 21 19.2 14.6 19.2 9.8A7.2 7.2 0 1 0 4.8 9.8C4.8 14.6 12 21 12 21Z"/><circle fill="none" stroke="currentColor" stroke-width="1.8" cx="12" cy="9.8" r="2.6"/></symbol>
+    <symbol id="v-search" viewBox="0 0 24 24"><circle fill="none" stroke="currentColor" stroke-width="1.9" cx="10.6" cy="10.6" r="6.4"/><path fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" d="M15.3 15.3L20.6 20.6"/></symbol>
+    <symbol id="v-right" viewBox="0 0 24 24"><path fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" d="M9.6 5.8L15.8 12L9.6 18.2"/></symbol>
+    <symbol id="v-left" viewBox="0 0 24 24"><path fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" d="M14.4 5.8L8.2 12L14.4 18.2"/></symbol>
+    <symbol id="v-camera" viewBox="0 0 24 24"><rect fill="none" stroke="currentColor" stroke-width="1.8" x="3" y="7.2" width="18" height="13" rx="3.4"/><circle fill="none" stroke="currentColor" stroke-width="1.8" cx="12" cy="13.7" r="3.4"/><path fill="none" stroke="currentColor" stroke-width="1.8" stroke-linejoin="round" d="M9.2 7.2L10.5 4.6H13.5L14.8 7.2"/></symbol>
+    <symbol id="v-plus" viewBox="0 0 24 24"><path fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" d="M12 5.6V18.4M5.6 12H18.4"/></symbol>
+    <symbol id="v-check" viewBox="0 0 24 24"><path fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round" d="M5 12.6L9.6 17.2L19 7.8"/></symbol>
+    <symbol id="v-bell" viewBox="0 0 24 24"><path fill="none" stroke="currentColor" stroke-width="1.8" stroke-linejoin="round" d="M6.4 10.2A5.6 5.6 0 0 1 17.6 10.2V14.6L19.4 17.4H4.6L6.4 14.6Z"/><path fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" d="M10 20H14"/></symbol>
+    <symbol id="v-ruler" viewBox="0 0 24 24"><rect fill="none" stroke="currentColor" stroke-width="1.8" x="2.8" y="8.8" width="18.4" height="6.4" rx="2"/><path fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" d="M7.2 8.8V11M11.2 8.8V11M15.2 8.8V11M19 8.8V11"/></symbol>
+    <symbol id="v-share" viewBox="0 0 24 24"><path fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" d="M12 3.8V14.8M8.6 7.2L12 3.8L15.4 7.2M5.2 13.4V19.2A1.8 1.8 0 0 0 7 21H17A1.8 1.8 0 0 0 18.8 19.2V13.4"/></symbol>
+    <symbol id="v-medal" viewBox="0 0 24 24"><circle fill="none" stroke="currentColor" stroke-width="1.8" cx="12" cy="14.8" r="5.4"/><path fill="none" stroke="currentColor" stroke-width="1.8" stroke-linejoin="round" d="M8.6 9.8L6.4 3.6H17.6L15.4 9.8"/></symbol>
+  </defs>
+</svg>
+
+<div style="max-width:1280px;margin:0 auto;padding:0 28px">
+
+  <header style="padding:84px 0 52px;display:flex;flex-direction:column;gap:18px">
+    <div style="display:flex;align-items:center;gap:9px">
+      <span style="width:7px;height:7px;border-radius:999px;background:#0B9E82;display:block"></span>
+      <span style="font-size:13px;font-weight:700;letter-spacing:-.01em;color:#0B9E82">Revision 03 · 국내 앱 문법 적용</span>
+    </div>
+    <h1 style="margin:0;font-size:clamp(38px,5.6vw,60px);line-height:1.08;letter-spacing:-.04em;font-weight:800">읽히는 화면으로<br>다시 세웠습니다</h1>
+    <p style="margin:0;max-width:60ch;font-size:17px;line-height:1.65;color:#4E585E;text-wrap:pretty">
+      레퍼런스로 주신 갤러리의 국내 앱들과 비교해 보면 차이는 취향이 아니라 문법이었습니다.
+      영문 모노스페이스 라벨, 카드 안의 카드, 1px 보더로 나눈 구획 — 이 셋이 화면을 &lsquo;시안처럼&rsquo; 보이게 만듭니다.
+      전부 걷어내고 타입 위계와 면 분할로만 정리했습니다.
+    </p>
+    <div style="display:flex;flex-wrap:wrap;gap:8px;font-size:13px;font-weight:600;color:#5B6469">
+      <span style="background:#fff;border-radius:999px;padding:9px 15px;white-space:nowrap">Pretendard 단일 서체</span>
+      <span style="background:#fff;border-radius:999px;padding:9px 15px;white-space:nowrap">보더 → 면 분할</span>
+      <span style="background:#fff;border-radius:999px;padding:9px 15px;white-space:nowrap">이중 베젤 제거</span>
+      <span style="background:#fff;border-radius:999px;padding:9px 15px;white-space:nowrap">6 screens · 360×860</span>
+    </div>
+  </header>
+
+  <section style="padding:52px 0">
+    <h2 style="margin:0 0 8px;font-size:26px;line-height:1.25;letter-spacing:-.03em;font-weight:750">무엇이 달라졌나</h2>
+    <p style="margin:0 0 32px;font-size:15px;line-height:1.6;color:#6B747A">네 가지만 바꿨는데 밀도가 완전히 달라집니다.</p>
+    <div style="display:grid;gap:16px;grid-template-columns:repeat(auto-fit,minmax(276px,1fr))">
+      <div style="background:#fff;border-radius:20px;padding:24px">
+        <div style="width:38px;height:38px;border-radius:12px;background:#E9F7F3;color:#0B9E82;display:grid;place-items:center;margin-bottom:16px"><svg width="20" height="20"><use href="#v-book"/></svg></div>
+        <h3 style="margin:0;font-size:17px;font-weight:700;letter-spacing:-.02em">영문 라벨을 지웠다</h3>
+        <p style="margin:9px 0 0;font-size:14.5px;line-height:1.6;color:#6B747A">TODAY&rsquo;S INDEX · FIELD GUIDE 같은 모노스페이스 캡션은 한국 사용자에게 정보가 아니라 장식입니다. 한글 소제목 하나로 대체했습니다.</p>
+      </div>
+      <div style="background:#fff;border-radius:20px;padding:24px">
+        <div style="width:38px;height:38px;border-radius:12px;background:#E9F7F3;color:#0B9E82;display:grid;place-items:center;margin-bottom:16px"><svg width="20" height="20"><use href="#v-swell"/></svg></div>
+        <h3 style="margin:0;font-size:17px;font-weight:700;letter-spacing:-.02em">카드 한 겹으로</h3>
+        <p style="margin:9px 0 0;font-size:14.5px;line-height:1.6;color:#6B747A">흰 카드 안에 회색 카드를 넣던 이중 베젤을 없앴습니다. 배경이 회색, 콘텐츠가 흰 카드 — 국내 앱이 공통으로 쓰는 단순한 두 겹 구조입니다.</p>
+      </div>
+      <div style="background:#fff;border-radius:20px;padding:24px">
+        <div style="width:38px;height:38px;border-radius:12px;background:#E9F7F3;color:#0B9E82;display:grid;place-items:center;margin-bottom:16px"><svg width="20" height="20"><use href="#v-ruler"/></svg></div>
+        <h3 style="margin:0;font-size:17px;font-weight:700;letter-spacing:-.02em">타입 스케일 상향</h3>
+        <p style="margin:9px 0 0;font-size:14.5px;line-height:1.6;color:#6B747A">본문 13 → 15px, 값 14 → 17px, 제목은 700 이상. 11px 회색 캡션으로 채우던 자리를 줄이고 필요한 정보만 크게 남겼습니다.</p>
+      </div>
+      <div style="background:#fff;border-radius:20px;padding:24px">
+        <div style="width:38px;height:38px;border-radius:12px;background:#E9F7F3;color:#0B9E82;display:grid;place-items:center;margin-bottom:16px"><svg width="20" height="20"><use href="#v-camera"/></svg></div>
+        <h3 style="margin:0;font-size:17px;font-weight:700;letter-spacing:-.02em">사진이 주인공</h3>
+        <p style="margin:9px 0 0;font-size:14.5px;line-height:1.6;color:#6B747A">도감은 결국 사진 앨범입니다. 칸을 키우고 여백을 줄여 한 화면에 사진이 더 많이 보이게 했습니다.</p>
+      </div>
+    </div>
+  </section>
+
+  <section style="padding:40px 0 72px">
+    <h2 style="margin:0 0 8px;font-size:26px;line-height:1.25;letter-spacing:-.03em;font-weight:750">여섯 화면</h2>
+    <p style="margin:0 0 36px;font-size:15px;line-height:1.6;color:#6B747A">사진 자리는 플레이스홀더입니다.</p>
+
+    <div style="display:grid;gap:44px 26px;grid-template-columns:repeat(auto-fit,minmax(306px,max-content));justify-content:center">
+
+      <figure style="margin:0;display:flex;flex-direction:column;gap:16px;width:max-content">
+        <div style="width:306px;height:731px;border-radius:40px;position:relative;overflow:hidden;background:#fff;box-shadow:0 0 0 1px rgba(17,20,23,.07),0 30px 60px -30px rgba(17,20,23,.35)">
+          <div style="width:360px;height:860px;transform:scale(.85);transform-origin:0 0;position:absolute;top:0;left:0;background:#F4F5F7;color:#111417;overflow:hidden">
+            <div style="height:46px;display:flex;align-items:center;justify-content:space-between;padding:0 24px 0 28px;font-size:14px;font-weight:700"><span>9:41</span><span style="width:22px;height:11px;border-radius:3px;background:#111417;opacity:.75"></span></div>
+
+            <div style="height:52px;padding:0 20px;display:flex;align-items:center;gap:10px">
+              <span style="display:flex;align-items:center;gap:5px;font-size:19px;font-weight:800;letter-spacing:-.03em">부산 기장<svg width="17" height="17" style="color:#9BA3A8;transform:rotate(90deg)"><use href="#v-right"/></svg></span>
+              <span style="flex:1"></span>
+              <span style="width:38px;height:38px;display:grid;place-items:center;color:#3D464B;position:relative"><svg width="21" height="21"><use href="#v-bell"/></svg><i style="position:absolute;top:8px;right:9px;width:6px;height:6px;border-radius:999px;background:#F0483E;display:block;box-shadow:0 0 0 2px #F4F5F7"></i></span>
+            </div>
+
+            <div style="padding:6px 20px 0">
+              <div style="background:#fff;border-radius:24px;padding:22px 20px 20px">
+                <div style="display:flex;align-items:center;gap:8px">
+                  <span style="font-size:15px;font-weight:700;color:#3D464B">오늘의 낚시지수</span>
+                  <span style="flex:1"></span>
+                  <span style="font-size:13px;font-weight:600;color:#9BA3A8">8월 14일 목</span>
+                </div>
+                <div style="margin-top:16px;display:flex;align-items:flex-end;gap:12px">
+                  <span style="font-size:38px;font-weight:800;letter-spacing:-.045em;line-height:1;color:#0B9E82">아주 좋음</span>
+                  <span style="padding:5px 11px;border-radius:999px;background:#E9F7F3;color:#0A8A72;font-size:14px;font-weight:800;font-variant-numeric:tabular-nums;margin-bottom:3px">4.0</span>
+                </div>
+                <p style="margin:12px 0 0;font-size:15px;line-height:1.6;color:#4E585E">바람 약하고 파고 낮습니다. 학리 갯바위 추천.</p>
+                <div style="margin-top:20px;height:1px;background:#EEF0F2"></div>
+                <div style="margin-top:18px;display:flex">
+                  <div style="flex:1;display:flex;flex-direction:column;gap:7px"><span style="display:flex;align-items:center;gap:5px;font-size:13px;font-weight:600;color:#9BA3A8"><svg width="15" height="15"><use href="#v-thermo"/></svg>수온</span><span style="font-size:19px;font-weight:750;letter-spacing:-.03em;font-variant-numeric:tabular-nums">18.4<span style="font-size:13px;font-weight:600;color:#9BA3A8;margin-left:2px">℃</span></span></div>
+                  <div style="flex:1;display:flex;flex-direction:column;gap:7px"><span style="display:flex;align-items:center;gap:5px;font-size:13px;font-weight:600;color:#9BA3A8"><svg width="15" height="15"><use href="#v-swell"/></svg>파고</span><span style="font-size:19px;font-weight:750;letter-spacing:-.03em;font-variant-numeric:tabular-nums">0.4<span style="font-size:13px;font-weight:600;color:#9BA3A8;margin-left:3px">m</span></span></div>
+                  <div style="flex:1;display:flex;flex-direction:column;gap:7px"><span style="display:flex;align-items:center;gap:5px;font-size:13px;font-weight:600;color:#9BA3A8"><svg width="15" height="15"><use href="#v-wind"/></svg>풍속</span><span style="font-size:19px;font-weight:750;letter-spacing:-.03em;font-variant-numeric:tabular-nums">2.1<span style="font-size:13px;font-weight:600;color:#9BA3A8;margin-left:3px">㎧</span></span></div>
+                </div>
+              </div>
+            </div>
+
+            <div style="padding:10px 20px 0;display:flex;gap:10px">
+              <div style="flex:1;background:#fff;border-radius:20px;padding:16px 18px;display:flex;align-items:center;gap:11px">
+                <span style="width:34px;height:34px;flex:0 0 34px;border-radius:11px;background:#EEF2FE;color:#3A62D8;display:grid;place-items:center"><svg width="18" height="18"><use href="#v-moon"/></svg></span>
+                <div style="min-width:0;display:flex;flex-direction:column;gap:2px"><span style="font-size:12.5px;font-weight:600;color:#9BA3A8">물때</span><span style="font-size:15px;font-weight:750;letter-spacing:-.02em;white-space:nowrap">5물 · 13:20</span></div>
+              </div>
+              <div style="flex:1;background:#fff;border-radius:20px;padding:16px 18px;display:flex;align-items:center;gap:11px">
+                <span style="width:34px;height:34px;flex:0 0 34px;border-radius:11px;background:#FFF3E4;color:#D5811A;display:grid;place-items:center"><svg width="18" height="18"><use href="#v-sun"/></svg></span>
+                <div style="min-width:0;display:flex;flex-direction:column;gap:2px"><span style="font-size:12.5px;font-weight:600;color:#9BA3A8">일출·일몰</span><span style="font-size:15px;font-weight:750;letter-spacing:-.02em;white-space:nowrap">05:11 · 19:42</span></div>
+              </div>
+            </div>
+
+            <div style="padding:10px 20px 0">
+              <div style="background:#fff;border-radius:24px;padding:20px">
+                <div style="display:flex;align-items:center;gap:8px">
+                  <span style="font-size:16px;font-weight:750;letter-spacing:-.02em">내 도감</span>
+                  <span style="padding:3px 9px;border-radius:999px;background:#F4F5F7;font-size:12.5px;font-weight:700;color:#5B6469;font-variant-numeric:tabular-nums">42 / 78</span>
+                  <span style="flex:1"></span>
+                  <svg width="17" height="17" style="color:#C3C9CD"><use href="#v-right"/></svg>
+                </div>
+                <div style="margin-top:14px;height:8px;border-radius:999px;background:#F0F2F4;overflow:hidden;display:flex"><i style="display:block;height:100%;width:46%;background:#0B9E82"></i><i style="display:block;height:100%;width:8%;background:#E0A02C"></i></div>
+                <div style="margin-top:16px;display:flex;gap:8px">
+                  <div style="flex:1;aspect-ratio:1;border-radius:14px;background:repeating-linear-gradient(135deg,#EDEFF1 0 8px,#E4E7EA 8px 16px)"></div>
+                  <div style="flex:1;aspect-ratio:1;border-radius:14px;background:repeating-linear-gradient(135deg,#EDEFF1 0 8px,#E4E7EA 8px 16px)"></div>
+                  <div style="flex:1;aspect-ratio:1;border-radius:14px;background:repeating-linear-gradient(135deg,#F7EFDD 0 8px,#F0E5CB 8px 16px)"></div>
+                  <div style="flex:1;aspect-ratio:1;border-radius:14px;background:#F4F5F7;display:grid;place-items:center;color:#C3C9CD;font-size:13px;font-weight:700">+39</div>
+                </div>
+                <p style="margin:14px 0 0;font-size:14px;font-weight:600;color:#6B747A">이번 달에 3종 새로 기록했어요</p>
+              </div>
+            </div>
+
+            <div style="position:absolute;left:0;right:0;bottom:0;background:#fff;padding:8px 0 22px;box-shadow:0 -1px 0 rgba(17,20,23,.06)">
+              <div style="display:flex;align-items:center">
+                <span style="flex:1;display:flex;flex-direction:column;align-items:center;gap:4px;color:#111417"><svg width="24" height="24"><use href="#v-home"/></svg><span style="font-size:11px;font-weight:700">홈</span></span>
+                <span style="flex:1;display:flex;flex-direction:column;align-items:center;gap:4px;color:#B5BBBF"><svg width="24" height="24"><use href="#v-wave"/></svg><span style="font-size:11px;font-weight:600">지수</span></span>
+                <span style="flex:1;display:flex;flex-direction:column;align-items:center;gap:4px;color:#B5BBBF"><svg width="24" height="24"><use href="#v-book"/></svg><span style="font-size:11px;font-weight:600">도감</span></span>
+                <span style="flex:1;display:flex;flex-direction:column;align-items:center;gap:4px;color:#B5BBBF"><svg width="24" height="24"><use href="#v-chat"/></svg><span style="font-size:11px;font-weight:600">게시판</span></span>
+                <span style="flex:1;display:flex;flex-direction:column;align-items:center;gap:4px;color:#B5BBBF"><svg width="24" height="24"><use href="#v-user"/></svg><span style="font-size:11px;font-weight:600">마이</span></span>
+              </div>
+            </div>
+          </div>
+        </div>
+        <figcaption style="display:flex;flex-direction:column;gap:5px;max-width:306px">
+          <span style="font-size:16px;font-weight:750;letter-spacing:-.02em">01 · 홈</span>
+          <span style="font-size:14px;line-height:1.55;color:#6B747A">지역명이 곧 제목입니다. 지수는 등급 텍스트를 가장 크게 두고, 링 게이지는 뺐습니다 — 4점 만점 표기가 링보다 정확합니다.</span>
+        </figcaption>
+      </figure>
+
+      <figure style="margin:0;display:flex;flex-direction:column;gap:16px;width:max-content">
+        <div style="width:306px;height:731px;border-radius:40px;position:relative;overflow:hidden;background:#fff;box-shadow:0 0 0 1px rgba(17,20,23,.07),0 30px 60px -30px rgba(17,20,23,.35)">
+          <div style="width:360px;height:860px;transform:scale(.85);transform-origin:0 0;position:absolute;top:0;left:0;background:#fff;color:#111417;overflow:hidden">
+            <div style="height:46px;display:flex;align-items:center;justify-content:space-between;padding:0 24px 0 28px;font-size:14px;font-weight:700"><span>9:41</span><span style="width:22px;height:11px;border-radius:3px;background:#111417;opacity:.75"></span></div>
+
+            <div style="height:52px;padding:0 20px;display:flex;align-items:center;gap:6px">
+              <span style="font-size:21px;font-weight:800;letter-spacing:-.035em">도감</span>
+              <span style="flex:1"></span>
+              <span style="width:38px;height:38px;display:grid;place-items:center;color:#3D464B"><svg width="21" height="21"><use href="#v-search"/></svg></span>
+              <span style="height:36px;padding:0 14px;border-radius:10px;background:#111417;color:#fff;display:flex;align-items:center;gap:6px;font-size:14px;font-weight:700;white-space:nowrap"><svg width="16" height="16"><use href="#v-plus"/></svg>기록</span>
+            </div>
+
+            <div style="padding:6px 20px 0">
+              <div style="display:flex;align-items:flex-end;gap:8px">
+                <span style="font-size:34px;font-weight:800;letter-spacing:-.045em;line-height:1;font-variant-numeric:tabular-nums">42</span>
+                <span style="font-size:17px;font-weight:700;color:#B5BBBF;margin-bottom:2px">/ 78종</span>
+                <span style="flex:1"></span>
+                <span style="font-size:15px;font-weight:750;color:#0B9E82;margin-bottom:3px">54%</span>
+              </div>
+              <div style="margin-top:12px;height:8px;border-radius:999px;background:#F0F2F4;overflow:hidden;display:flex"><i style="display:block;height:100%;width:46%;background:#0B9E82"></i><i style="display:block;height:100%;width:8%;background:#E0A02C"></i></div>
+            </div>
+
+            <div style="display:flex;gap:7px;padding:18px 20px 0">
+              <span style="height:36px;border-radius:10px;padding:0 14px;display:flex;align-items:center;background:#111417;color:#fff;font-size:14px;font-weight:700;white-space:nowrap">전체</span>
+              <span style="height:36px;border-radius:10px;padding:0 14px;display:flex;align-items:center;background:#F4F5F7;color:#5B6469;font-size:14px;font-weight:600;white-space:nowrap">기록한 종</span>
+              <span style="height:36px;border-radius:10px;padding:0 14px;display:flex;align-items:center;background:#F4F5F7;color:#5B6469;font-size:14px;font-weight:600;white-space:nowrap">희귀</span>
+              <span style="height:36px;border-radius:10px;padding:0 14px;display:flex;align-items:center;background:#F4F5F7;color:#5B6469;font-size:14px;font-weight:600;white-space:nowrap">제철</span>
+            </div>
+
+            <div style="padding:16px 20px 0;display:grid;grid-template-columns:repeat(3,1fr);gap:8px 8px">
+
+              <div style="display:flex;flex-direction:column;gap:7px">
+                <div style="aspect-ratio:1;border-radius:16px;background:repeating-linear-gradient(135deg,#EDEFF1 0 8px,#E4E7EA 8px 16px);position:relative;overflow:hidden">
+                  <span style="position:absolute;right:6px;bottom:6px;padding:3px 8px;border-radius:999px;background:rgba(17,20,23,.62);color:#fff;font-size:11px;font-weight:700">4회</span>
+                </div>
+                <span style="font-size:14px;font-weight:700;letter-spacing:-.02em">감성돔</span>
+              </div>
+
+              <div style="display:flex;flex-direction:column;gap:7px">
+                <div style="aspect-ratio:1;border-radius:16px;background:repeating-linear-gradient(135deg,#F7EFDD 0 8px,#F0E5CB 8px 16px);position:relative;overflow:hidden">
+                  <span style="position:absolute;left:6px;top:6px;width:20px;height:20px;border-radius:999px;background:#E0A02C;color:#fff;display:grid;place-items:center"><svg width="14" height="14"><use href="#v-medal"/></svg></span>
+                  <span style="position:absolute;right:6px;bottom:6px;padding:3px 8px;border-radius:999px;background:rgba(17,20,23,.62);color:#fff;font-size:11px;font-weight:700">1회</span>
+                </div>
+                <span style="font-size:14px;font-weight:700;letter-spacing:-.02em">돌돔</span>
+              </div>
+
+              <div style="display:flex;flex-direction:column;gap:7px">
+                <div style="aspect-ratio:1;border-radius:16px;background:repeating-linear-gradient(135deg,#EDEFF1 0 8px,#E4E7EA 8px 16px);position:relative;overflow:hidden">
+                  <span style="position:absolute;right:6px;bottom:6px;padding:3px 8px;border-radius:999px;background:rgba(17,20,23,.62);color:#fff;font-size:11px;font-weight:700">11회</span>
+                </div>
+                <span style="font-size:14px;font-weight:700;letter-spacing:-.02em">우럭</span>
+              </div>
+
+              <div style="display:flex;flex-direction:column;gap:7px">
+                <div style="aspect-ratio:1;border-radius:16px;background:repeating-linear-gradient(135deg,#EDEFF1 0 8px,#E4E7EA 8px 16px);position:relative;overflow:hidden">
+                  <span style="position:absolute;right:6px;bottom:6px;padding:3px 8px;border-radius:999px;background:rgba(17,20,23,.62);color:#fff;font-size:11px;font-weight:700">7회</span>
+                </div>
+                <span style="font-size:14px;font-weight:700;letter-spacing:-.02em">농어</span>
+              </div>
+
+              <div style="display:flex;flex-direction:column;gap:7px">
+                <div style="aspect-ratio:1;border-radius:16px;background:repeating-linear-gradient(135deg,#EDEFF1 0 8px,#E4E7EA 8px 16px);position:relative;overflow:hidden">
+                  <span style="position:absolute;right:6px;bottom:6px;padding:3px 8px;border-radius:999px;background:rgba(17,20,23,.62);color:#fff;font-size:11px;font-weight:700">3회</span>
+                </div>
+                <span style="font-size:14px;font-weight:700;letter-spacing:-.02em">벵에돔</span>
+              </div>
+
+              <sc-if value="{{ showLocked }}" hint-placeholder-val="{{ true }}">
+              <div style="display:flex;flex-direction:column;gap:7px">
+                <div style="aspect-ratio:1;border-radius:16px;background:#F4F5F7;display:grid;place-items:center;color:#DCE0E3"><svg width="30" height="30"><use href="#v-fish"/></svg></div>
+                <span style="font-size:14px;font-weight:700;color:#C3C9CD">미기록</span>
+              </div>
+              </sc-if>
+
+              <div style="display:flex;flex-direction:column;gap:7px">
+                <div style="aspect-ratio:1;border-radius:16px;background:repeating-linear-gradient(135deg,#EDEFF1 0 8px,#E4E7EA 8px 16px);position:relative;overflow:hidden">
+                  <span style="position:absolute;right:6px;bottom:6px;padding:3px 8px;border-radius:999px;background:rgba(17,20,23,.62);color:#fff;font-size:11px;font-weight:700">2회</span>
+                </div>
+                <span style="font-size:14px;font-weight:700;letter-spacing:-.02em">참돔</span>
+              </div>
+
+              <div style="display:flex;flex-direction:column;gap:7px">
+                <div style="aspect-ratio:1;border-radius:16px;background:repeating-linear-gradient(135deg,#EDEFF1 0 8px,#E4E7EA 8px 16px);position:relative;overflow:hidden">
+                  <span style="position:absolute;right:6px;bottom:6px;padding:3px 8px;border-radius:999px;background:rgba(17,20,23,.62);color:#fff;font-size:11px;font-weight:700">5회</span>
+                </div>
+                <span style="font-size:14px;font-weight:700;letter-spacing:-.02em">쥐노래미</span>
+              </div>
+
+              <sc-if value="{{ showLocked }}" hint-placeholder-val="{{ true }}">
+              <div style="display:flex;flex-direction:column;gap:7px">
+                <div style="aspect-ratio:1;border-radius:16px;background:#FBF6EC;display:grid;place-items:center;color:#EBDCBF"><svg width="30" height="30"><use href="#v-fish"/></svg></div>
+                <span style="font-size:14px;font-weight:700;color:#D3C6A6">희귀</span>
+              </div>
+              </sc-if>
+
+              <sc-if value="{{ showLocked }}" hint-placeholder-val="{{ true }}">
+              <div style="display:flex;flex-direction:column;gap:7px">
+                <div style="aspect-ratio:1;border-radius:16px;background:#F4F5F7;display:grid;place-items:center;color:#DCE0E3"><svg width="30" height="30"><use href="#v-fish"/></svg></div>
+                <span style="font-size:14px;font-weight:700;color:#C3C9CD">미기록</span>
+              </div>
+              </sc-if>
+
+              <sc-if value="{{ showLocked }}" hint-placeholder-val="{{ true }}">
+              <div style="display:flex;flex-direction:column;gap:7px">
+                <div style="aspect-ratio:1;border-radius:16px;background:#F4F5F7;display:grid;place-items:center;color:#DCE0E3"><svg width="30" height="30"><use href="#v-fish"/></svg></div>
+                <span style="font-size:14px;font-weight:700;color:#C3C9CD">미기록</span>
+              </div>
+              </sc-if>
+
+              <sc-if value="{{ showLocked }}" hint-placeholder-val="{{ true }}">
+              <div style="display:flex;flex-direction:column;gap:7px">
+                <div style="aspect-ratio:1;border-radius:16px;background:#F4F5F7;display:grid;place-items:center;color:#DCE0E3"><svg width="30" height="30"><use href="#v-fish"/></svg></div>
+                <span style="font-size:14px;font-weight:700;color:#C3C9CD">미기록</span>
+              </div>
+              </sc-if>
+            </div>
+
+            <div style="position:absolute;left:0;right:0;bottom:0;background:#fff;padding:8px 0 22px;box-shadow:0 -1px 0 rgba(17,20,23,.06)">
+              <div style="display:flex;align-items:center">
+                <span style="flex:1;display:flex;flex-direction:column;align-items:center;gap:4px;color:#B5BBBF"><svg width="24" height="24"><use href="#v-home"/></svg><span style="font-size:11px;font-weight:600">홈</span></span>
+                <span style="flex:1;display:flex;flex-direction:column;align-items:center;gap:4px;color:#B5BBBF"><svg width="24" height="24"><use href="#v-wave"/></svg><span style="font-size:11px;font-weight:600">지수</span></span>
+                <span style="flex:1;display:flex;flex-direction:column;align-items:center;gap:4px;color:#111417"><svg width="24" height="24"><use href="#v-book"/></svg><span style="font-size:11px;font-weight:700">도감</span></span>
+                <span style="flex:1;display:flex;flex-direction:column;align-items:center;gap:4px;color:#B5BBBF"><svg width="24" height="24"><use href="#v-chat"/></svg><span style="font-size:11px;font-weight:600">게시판</span></span>
+                <span style="flex:1;display:flex;flex-direction:column;align-items:center;gap:4px;color:#B5BBBF"><svg width="24" height="24"><use href="#v-user"/></svg><span style="font-size:11px;font-weight:600">마이</span></span>
+              </div>
+            </div>
+          </div>
+        </div>
+        <figcaption style="display:flex;flex-direction:column;gap:5px;max-width:306px">
+          <span style="font-size:16px;font-weight:750;letter-spacing:-.02em">02 · 도감</span>
+          <span style="font-size:14px;line-height:1.55;color:#6B747A">배경을 흰색으로 두고 칸을 키웠습니다. 미기록 칸은 자물쇠 대신 실루엣 — 잠긴 게 아니라 아직 안 만난 종입니다.</span>
+        </figcaption>
+      </figure>
+
+      <figure style="margin:0;display:flex;flex-direction:column;gap:16px;width:max-content">
+        <div style="width:306px;height:731px;border-radius:40px;position:relative;overflow:hidden;background:#fff;box-shadow:0 0 0 1px rgba(17,20,23,.07),0 30px 60px -30px rgba(17,20,23,.35)">
+          <div style="width:360px;height:860px;transform:scale(.85);transform-origin:0 0;position:absolute;top:0;left:0;background:#F4F5F7;color:#111417;overflow:hidden">
+            <div style="height:290px;position:relative;background:repeating-linear-gradient(135deg,#E4E7EA 0 10px,#DBDFE3 10px 20px)">
+              <div style="height:46px;display:flex;align-items:center;justify-content:space-between;padding:0 24px 0 28px;font-size:14px;font-weight:700"><span>9:41</span><span style="width:22px;height:11px;border-radius:3px;background:#111417;opacity:.75"></span></div>
+              <div style="padding:0 20px;display:flex;align-items:center;gap:10px">
+                <span style="width:38px;height:38px;border-radius:999px;background:rgba(255,255,255,.9);display:grid;place-items:center;color:#111417"><svg width="18" height="18"><use href="#v-left"/></svg></span>
+                <span style="flex:1"></span>
+                <span style="width:38px;height:38px;border-radius:999px;background:rgba(255,255,255,.9);display:grid;place-items:center;color:#111417"><svg width="18" height="18"><use href="#v-share"/></svg></span>
+              </div>
+              <span style="position:absolute;left:20px;bottom:34px;font-size:13px;font-weight:600;color:#5B6469">대표 사진 · 42.5<span style="margin-left:3px">cm</span></span>
+            </div>
+
+            <div style="margin-top:-22px;background:#F4F5F7;border-radius:22px 22px 0 0;position:relative;padding-top:22px">
+              <div style="padding:0 20px">
+                <div style="display:flex;align-items:center;gap:8px">
+                  <span style="font-size:26px;font-weight:800;letter-spacing:-.04em">감성돔</span>
+                  <span style="padding:4px 10px;border-radius:999px;background:#E9F7F3;color:#0A8A72;font-size:12.5px;font-weight:700">일반</span>
+                </div>
+                <p style="margin:6px 0 0;font-size:13.5px;font-weight:500;color:#9BA3A8">Acanthopagrus schlegelii</p>
+              </div>
+
+              <div style="padding:18px 20px 0;display:flex;gap:10px">
+                <div style="flex:1;background:#fff;border-radius:18px;padding:16px 18px">
+                  <span style="font-size:13px;font-weight:600;color:#9BA3A8">내 최대</span>
+                  <div style="margin-top:7px;font-size:22px;font-weight:800;letter-spacing:-.04em;font-variant-numeric:tabular-nums">42.5<span style="font-size:14px;font-weight:600;color:#9BA3A8;margin-left:3px">cm</span></div>
+                </div>
+                <div style="flex:1;background:#fff;border-radius:18px;padding:16px 18px">
+                  <span style="font-size:13px;font-weight:600;color:#9BA3A8">기록</span>
+                  <div style="margin-top:7px;font-size:22px;font-weight:800;letter-spacing:-.04em;font-variant-numeric:tabular-nums">4<span style="font-size:14px;font-weight:600;color:#9BA3A8;margin-left:3px">회</span></div>
+                </div>
+              </div>
+
+              <div style="padding:10px 20px 0">
+                <div style="background:#fff;border-radius:18px;padding:4px 18px">
+                  <div style="display:flex;align-items:center;padding:13px 0;gap:10px"><span style="flex:1;min-width:0;font-size:14px;font-weight:600;color:#6B747A;white-space:nowrap">첫 기록</span><span style="font-size:14.5px;font-weight:700;white-space:nowrap">2025.09.14 기장 학리</span></div>
+                  <div style="height:1px;background:#F0F2F4"></div>
+                  <div style="display:flex;align-items:center;padding:13px 0;gap:10px"><span style="flex:1;min-width:0;font-size:14px;font-weight:600;color:#6B747A;white-space:nowrap">제철</span><span style="font-size:14.5px;font-weight:700;white-space:nowrap">9월 ~ 12월</span></div>
+                  <div style="height:1px;background:#F0F2F4"></div>
+                  <div style="display:flex;align-items:center;padding:13px 0;gap:10px"><span style="flex:1;min-width:0;font-size:14px;font-weight:600;color:#6B747A;white-space:nowrap">주 서식</span><span style="font-size:14.5px;font-weight:700;white-space:nowrap">갯바위 · 방파제</span></div>
+                </div>
+              </div>
+
+              <div style="padding:22px 20px 0;display:flex;align-items:center;gap:8px">
+                <span style="font-size:16px;font-weight:750;letter-spacing:-.02em">내 기록</span>
+                <span style="font-size:16px;font-weight:750;color:#C3C9CD">4</span>
+              </div>
+
+              <div style="padding:12px 20px 0;display:flex;gap:8px">
+                <div style="flex:1;aspect-ratio:1;border-radius:14px;background:repeating-linear-gradient(135deg,#EDEFF1 0 8px,#E4E7EA 8px 16px)"></div>
+                <div style="flex:1;aspect-ratio:1;border-radius:14px;background:repeating-linear-gradient(135deg,#EDEFF1 0 8px,#E4E7EA 8px 16px)"></div>
+                <div style="flex:1;aspect-ratio:1;border-radius:14px;background:repeating-linear-gradient(135deg,#EDEFF1 0 8px,#E4E7EA 8px 16px)"></div>
+                <div style="flex:1;aspect-ratio:1;border-radius:14px;background:#fff;display:grid;place-items:center;color:#0B9E82"><svg width="20" height="20"><use href="#v-plus"/></svg></div>
+              </div>
+            </div>
+
+            <div style="position:absolute;left:0;right:0;bottom:0;background:#fff;padding:12px 20px 26px;box-shadow:0 -1px 0 rgba(17,20,23,.06)">
+              <div style="height:54px;border-radius:16px;background:#0B9E82;color:#fff;display:flex;align-items:center;justify-content:center;gap:8px;font-size:16px;font-weight:750;letter-spacing:-.02em"><svg width="19" height="19"><use href="#v-camera"/></svg>기록 추가하기</div>
+            </div>
+          </div>
+        </div>
+        <figcaption style="display:flex;flex-direction:column;gap:5px;max-width:306px">
+          <span style="font-size:16px;font-weight:750;letter-spacing:-.02em">03 · 어종 상세</span>
+          <span style="font-size:14px;line-height:1.55;color:#6B747A">사진을 상단 풀블리드로 올리고 시트가 그 위로 겹칩니다. CTA는 하단 고정 바 — 스크롤과 무관하게 항상 같은 자리입니다.</span>
+        </figcaption>
+      </figure>
+
+      <figure style="margin:0;display:flex;flex-direction:column;gap:16px;width:max-content">
+        <div style="width:306px;height:731px;border-radius:40px;position:relative;overflow:hidden;background:#fff;box-shadow:0 0 0 1px rgba(17,20,23,.07),0 30px 60px -30px rgba(17,20,23,.35)">
+          <div style="width:360px;height:860px;transform:scale(.85);transform-origin:0 0;position:absolute;top:0;left:0;background:#fff;color:#111417;overflow:hidden">
+            <div style="height:46px;display:flex;align-items:center;justify-content:space-between;padding:0 24px 0 28px;font-size:14px;font-weight:700"><span>9:41</span><span style="width:22px;height:11px;border-radius:3px;background:#111417;opacity:.75"></span></div>
+
+            <div style="height:52px;padding:0 14px 0 20px;display:flex;align-items:center;gap:8px">
+              <span style="width:38px;height:38px;display:grid;place-items:center;color:#111417;margin-left:-9px"><svg width="20" height="20"><use href="#v-left"/></svg></span>
+              <span style="flex:1;font-size:17px;font-weight:750;letter-spacing:-.025em">기록 추가</span>
+              <span style="height:34px;padding:0 13px;border-radius:10px;background:#F4F5F7;color:#5B6469;font-size:14px;font-weight:700;display:flex;align-items:center;white-space:nowrap">임시저장</span>
+            </div>
+
+            <div style="padding:8px 20px 0">
+              <div style="display:flex;gap:8px">
+                <div style="flex:1;aspect-ratio:1;border-radius:16px;background:#F4F5F7;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:4px;color:#6B747A"><svg width="22" height="22"><use href="#v-camera"/></svg><span style="font-size:12px;font-weight:700">1/5</span></div>
+                <div style="flex:1;aspect-ratio:1;border-radius:16px;background:repeating-linear-gradient(135deg,#EDEFF1 0 8px,#E4E7EA 8px 16px);position:relative"><span style="position:absolute;right:5px;top:5px;width:20px;height:20px;border-radius:999px;background:rgba(17,20,23,.65);color:#fff;display:grid;place-items:center;font-size:13px;font-weight:700;line-height:1">&times;</span></div>
+                <div style="flex:1;aspect-ratio:1"></div>
+                <div style="flex:1;aspect-ratio:1"></div>
+              </div>
+            </div>
+
+            <div style="padding:22px 20px 0">
+              <div style="height:1px;background:#F0F2F4"></div>
+              <div style="display:flex;align-items:center;padding:16px 0;gap:10px">
+                <span style="flex:1;min-width:0;font-size:15px;font-weight:600;color:#6B747A;white-space:nowrap">어종</span>
+                <span style="font-size:16px;font-weight:750;white-space:nowrap">감성돔</span>
+                <svg width="17" height="17" style="color:#C3C9CD;flex:0 0 17px"><use href="#v-right"/></svg>
+              </div>
+              <div style="height:1px;background:#F0F2F4"></div>
+              <div style="display:flex;align-items:center;padding:16px 0;gap:10px">
+                <span style="flex:1;min-width:0;font-size:15px;font-weight:600;color:#6B747A;white-space:nowrap">길이</span>
+                <span style="font-size:16px;font-weight:750;font-variant-numeric:tabular-nums;white-space:nowrap">42.5<span style="margin-left:2px;color:#6B747A">cm</span></span>
+                <svg width="17" height="17" style="color:#C3C9CD;flex:0 0 17px"><use href="#v-right"/></svg>
+              </div>
+              <div style="height:1px;background:#F0F2F4"></div>
+              <div style="display:flex;align-items:center;padding:16px 0;gap:10px">
+                <span style="flex:1;min-width:0;font-size:15px;font-weight:600;color:#6B747A;white-space:nowrap">일시</span>
+                <span style="font-size:16px;font-weight:750;font-variant-numeric:tabular-nums;white-space:nowrap">8.14 06:12</span>
+                <svg width="17" height="17" style="color:#C3C9CD;flex:0 0 17px"><use href="#v-right"/></svg>
+              </div>
+              <div style="height:1px;background:#F0F2F4"></div>
+              <div style="display:flex;align-items:center;padding:16px 0;gap:10px">
+                <span style="flex:1;min-width:0;font-size:15px;font-weight:600;color:#6B747A;white-space:nowrap">포인트</span>
+                <span style="font-size:16px;font-weight:750;white-space:nowrap">기장 학리</span>
+                <svg width="17" height="17" style="color:#C3C9CD;flex:0 0 17px"><use href="#v-right"/></svg>
+              </div>
+              <div style="height:1px;background:#F0F2F4"></div>
+            </div>
+
+            <div style="padding:20px 20px 0">
+              <div style="display:flex;align-items:baseline;gap:8px">
+                <span style="font-size:15px;font-weight:750;letter-spacing:-.02em">메모</span>
+                <span style="font-size:13px;font-weight:600;color:#C3C9CD">선택</span>
+                <span style="flex:1"></span>
+                <span style="font-size:13px;font-weight:600;color:#C3C9CD;font-variant-numeric:tabular-nums">38 / 500</span>
+              </div>
+              <div style="margin-top:10px;background:#F4F5F7;border-radius:16px;padding:16px;min-height:104px">
+                <p style="margin:0;font-size:15px;line-height:1.65;color:#3D464B">새벽 물때에 갯지렁이로. 조류 바뀌는 타이밍에 바로 입질 들어왔다.</p>
+              </div>
+            </div>
+
+            <div style="padding:16px 20px 0;display:flex;align-items:center;gap:12px">
+              <div style="flex:1;min-width:0;display:flex;flex-direction:column;gap:3px">
+                <span style="font-size:15px;font-weight:700;letter-spacing:-.02em">게시판에도 올리기</span>
+                <span style="font-size:13px;font-weight:500;color:#9BA3A8">포인트는 &lsquo;기장&rsquo;까지만 공개됩니다</span>
+              </div>
+              <span style="width:50px;height:30px;flex:0 0 50px;border-radius:999px;background:#E4E7EA;position:relative"><i style="position:absolute;top:3px;left:3px;width:24px;height:24px;border-radius:999px;background:#fff;display:block;box-shadow:0 1px 3px rgba(17,20,23,.25)"></i></span>
+            </div>
+
+            <div style="position:absolute;left:0;right:0;bottom:0;background:#fff;padding:12px 20px 26px;box-shadow:0 -1px 0 rgba(17,20,23,.06)">
+              <div style="height:54px;border-radius:16px;background:#0B9E82;color:#fff;display:flex;align-items:center;justify-content:center;font-size:16px;font-weight:750;letter-spacing:-.02em">기록 저장</div>
+            </div>
+          </div>
+        </div>
+        <figcaption style="display:flex;flex-direction:column;gap:5px;max-width:306px">
+          <span style="font-size:16px;font-weight:750;letter-spacing:-.02em">04 · 기록 추가</span>
+          <span style="font-size:14px;line-height:1.55;color:#6B747A">카드를 없애고 구분선 리스트로 바꿨습니다. 입력 폼은 카드로 감쌀수록 항목이 멀어 보입니다. 판정·검증은 없습니다.</span>
+        </figcaption>
+      </figure>
+
+      <figure style="margin:0;display:flex;flex-direction:column;gap:16px;width:max-content">
+        <div style="width:306px;height:731px;border-radius:40px;position:relative;overflow:hidden;background:#fff;box-shadow:0 0 0 1px rgba(17,20,23,.07),0 30px 60px -30px rgba(17,20,23,.35)">
+          <div style="width:360px;height:860px;transform:scale(.85);transform-origin:0 0;position:absolute;top:0;left:0;background:#fff;color:#111417;overflow:hidden">
+            <div style="height:46px;display:flex;align-items:center;justify-content:space-between;padding:0 24px 0 28px;font-size:14px;font-weight:700"><span>9:41</span><span style="width:22px;height:11px;border-radius:3px;background:#111417;opacity:.75"></span></div>
+
+            <div style="padding:34px 28px 0;display:flex;flex-direction:column;align-items:center;text-align:center">
+              <span style="width:64px;height:64px;border-radius:999px;background:#E9F7F3;color:#0B9E82;display:grid;place-items:center"><svg width="32" height="32"><use href="#v-check"/></svg></span>
+              <p style="margin:18px 0 0;font-size:26px;font-weight:800;letter-spacing:-.04em;line-height:1.32">도감 43번째<br>칸이 채워졌어요</p>
+              <p style="margin:10px 0 0;font-size:15px;font-weight:500;line-height:1.6;color:#6B747A">돌돔은 처음 기록한 종이에요</p>
+            </div>
+
+            <div style="padding:22px 20px 0">
+              <div style="border-radius:24px;overflow:hidden;background:#FBF6EC">
+                <div style="aspect-ratio:16/10;background:repeating-linear-gradient(135deg,#F6EEDC 0 10px,#EEE2C6 10px 20px);position:relative">
+                  <span style="position:absolute;left:12px;top:12px;padding:5px 11px;border-radius:999px;background:#E0A02C;color:#fff;font-size:12px;font-weight:800;display:flex;align-items:center;gap:5px"><svg width="15" height="15"><use href="#v-medal"/></svg>희귀</span>
+                </div>
+                <div style="padding:16px 20px 18px">
+                  <div style="display:flex;align-items:flex-end;gap:10px">
+                    <span style="flex:1;min-width:0;font-size:20px;font-weight:800;letter-spacing:-.035em">돌돔</span>
+                    <span style="font-size:22px;font-weight:800;letter-spacing:-.04em;font-variant-numeric:tabular-nums">38.0<span style="font-size:14px;font-weight:600;color:#A79767;margin-left:3px">cm</span></span>
+                  </div>
+                  <p style="margin:10px 0 0;font-size:14px;font-weight:600;color:#A08B54">기장 학리 · 8월 14일 06:12</p>
+                </div>
+              </div>
+            </div>
+
+            <div style="padding:12px 20px 0">
+              <div style="background:#F4F5F7;border-radius:20px;padding:16px 20px;display:flex;align-items:center;gap:14px">
+                <div style="flex:1;min-width:0">
+                  <span style="font-size:14px;font-weight:700;color:#5B6469">도감 진행도</span>
+                  <div style="margin-top:10px;height:8px;border-radius:999px;background:#E4E7EA;overflow:hidden"><i style="display:block;height:100%;width:55%;background:#0B9E82"></i></div>
+                </div>
+                <span style="font-size:18px;font-weight:800;letter-spacing:-.03em;font-variant-numeric:tabular-nums">43<span style="color:#B5BBBF;margin-left:1px"> / 78</span></span>
+              </div>
+            </div>
+
+            <div style="position:absolute;left:0;right:0;bottom:0;background:#fff;padding:12px 20px 26px;display:flex;flex-direction:column;gap:9px">
+              <div style="height:54px;border-radius:16px;background:#0B9E82;color:#fff;display:flex;align-items:center;justify-content:center;font-size:16px;font-weight:750;letter-spacing:-.02em">도감에서 보기</div>
+              <div style="height:50px;border-radius:16px;background:#F4F5F7;color:#3D464B;display:flex;align-items:center;justify-content:center;gap:8px;font-size:15px;font-weight:700"><svg width="18" height="18"><use href="#v-share"/></svg>게시판에 올리기</div>
+            </div>
+          </div>
+        </div>
+        <figcaption style="display:flex;flex-direction:column;gap:5px;max-width:306px">
+          <span style="font-size:16px;font-weight:750;letter-spacing:-.02em">05 · 저장 완료</span>
+          <span style="font-size:14px;line-height:1.55;color:#6B747A">희귀 등급만 골드 카드로 축하합니다. 일반 종은 같은 화면에서 카드 색만 회백색으로 내려갑니다.</span>
+        </figcaption>
+      </figure>
+
+      <figure style="margin:0;display:flex;flex-direction:column;gap:16px;width:max-content">
+        <div style="width:306px;height:731px;border-radius:40px;position:relative;overflow:hidden;background:#fff;box-shadow:0 0 0 1px rgba(17,20,23,.07),0 30px 60px -30px rgba(17,20,23,.35)">
+          <div style="width:360px;height:860px;transform:scale(.85);transform-origin:0 0;position:absolute;top:0;left:0;background:#F4F5F7;color:#111417;overflow:hidden">
+            <div style="height:46px;display:flex;align-items:center;justify-content:space-between;padding:0 24px 0 28px;font-size:14px;font-weight:700"><span>9:41</span><span style="width:22px;height:11px;border-radius:3px;background:#111417;opacity:.75"></span></div>
+
+            <div style="height:52px;padding:0 20px;display:flex;align-items:center;gap:8px">
+              <span style="font-size:21px;font-weight:800;letter-spacing:-.035em">낚시지수</span>
+              <span style="flex:1"></span>
+              <span style="height:36px;padding:0 13px;border-radius:10px;background:#fff;display:flex;align-items:center;gap:6px;font-size:14px;font-weight:700;color:#3D464B;white-space:nowrap"><svg width="16" height="16" style="color:#9BA3A8"><use href="#v-pin"/></svg>지역</span>
+            </div>
+
+            <div style="display:flex;gap:7px;padding:6px 20px 0">
+              <span style="height:36px;border-radius:10px;padding:0 14px;display:flex;align-items:center;background:#111417;color:#fff;font-size:14px;font-weight:700;white-space:nowrap">부산 기장</span>
+              <span style="height:36px;border-radius:10px;padding:0 14px;display:flex;align-items:center;background:#fff;color:#5B6469;font-size:14px;font-weight:600;white-space:nowrap">인천 영종도</span>
+              <span style="height:36px;border-radius:10px;padding:0 14px;display:flex;align-items:center;background:#fff;color:#5B6469;font-size:14px;font-weight:600;white-space:nowrap">여수 돌산</span>
+            </div>
+
+            <div style="padding:16px 20px 0;display:flex;flex-direction:column;gap:10px">
+              <div style="background:#fff;border-radius:22px;padding:20px">
+                <div style="display:flex;align-items:center;gap:10px">
+                  <span style="flex:1;min-width:0;font-size:18px;font-weight:750;letter-spacing:-.025em">기장 학리</span>
+                  <span style="padding:5px 11px;border-radius:999px;background:#E9F7F3;color:#0A8A72;font-size:13px;font-weight:750;white-space:nowrap">아주 좋음</span>
+                </div>
+                <p style="margin:10px 0 0;font-size:14.5px;line-height:1.6;color:#6B747A">바람 약하고 파고 낮습니다</p>
+                <div style="margin-top:16px;display:flex">
+                  <div style="flex:1;display:flex;flex-direction:column;gap:5px"><span style="font-size:12.5px;font-weight:600;color:#9BA3A8">수온</span><span style="font-size:17px;font-weight:750;letter-spacing:-.03em;font-variant-numeric:tabular-nums">18.4<span style="margin-left:2px">℃</span></span></div>
+                  <div style="flex:1;display:flex;flex-direction:column;gap:5px"><span style="font-size:12.5px;font-weight:600;color:#9BA3A8">파고</span><span style="font-size:17px;font-weight:750;letter-spacing:-.03em;font-variant-numeric:tabular-nums">0.4<span style="margin-left:3px">m</span></span></div>
+                  <div style="flex:1;display:flex;flex-direction:column;gap:5px"><span style="font-size:12.5px;font-weight:600;color:#9BA3A8">풍속</span><span style="font-size:17px;font-weight:750;letter-spacing:-.03em;font-variant-numeric:tabular-nums">2.1<span style="margin-left:3px">㎧</span></span></div>
+                </div>
+              </div>
+
+              <div style="background:#fff;border-radius:22px;padding:20px">
+                <div style="display:flex;align-items:center;gap:10px">
+                  <span style="flex:1;min-width:0;font-size:18px;font-weight:750;letter-spacing:-.025em">대변항 방파제</span>
+                  <span style="padding:5px 11px;border-radius:999px;background:#EEF2FE;color:#2D55C8;font-size:13px;font-weight:750;white-space:nowrap">좋음</span>
+                </div>
+                <p style="margin:10px 0 0;font-size:14.5px;line-height:1.6;color:#6B747A">오후 들어 입질이 활발해질 것으로 보입니다</p>
+                <div style="margin-top:16px;display:flex">
+                  <div style="flex:1;display:flex;flex-direction:column;gap:5px"><span style="font-size:12.5px;font-weight:600;color:#9BA3A8">수온</span><span style="font-size:17px;font-weight:750;letter-spacing:-.03em;font-variant-numeric:tabular-nums">17.9<span style="margin-left:2px">℃</span></span></div>
+                  <div style="flex:1;display:flex;flex-direction:column;gap:5px"><span style="font-size:12.5px;font-weight:600;color:#9BA3A8">파고</span><span style="font-size:17px;font-weight:750;letter-spacing:-.03em;font-variant-numeric:tabular-nums">0.6<span style="margin-left:3px">m</span></span></div>
+                  <div style="flex:1;display:flex;flex-direction:column;gap:5px"><span style="font-size:12.5px;font-weight:600;color:#9BA3A8">풍속</span><span style="font-size:17px;font-weight:750;letter-spacing:-.03em;font-variant-numeric:tabular-nums">3.0<span style="margin-left:3px">㎧</span></span></div>
+                </div>
+              </div>
+
+              <div style="background:#fff;border-radius:22px;padding:20px;display:flex;align-items:center;gap:10px">
+                <span style="flex:1;min-width:0;font-size:18px;font-weight:750;letter-spacing:-.025em">포항 구룡포</span>
+                <span style="padding:5px 11px;border-radius:999px;background:#FDEDEA;color:#C7382A;font-size:13px;font-weight:750;white-space:nowrap">나쁨</span>
+              </div>
+
+              <div style="background:#fff;border-radius:22px;padding:20px;display:flex;align-items:center;gap:10px">
+                <span style="flex:1;min-width:0;font-size:18px;font-weight:750;letter-spacing:-.025em">거제 지세포</span>
+                <span style="padding:5px 11px;border-radius:999px;background:#FFF3E4;color:#B57612;font-size:13px;font-weight:750;white-space:nowrap">보통</span>
+              </div>
+            </div>
+
+            <div style="position:absolute;left:0;right:0;bottom:0;background:#fff;padding:8px 0 22px;box-shadow:0 -1px 0 rgba(17,20,23,.06)">
+              <div style="display:flex;align-items:center">
+                <span style="flex:1;display:flex;flex-direction:column;align-items:center;gap:4px;color:#B5BBBF"><svg width="24" height="24"><use href="#v-home"/></svg><span style="font-size:11px;font-weight:600">홈</span></span>
+                <span style="flex:1;display:flex;flex-direction:column;align-items:center;gap:4px;color:#111417"><svg width="24" height="24"><use href="#v-wave"/></svg><span style="font-size:11px;font-weight:700">지수</span></span>
+                <span style="flex:1;display:flex;flex-direction:column;align-items:center;gap:4px;color:#B5BBBF"><svg width="24" height="24"><use href="#v-book"/></svg><span style="font-size:11px;font-weight:600">도감</span></span>
+                <span style="flex:1;display:flex;flex-direction:column;align-items:center;gap:4px;color:#B5BBBF"><svg width="24" height="24"><use href="#v-chat"/></svg><span style="font-size:11px;font-weight:600">게시판</span></span>
+                <span style="flex:1;display:flex;flex-direction:column;align-items:center;gap:4px;color:#B5BBBF"><svg width="24" height="24"><use href="#v-user"/></svg><span style="font-size:11px;font-weight:600">마이</span></span>
+              </div>
+            </div>
+          </div>
+        </div>
+        <figcaption style="display:flex;flex-direction:column;gap:5px;max-width:306px">
+          <span style="font-size:16px;font-weight:750;letter-spacing:-.02em">06 · 지수 목록</span>
+          <span style="font-size:14px;line-height:1.55;color:#6B747A">등급은 배지 색으로만 구분하고 점 표시를 뺐습니다. 데이터가 없는 포인트는 한 줄로 접혀 목록 리듬이 유지됩니다.</span>
+        </figcaption>
+      </figure>
+
+    </div>
+  </section>
+
+  <section style="padding:48px 0 96px;border-top:1px solid rgba(17,20,23,.08)">
+    <h2 style="margin:32px 0 8px;font-size:26px;line-height:1.25;letter-spacing:-.03em;font-weight:750">다음에 필요한 것</h2>
+    <p style="margin:0 0 28px;font-size:15px;line-height:1.6;color:#6B747A">여기서 더 올리려면 시안 손질보다 재료가 필요합니다.</p>
+    <div style="display:grid;gap:14px;grid-template-columns:repeat(auto-fit,minmax(264px,1fr))">
+      <div style="background:#fff;border-radius:18px;padding:22px">
+        <h3 style="margin:0 0 8px;font-size:16px;font-weight:750;letter-spacing:-.02em">실제 조황 사진</h3>
+        <p style="margin:0;font-size:14px;line-height:1.6;color:#6B747A">도감·상세·완료 화면의 인상은 8할이 사진입니다. 대여섯 장만 있으면 바로 끼웁니다.</p>
+      </div>
+      <div style="background:#fff;border-radius:18px;padding:22px">
+        <h3 style="margin:0 0 8px;font-size:16px;font-weight:750;letter-spacing:-.02em">어종 리스트 확정</h3>
+        <p style="margin:0;font-size:14px;line-height:1.6;color:#6B747A">78종은 임시 숫자입니다. 실제 목록과 희귀 지정이 나오면 그리드 구조를 그에 맞춥니다.</p>
+      </div>
+      <div style="background:#fff;border-radius:18px;padding:22px">
+        <h3 style="margin:0 0 8px;font-size:16px;font-weight:750;letter-spacing:-.02em">브랜드 컬러</h3>
+        <p style="margin:0;font-size:14px;line-height:1.6;color:#6B747A">지금 초록(#0B9E82)은 제 선택입니다. 정해진 브랜드 컬러가 있으면 전체를 그 색으로 돌립니다.</p>
+      </div>
+      <div style="background:#fff;border-radius:18px;padding:22px">
+        <h3 style="margin:0 0 8px;font-size:16px;font-weight:750;letter-spacing:-.02em">게시판 화면</h3>
+        <p style="margin:0;font-size:14px;line-height:1.6;color:#6B747A">기록이 게시판으로 흘러가는 구조라 목록·상세도 같은 문법으로 다시 그려야 합니다.</p>
+      </div>
+    </div>
+  </section>
+</div>
+
+</x-dc>
+<script type="text/x-dc" data-dc-script data-props="{&quot;showLocked&quot;:{&quot;editor&quot;:&quot;boolean&quot;,&quot;default&quot;:true,&quot;tsType&quot;:&quot;boolean&quot;,&quot;section&quot;:&quot;도감&quot;}}">
+class Component extends DCLogic {
+  renderVals() {
+    return { showLocked: this.props.showLocked ?? true };
+  }
+}
+
+</script>
+</body>
+</html>

@@ -1,0 +1,158 @@
+import '../data/catch_seed.dart';
+import '../data/mock_data.dart';
+import '../data/species_seed.dart';
+import '../models/models.dart';
+import 'fishing_repository.dart';
+
+/// 시드 데이터로 응답하는 구현.
+/// 백엔드 app-fishing이 뜨기 전까지 기본값이다.
+///
+/// 도감은 서버가 합쳐주는 형태지만, 여기서는 어종 마스터와 조과 기록을
+/// 클라이언트에서 합쳐 [CollectionEntry]를 만든다.
+class MockFishingRepository implements FishingRepository {
+  MockFishingRepository();
+
+  /// 로딩 상태가 실제로 보이도록 짧은 지연을 준다.
+  static const _latency = Duration(milliseconds: 220);
+
+  /// 등록/삭제가 화면에 반영되도록 들고 있는 목록. 실제 구현에서는 서버가 소유한다.
+  ///
+  /// static이 아니라 인스턴스 필드다 — static으로 두면 위젯 테스트끼리
+  /// 등록 결과를 공유해서 실행 순서에 따라 결과가 달라진다.
+  final List<CatchRecord> _catches = [...CatchSeed.all];
+
+  @override
+  Future<List<RegionGroup>> fetchRegions() async {
+    await Future.delayed(_latency);
+    return MockData.regions;
+  }
+
+  @override
+  Future<List<RegionGroup>> searchRegions(String query) async {
+    await Future.delayed(_latency);
+    final q = query.trim();
+    if (q.isEmpty) return MockData.regions;
+    return MockData.regions
+        .where((r) => r.name.contains(q) || r.area.contains(q))
+        .toList();
+  }
+
+  @override
+  Future<List<Spot>> fetchSpots(int regionGroupId) async {
+    await Future.delayed(_latency);
+    return MockData.spots.where((s) => s.regionGroupId == regionGroupId).toList();
+  }
+
+  @override
+  Future<Spot> fetchSpot(int id) async {
+    await Future.delayed(_latency);
+    return MockData.spots.firstWhere(
+      (s) => s.id == id,
+      orElse: () => MockData.spots.first,
+    );
+  }
+
+  @override
+  Future<List<CollectionEntry>> fetchCollection() async {
+    await Future.delayed(_latency);
+    return _buildCollection();
+  }
+
+  @override
+  Future<CollectionEntry> fetchCollectionEntry(int speciesId) async {
+    await Future.delayed(_latency);
+    return _entryFor(
+      SpeciesSeed.all.firstWhere(
+        (s) => s.id == speciesId,
+        orElse: () => SpeciesSeed.all.first,
+      ),
+    );
+  }
+
+  @override
+  Future<List<CatchRecord>> fetchCatches({int? speciesId}) async {
+    await Future.delayed(_latency);
+    final list = _catches
+        .where((c) => speciesId == null || c.speciesId == speciesId)
+        .toList();
+    list.sort((a, b) => b.caughtAt.compareTo(a.caughtAt));
+    return list;
+  }
+
+  @override
+  Future<CatchResult> registerCatch(CatchDraft draft) async {
+    await Future.delayed(_latency);
+
+    final species = SpeciesSeed.all.firstWhere((s) => s.id == draft.speciesId);
+    final firstCatch = !_catches.any((c) => c.speciesId == draft.speciesId);
+
+    final record = CatchRecord(
+      id: (_catches.map((c) => c.id).fold(0, (a, b) => a > b ? a : b)) + 1,
+      speciesId: species.id,
+      speciesName: species.name,
+      // 목 모드에는 사진을 올릴 서버가 없다. 시드와 같은 규칙으로 비워 두고
+      // 화면은 줄무늬 플레이스홀더를 그린다.
+      photoUrl: '',
+      lengthCm: draft.lengthCm,
+      caughtAt: draft.caughtAt,
+      spotName: draft.spotName,
+      memo: draft.memo,
+    );
+    _catches.add(record);
+
+    final owned = _catches.map((c) => c.speciesId).toSet().length;
+    return CatchResult(
+      record: record,
+      firstCatch: firstCatch,
+      ownedCount: owned,
+      totalCount: SpeciesSeed.all.length,
+    );
+  }
+
+  @override
+  Future<void> deleteCatch(int id) async {
+    await Future.delayed(_latency);
+    _catches.removeWhere((c) => c.id == id);
+  }
+
+  @override
+  Future<List<Post>> fetchPosts({
+    PostCategory? category,
+    int? regionGroupId,
+  }) async {
+    await Future.delayed(_latency);
+    return MockData.posts
+        .where((p) => category == null || p.category == category)
+        .toList();
+  }
+
+  @override
+  Future<Profile?> fetchProfile() async {
+    await Future.delayed(_latency);
+    return MockData.profile;
+  }
+
+  // ── 도감 조립 ───────────────────────────────────────────────
+
+  List<CollectionEntry> _buildCollection() =>
+      SpeciesSeed.all.map(_entryFor).toList();
+
+  /// 한 어종의 내 기록을 모아 도감 칸 하나를 만든다.
+  /// 표지 사진과 최고 기록은 가장 큰 개체의 것을 쓴다.
+  CollectionEntry _entryFor(Species species) {
+    final mine = _catches.where((c) => c.speciesId == species.id).toList();
+    if (mine.isEmpty) return CollectionEntry(species: species);
+
+    mine.sort((a, b) => b.lengthCm.compareTo(a.lengthCm));
+    final best = mine.first;
+    final first = mine.map((c) => c.caughtAt).reduce((a, b) => a.isBefore(b) ? a : b);
+
+    return CollectionEntry(
+      species: species,
+      catchCount: mine.length,
+      bestLengthCm: best.lengthCm,
+      coverPhotoUrl: best.photoUrl.isEmpty ? null : best.photoUrl,
+      firstCaughtAt: first,
+    );
+  }
+}
