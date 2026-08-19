@@ -9,6 +9,6 @@ abstract final class FeatureFlags {
   /// Rev 2: 운세 미노출. 백엔드 스키마와 배치는 유지하되 프론트는 호출하지 않는다.
   static const enableFortune = false;
 
-  /// 조과 사진 업로드. `image_picker` 연동 전까지는 더미 플레이스홀더를 쓴다.
-  static const enablePhotoPicker = false;
+  // `enablePhotoPicker` 는 제거했다. image_picker 가 붙었고, 테스트가 필요로 하는
+  // 갈림길은 플래그가 아니라 `photoPickerProvider` 를 갈아끼우는 쪽이 맞다.
 }

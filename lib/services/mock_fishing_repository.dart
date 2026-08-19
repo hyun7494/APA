@@ -90,7 +90,9 @@ class MockFishingRepository implements FishingRepository {
       id: (_catches.map((c) => c.id).fold(0, (a, b) => a > b ? a : b)) + 1,
       speciesId: species.id,
       speciesName: species.name,
-      photoUrl: draft.photoPath,
+      // 목 모드에는 사진을 올릴 서버가 없다. 시드와 같은 규칙으로 비워 두고
+      // 화면은 줄무늬 플레이스홀더를 그린다.
+      photoUrl: '',
       lengthCm: draft.lengthCm,
       caughtAt: draft.caughtAt,
       spotName: draft.spotName,

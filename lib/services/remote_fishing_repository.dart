@@ -104,6 +104,8 @@ class RemoteFishingRepository implements FishingRepository {
 
   @override
   Future<CatchResult> registerCatch(CatchDraft draft) async {
+    final photo = draft.photo;
+
     // 사진이 필수라 multipart로 보낸다 (기획서 4-3 이미지 저장 설계).
     final form = FormData.fromMap({
       'speciesId': draft.speciesId,
@@ -111,8 +113,17 @@ class RemoteFishingRepository implements FishingRepository {
       'caughtAt': draft.caughtAt.toIso8601String(),
       if (draft.spotName.isNotEmpty) 'spotName': draft.spotName,
       if (draft.memo.isNotEmpty) 'memo': draft.memo,
-      if (draft.photoPath.isNotEmpty)
-        'photo': await MultipartFile.fromFile(draft.photoPath),
+      if (photo != null)
+        'photo': MultipartFile.fromBytes(
+          photo.bytes,
+          filename: photo.name,
+          // 서버(PhotoStorageService)는 **선언된 Content-Type 으로만** 형식을
+          // 판정한다. Dio 는 보통 파일명 확장자를 보고 알아서 채워 주지만,
+          // 확장자가 없으면 application/octet-stream 으로 떨어지고 그러면
+          // 멀쩡한 JPEG 도 "JPEG 또는 PNG 사진만" 400 이 된다. 카메라가 만든
+          // 임시 파일명에는 확장자가 없을 수 있어 추측에 맡기지 않는다.
+          contentType: DioMediaType.parse(photo.mimeType),
+        ),
     });
     final res = await _dio.post<Map<String, dynamic>>(
       '/fishing/me/catches',

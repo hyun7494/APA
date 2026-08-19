@@ -4,9 +4,9 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 import 'package:intl/intl.dart';
 
-import '../config/feature_flags.dart';
 import '../models/catch_record.dart';
 import '../models/species.dart';
+import '../services/photo_picker.dart';
 import '../services/providers.dart';
 import '../theme/app_theme.dart';
 import '../widgets/app_buttons.dart';
@@ -36,8 +36,11 @@ class _CatchNewScreenState extends ConsumerState<CatchNewScreen> {
   final _spotController = TextEditingController();
   final _memoController = TextEditingController();
 
+  /// 서버 `fishing.photo.max-bytes` 와 같은 값.
+  static const _maxPhotoBytes = 15 * 1024 * 1024;
+
   Species? _species;
-  bool _hasPhoto = false;
+  PickedPhoto? _photo;
   bool _expanded = false;
   bool _submitting = false;
   DateTime _caughtAt = DateTime.now();
@@ -64,7 +67,7 @@ class _CatchNewScreenState extends ConsumerState<CatchNewScreen> {
 
   double? get _length => double.tryParse(_lengthController.text.trim());
 
-  bool get _ready => _hasPhoto && _species != null && (_length ?? 0) > 0;
+  bool get _ready => _photo != null && _species != null && (_length ?? 0) > 0;
 
   /// 선택한 어종의 금지체장보다 작으면 안내 배너를 띄운다.
   /// **등록을 막지는 않는다** — 차단하면 사용자가 길이를 거짓으로 넣게 되고
@@ -98,7 +101,7 @@ class _CatchNewScreenState extends ConsumerState<CatchNewScreen> {
                 const SizedBox(height: 22),
 
                 Reveal(index: 1, child: _PhotoField(
-                  hasPhoto: _hasPhoto,
+                  photo: _photo,
                   rare: _species?.rarity.isRare ?? false,
                   onPick: _pickPhoto,
                 )),
@@ -292,15 +295,38 @@ class _CatchNewScreenState extends ConsumerState<CatchNewScreen> {
   // ── 동작 ────────────────────────────────────────────────────
 
   Future<void> _pickPhoto() async {
-    if (!FeatureFlags.enablePhotoPicker) {
-      // image_picker 연동 전 — 자리만 채우고 플로우는 그대로 확인할 수 있게 둔다.
-      setState(() => _hasPhoto = true);
-      ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text('사진 촬영·선택은 카메라 연동 후 지원됩니다')),
-      );
-      return;
+    final source = await showModalBottomSheet<PhotoSource>(
+      context: context,
+      backgroundColor: Colors.transparent,
+      builder: (_) => const _PhotoSourceSheet(),
+    );
+    if (source == null || !mounted) return;
+
+    try {
+      final picked = await ref.read(photoPickerProvider).pick(source);
+      if (picked == null || !mounted) return;
+
+      // 서버 한도(15MB)를 넘는 사진은 여기서 잘라낸다. 올려 보고 400 을
+      // 받으면 업로드 시간을 통째로 날린 뒤에야 알게 된다.
+      if (picked.sizeBytes > _maxPhotoBytes) {
+        _toast('사진이 너무 커요 (${_mb(picked.sizeBytes)}MB). 15MB 아래로 줄여주세요');
+        return;
+      }
+      setState(() => _photo = picked);
+    } on UnsupportedPhotoException catch (e) {
+      if (mounted) _toast(e.message);
+    } catch (_) {
+      // 카메라·앨범 권한 거부가 여기로 온다. 플랫폼마다 예외 타입이 달라
+      // 하나로 묶고, 사용자가 할 수 있는 일만 알려준다.
+      if (mounted) _toast('사진을 가져오지 못했어요. 설정에서 사진·카메라 권한을 확인해 주세요');
     }
   }
+
+  void _toast(String message) => ScaffoldMessenger.of(
+    context,
+  ).showSnackBar(SnackBar(content: Text(message)));
+
+  static String _mb(int bytes) => (bytes / 1024 / 1024).toStringAsFixed(1);
 
   Future<void> _pickSpecies() async {
     final picked = await showModalBottomSheet<Species>(
@@ -330,6 +356,7 @@ class _CatchNewScreenState extends ConsumerState<CatchNewScreen> {
         speciesId: _species!.id,
         lengthCm: _length!,
         caughtAt: _caughtAt,
+        photo: _photo,
         spotName: _spotController.text.trim(),
         memo: _memoController.text.trim(),
       ),
@@ -350,20 +377,76 @@ class _CatchNewScreenState extends ConsumerState<CatchNewScreen> {
   }
 }
 
+/// 사진을 어디서 가져올지 고르는 시트.
+class _PhotoSourceSheet extends StatelessWidget {
+  const _PhotoSourceSheet();
+
+  @override
+  Widget build(BuildContext context) {
+    return SafeArea(
+      child: Container(
+        margin: const EdgeInsets.all(AppSpacing.screen),
+        padding: const EdgeInsets.all(8),
+        decoration: BoxDecoration(
+          color: AppColors.surface,
+          borderRadius: BorderRadius.circular(AppRadius.card),
+        ),
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            for (final source in PhotoSource.values) ...[
+              if (source != PhotoSource.values.first)
+                const CardDivider(margin: EdgeInsets.symmetric(horizontal: 10)),
+              PressScale(
+                onTap: () => Navigator.pop(context, source),
+                scale: 0.98,
+                child: Padding(
+                  padding: const EdgeInsets.symmetric(
+                    horizontal: 12,
+                    vertical: 16,
+                  ),
+                  child: Row(
+                    children: [
+                      LineIcon(
+                        source == PhotoSource.camera
+                            ? AppIcon.camera
+                            : AppIcon.book,
+                        size: 19,
+                        color: AppColors.accent,
+                        stroke: 1.5,
+                      ),
+                      const SizedBox(width: 12),
+                      Expanded(
+                        child: Text(source.label, style: AppText.rowValue),
+                      ),
+                    ],
+                  ),
+                ),
+              ),
+            ],
+          ],
+        ),
+      ),
+    );
+  }
+}
+
 /// ① 사진 — 상단 큰 영역. 필수.
 class _PhotoField extends StatelessWidget {
   const _PhotoField({
-    required this.hasPhoto,
+    required this.photo,
     required this.rare,
     required this.onPick,
   });
 
-  final bool hasPhoto;
+  final PickedPhoto? photo;
   final bool rare;
   final VoidCallback onPick;
 
   @override
   Widget build(BuildContext context) {
+    final picked = photo;
+
     return AppCard(
       onTap: onPick,
       padding: const EdgeInsets.all(10),
@@ -371,8 +454,39 @@ class _PhotoField extends StatelessWidget {
         aspectRatio: 4 / 3,
         child: ClipRRect(
           borderRadius: BorderRadius.circular(AppRadius.tile),
-          child: hasPhoto
-              ? PhotoPlaceholder(rare: rare)
+          child: picked != null
+              ? Stack(
+                  fit: StackFit.expand,
+                  children: [
+                    // 경로가 아니라 바이트로 그린다 — 웹에서도 같은 코드가 돈다.
+                    // 디코딩에 실패해도 화면이 깨지지 않게 줄무늬로 물러선다.
+                    Image.memory(
+                      picked.bytes,
+                      fit: BoxFit.cover,
+                      errorBuilder: (_, _, _) => PhotoPlaceholder(rare: rare),
+                    ),
+                    Positioned(
+                      right: 10,
+                      bottom: 10,
+                      child: Container(
+                        padding: const EdgeInsets.symmetric(
+                          horizontal: 10,
+                          vertical: 6,
+                        ),
+                        decoration: BoxDecoration(
+                          color: AppColors.scrim,
+                          borderRadius: BorderRadius.circular(AppRadius.pill),
+                        ),
+                        child: Text(
+                          '다시 고르기',
+                          style: AppText.badgeSmall.copyWith(
+                            color: AppColors.onAccent,
+                          ),
+                        ),
+                      ),
+                    ),
+                  ],
+                )
               : ColoredBox(
                   color: AppColors.fill,
                   child: Column(

@@ -1,5 +1,7 @@
 import 'package:flutter/material.dart';
 
+import '../services/photo_picker.dart';
+
 /// 조과 기록 — `fishing_user_catches` (기획서 3-3).
 ///
 /// 한 어종을 여러 번 등록할 수 있고, 도감 획득 여부는 해당 `speciesId`
@@ -82,7 +84,7 @@ class CatchDraft {
     required this.speciesId,
     required this.lengthCm,
     required this.caughtAt,
-    this.photoPath = '',
+    this.photo,
     this.spotName = '',
     this.memo = '',
   });
@@ -91,8 +93,8 @@ class CatchDraft {
   final double lengthCm;
   final DateTime caughtAt;
 
-  /// 로컬 사진 경로 (업로드 전)
-  final String photoPath;
+  /// 올릴 사진. 경로가 아니라 바이트다 — 웹에는 `dart:io` 파일이 없다.
+  final PickedPhoto? photo;
 
   final String spotName;
   final String memo;

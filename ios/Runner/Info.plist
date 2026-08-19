@@ -66,5 +66,11 @@
 		<string>UIInterfaceOrientationLandscapeLeft</string>
 		<string>UIInterfaceOrientationLandscapeRight</string>
 	</array>
+	<!-- image_picker. iOS 는 이 문구가 없으면 권한 대화상자를 띄우지 못하고
+	     앱이 그 자리에서 죽는다 (거부가 아니라 크래시다). -->
+	<key>NSCameraUsageDescription</key>
+	<string>조과 인증샷을 촬영하려면 카메라 접근이 필요합니다.</string>
+	<key>NSPhotoLibraryUsageDescription</key>
+	<string>도감에 올릴 인증샷을 고르려면 사진 접근이 필요합니다.</string>
 </dict>
 </plist>

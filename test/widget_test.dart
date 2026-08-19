@@ -1,3 +1,5 @@
+import 'dart:typed_data';
+
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
@@ -5,18 +7,62 @@ import 'package:intl/date_symbol_data_local.dart';
 
 import 'package:fishing_app/main.dart';
 import 'package:fishing_app/screens/catch_success_screen.dart';
+import 'package:fishing_app/services/photo_picker.dart';
 import 'package:fishing_app/widgets/app_buttons.dart';
 import 'package:fishing_app/widgets/pill_chip.dart';
 import 'package:fishing_app/widgets/spot_card.dart';
 import 'package:fishing_app/widgets/species_tile.dart';
 
+/// 항상 같은 사진 한 장을 내주는 선택기.
+///
+/// 진짜 `image_picker` 는 플랫폼 채널을 타서 위젯 테스트에서는 응답이 오지
+/// 않는다. 등록 플로우 검증은 이 대역으로 한다.
+class FakePhotoPicker implements PhotoPicker {
+  PhotoSource? lastSource;
+
+  /// 1x1 투명 PNG. 디코딩까지 되는 진짜 이미지라 미리보기도 그려진다.
+  static final bytes = Uint8List.fromList([
+    0x89, 0x50, 0x4E, 0x47, 0x0D, 0x0A, 0x1A, 0x0A, //
+    0x00, 0x00, 0x00, 0x0D, 0x49, 0x48, 0x44, 0x52,
+    0x00, 0x00, 0x00, 0x01, 0x00, 0x00, 0x00, 0x01,
+    0x08, 0x06, 0x00, 0x00, 0x00, 0x1F, 0x15, 0xC4,
+    0x89, 0x00, 0x00, 0x00, 0x0A, 0x49, 0x44, 0x41,
+    0x54, 0x78, 0x9C, 0x63, 0x00, 0x01, 0x00, 0x00,
+    0x05, 0x00, 0x01, 0x0D, 0x0A, 0x2D, 0xB4, 0x00,
+    0x00, 0x00, 0x00, 0x49, 0x45, 0x4E, 0x44, 0xAE,
+    0x42, 0x60, 0x82,
+  ]);
+
+  @override
+  Future<PickedPhoto?> pick(PhotoSource source) async {
+    lastSource = source;
+    return PickedPhoto(bytes: bytes, name: 'catch.png', mimeType: 'image/png');
+  }
+}
+
 /// 세로로 긴 화면에서 띄운다 — 상세 화면이 한 번에 다 렌더되도록.
 /// (1080x4500 @3.0 = 360x1500 논리 픽셀)
-Future<void> pumpApp(WidgetTester tester) async {
+Future<void> pumpApp(WidgetTester tester, {PhotoPicker? photoPicker}) async {
   tester.view.physicalSize = const Size(1080, 4500);
   tester.view.devicePixelRatio = 3.0;
   addTearDown(tester.view.reset);
-  await tester.pumpWidget(const ProviderScope(child: FishingApp()));
+  await tester.pumpWidget(
+    ProviderScope(
+      overrides: [
+        if (photoPicker != null)
+          photoPickerProvider.overrideWithValue(photoPicker),
+      ],
+      child: const FishingApp(),
+    ),
+  );
+  await tester.pumpAndSettle();
+}
+
+/// 사진 칸을 눌러 시트에서 [source] 를 고른다.
+Future<void> pickPhoto(WidgetTester tester, PhotoSource source) async {
+  await tester.tap(find.text('인증샷 추가'));
+  await tester.pumpAndSettle();
+  await tester.tap(find.text(source.label));
   await tester.pumpAndSettle();
 }
 
@@ -149,16 +195,19 @@ void main() {
   });
 
   testWidgets('조과를 등록하면 도감 칸이 채워지고 획득 연출로 넘어간다', (tester) async {
-    await pumpApp(tester);
+    final picker = FakePhotoPicker();
+    await pumpApp(tester, photoPicker: picker);
 
     await tester.tap(find.text('도감'));
     await tester.pumpAndSettle();
     await tester.tap(find.widgetWithText(HeaderButton, '등록'));
     await tester.pumpAndSettle();
 
-    // ① 사진 (더미 모드에서는 탭만으로 채워진다)
-    await tester.tap(find.text('인증샷 추가'));
-    await tester.pumpAndSettle();
+    // ① 사진 — 시트에서 갤러리를 고르면 대역 선택기가 한 장 내준다
+    await pickPhoto(tester, PhotoSource.gallery);
+    expect(picker.lastSource, PhotoSource.gallery);
+    expect(find.text('인증샷 추가'), findsNothing, reason: '미리보기로 바뀌어야 한다');
+    expect(find.text('다시 고르기'), findsOneWidget);
 
     // ② 어종 — 아직 등록하지 않은 종을 고른다.
     // 부시리는 시드에 기록이 없고 그리드 첫 화면에 보여 스크롤이 필요 없다.
