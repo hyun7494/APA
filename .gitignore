@@ -35,3 +35,7 @@ out/
 
 ### VS Code ###
 .vscode/
+
+### 조과 인증샷 (fishing.photo.dir) ###
+# 사용자 업로드 파일이다. 저장소에 들어갈 것이 아니고, 개인정보이기도 하다.
+data/

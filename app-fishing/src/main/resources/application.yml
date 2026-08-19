@@ -17,6 +17,14 @@ spring:
     default-schema: fishing
     create-schemas: true     # fishing 스키마가 없으면 만들어준다
 
+  servlet:
+    multipart:
+      # ⚠️ 기본값이 1MB 라 그냥 두면 스마트폰 사진(3~8MB)이 전부 거부된다.
+      #    fishing.photo.max-bytes 와 맞춰야 한다 — 여기가 더 작으면 우리 검증이 돌기도 전에
+      #    컨테이너가 먼저 끊어서 안내 문구가 달라진다.
+      max-file-size: 15MB
+      max-request-size: 20MB   # 파일 + 폼 필드 전체
+
 server:
   port: 8086
 
@@ -38,3 +46,13 @@ fishing:
     # 공공데이터포털은 Encoding/Decoding 두 키를 주는데 반드시 Decoding 키를 넣을 것
     kma-service-key: ${KMA_SERVICE_KEY:}     # 기상청
     khoa-service-key: ${KHOA_SERVICE_KEY:}   # 국립해양조사원
+
+  photo:
+    # 조과 인증샷 저장 위치 (기획서 4-3). 상대 경로면 앱의 작업 디렉터리 기준이다.
+    # ⚠️ 로컬 볼륨이라 컨테이너로 옮길 때 반드시 볼륨을 마운트할 것 — 안 하면 재배포마다
+    #    사용자 도감의 표지 사진이 통째로 사라진다.
+    dir: ${PHOTO_DIR:data/photos}
+    max-bytes: 15728640   # 15MB. spring.servlet.multipart.max-file-size 와 같은 값
+    max-edge: 1280        # 긴 변 목표 픽셀
+    thumb-edge: 320       # 도감 그리드용 썸네일
+    quality: 0.8          # JPEG 품질 80
