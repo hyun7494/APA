@@ -1,0 +1,222 @@
+import '../models/catch_record.dart';
+
+/// 내 조과 기록 시드.
+///
+/// 도감 획득 여부는 이 목록에 해당 `speciesId`가 있는지로 결정된다
+/// (기획서 3-3). 사진은 아직 없으므로 [CatchRecord.photoUrl]이 비어 있고,
+/// 화면은 줄무늬 플레이스홀더를 그린다.
+abstract final class CatchSeed {
+  static final _now = DateTime(2026, 8, 15, 6, 12);
+
+  static final all = <CatchRecord>[
+    // 감성돔 4회 — 도감 표지는 최고 기록인 42.5cm
+    CatchRecord(
+      id: 1,
+      speciesId: 1,
+      speciesName: '감성돔',
+      photoUrl: '',
+      lengthCm: 42.5,
+      caughtAt: _now.subtract(const Duration(days: 3)),
+      spotName: '기장 학리',
+      memo: '새벽 물때에 입질 폭발.',
+    ),
+    CatchRecord(
+      id: 2,
+      speciesId: 1,
+      speciesName: '감성돔',
+      photoUrl: '',
+      lengthCm: 38.0,
+      caughtAt: _now.subtract(const Duration(days: 24)),
+      spotName: '기장 학리',
+    ),
+    CatchRecord(
+      id: 3,
+      speciesId: 1,
+      speciesName: '감성돔',
+      photoUrl: '',
+      lengthCm: 31.2,
+      caughtAt: _now.subtract(const Duration(days: 96)),
+      spotName: '여수 돌산 갯바위',
+    ),
+    CatchRecord(
+      id: 4,
+      speciesId: 1,
+      speciesName: '감성돔',
+      photoUrl: '',
+      lengthCm: 28.4,
+      caughtAt: _now.subtract(const Duration(days: 331)),
+      spotName: '기장 학리',
+    ),
+
+    // 돌돔 — 희귀
+    CatchRecord(
+      id: 5,
+      speciesId: 4,
+      speciesName: '돌돔',
+      photoUrl: '',
+      lengthCm: 38.0,
+      caughtAt: _now.subtract(const Duration(days: 1)),
+      spotName: '기장 학리',
+      memo: '올해 첫 돌돔.',
+    ),
+
+    // 농어 7회
+    CatchRecord(
+      id: 6,
+      speciesId: 5,
+      speciesName: '농어',
+      photoUrl: '',
+      lengthCm: 55.2,
+      caughtAt: _now.subtract(const Duration(days: 11)),
+      spotName: '통영 사량도',
+    ),
+    CatchRecord(
+      id: 7,
+      speciesId: 5,
+      speciesName: '농어',
+      photoUrl: '',
+      lengthCm: 47.0,
+      caughtAt: _now.subtract(const Duration(days: 40)),
+      spotName: '여수 돌산 갯바위',
+    ),
+    CatchRecord(
+      id: 8,
+      speciesId: 5,
+      speciesName: '농어',
+      photoUrl: '',
+      lengthCm: 44.8,
+      caughtAt: _now.subtract(const Duration(days: 58)),
+      spotName: '통영 사량도',
+    ),
+
+    // 참돔 2회
+    CatchRecord(
+      id: 9,
+      speciesId: 3,
+      speciesName: '참돔',
+      photoUrl: '',
+      lengthCm: 48.0,
+      caughtAt: _now.subtract(const Duration(days: 8)),
+      spotName: '통영 사량도',
+    ),
+    CatchRecord(
+      id: 10,
+      speciesId: 3,
+      speciesName: '참돔',
+      photoUrl: '',
+      lengthCm: 36.5,
+      caughtAt: _now.subtract(const Duration(days: 120)),
+      spotName: '포항 구룡포',
+    ),
+
+    // 방파제 생활 어종
+    CatchRecord(
+      id: 11,
+      speciesId: 9,
+      speciesName: '볼락',
+      photoUrl: '',
+      lengthCm: 22.4,
+      caughtAt: _now.subtract(const Duration(days: 5)),
+      spotName: '기장 대변항 방파제',
+    ),
+    CatchRecord(
+      id: 12,
+      speciesId: 10,
+      speciesName: '우럭',
+      photoUrl: '',
+      lengthCm: 29.8,
+      caughtAt: _now.subtract(const Duration(days: 15)),
+      spotName: '인천 영종도 선착장',
+    ),
+    CatchRecord(
+      id: 13,
+      speciesId: 13,
+      speciesName: '전갱이',
+      photoUrl: '',
+      lengthCm: 24.1,
+      caughtAt: _now.subtract(const Duration(days: 19)),
+      spotName: '기장 대변항 방파제',
+    ),
+    CatchRecord(
+      id: 14,
+      speciesId: 12,
+      speciesName: '고등어',
+      photoUrl: '',
+      lengthCm: 31.0,
+      caughtAt: _now.subtract(const Duration(days: 21)),
+      spotName: '기장 대변항 방파제',
+    ),
+    CatchRecord(
+      id: 15,
+      speciesId: 11,
+      speciesName: '광어',
+      photoUrl: '',
+      lengthCm: 51.3,
+      caughtAt: _now.subtract(const Duration(days: 63)),
+      spotName: '인천 영종도 선착장',
+    ),
+    CatchRecord(
+      id: 16,
+      speciesId: 22,
+      speciesName: '무늬오징어',
+      photoUrl: '',
+      lengthCm: 27.6,
+      caughtAt: _now.subtract(const Duration(days: 250)),
+      spotName: '여수 돌산 갯바위',
+    ),
+    CatchRecord(
+      id: 17,
+      speciesId: 17,
+      speciesName: '쥐노래미',
+      photoUrl: '',
+      lengthCm: 33.2,
+      caughtAt: _now.subtract(const Duration(days: 74)),
+      spotName: '포항 구룡포',
+    ),
+    CatchRecord(
+      id: 18,
+      speciesId: 14,
+      speciesName: '학공치',
+      photoUrl: '',
+      lengthCm: 26.0,
+      caughtAt: _now.subtract(const Duration(days: 210)),
+      spotName: '기장 대변항 방파제',
+    ),
+    CatchRecord(
+      id: 19,
+      speciesId: 2,
+      speciesName: '벵에돔',
+      photoUrl: '',
+      lengthCm: 30.4,
+      caughtAt: _now.subtract(const Duration(days: 34)),
+      spotName: '여수 돌산 갯바위',
+    ),
+    CatchRecord(
+      id: 20,
+      speciesId: 21,
+      speciesName: '한치',
+      photoUrl: '',
+      lengthCm: 21.8,
+      caughtAt: _now.subtract(const Duration(days: 29)),
+      spotName: '통영 사량도',
+    ),
+    CatchRecord(
+      id: 21,
+      speciesId: 32,
+      speciesName: '붕어',
+      photoUrl: '',
+      lengthCm: 25.5,
+      caughtAt: _now.subtract(const Duration(days: 140)),
+      spotName: '경산 저수지',
+    ),
+    CatchRecord(
+      id: 22,
+      speciesId: 31,
+      speciesName: '배스',
+      photoUrl: '',
+      lengthCm: 41.0,
+      caughtAt: _now.subtract(const Duration(days: 145)),
+      spotName: '경산 저수지',
+    ),
+  ];
+}

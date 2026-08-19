@@ -1,0 +1,26 @@
+{
+  "permissions": {
+    "allow": [
+      "PowerShell(flutter analyze --no-pub 2>&1)",
+      "PowerShell(flutter test --no-pub 2>&1)",
+      "PowerShell(flutter test --no-pub --plain-name \"������ ����ϸ�\" 2>&1)",
+      "Bash(sed -i 's|  static List<CollectionEntry> _buildCollection\\(\\) =>|  List<CollectionEntry> _buildCollection\\(\\) =>|' lib/services/mock_fishing_repository.dart)",
+      "Bash(sed -i 's|  static CollectionEntry _entryFor\\(Species species\\) {|  CollectionEntry _entryFor\\(Species species\\) {|' lib/services/mock_fishing_repository.dart)",
+      "Bash(sed -i 's|    if \\(useMockData\\) return const MockFishingRepository\\(\\);|    if \\(useMockData\\) return MockFishingRepository\\(\\);|' lib/services/providers.dart)",
+      "Bash(awk 'NR>=104 && NR<=200' \"Deep Tide v2.dc.html\")",
+      "Bash(awk 'NR>=200 && NR<=290' \"Deep Tide v2.dc.html\")",
+      "Bash(awk 'NR>=298 && NR<=400' \"Deep Tide v2.dc.html\")",
+      "Bash(awk 'NR>=400 && NR<=520' \"Deep Tide v2.dc.html\")",
+      "Bash(awk 'NR>=520 && NR<=590' \"Deep Tide v2.dc.html\")",
+      "Bash(awk 'NR>=585 && NR<=615' \"Deep Tide v2.dc.html\")",
+      "Bash(awk 'NR>=305 && NR<=345' \"Deep Tide v2.dc.html\")",
+      "Bash(awk 'NR>=345 && NR<=372' \"Deep Tide v2.dc.html\")",
+      "Bash(awk 'NR>=390 && NR<=425' \"Deep Tide v2.dc.html\")",
+      "Bash(./gradlew :app-fishing:test --console=plain -q)",
+      "Bash(echo \"EXIT=$?\")"
+    ],
+    "additionalDirectories": [
+      "c:\\Users\\et002\\IdeaProjects\\APA\\app-fishing\\src\\main\\java\\com\\apa\\fishing\\domain"
+    ]
+  }
+}
