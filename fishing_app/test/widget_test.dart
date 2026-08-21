@@ -60,7 +60,7 @@ Future<void> pumpApp(WidgetTester tester, {PhotoPicker? photoPicker}) async {
 
 /// 사진 칸을 눌러 시트에서 [source] 를 고른다.
 Future<void> pickPhoto(WidgetTester tester, PhotoSource source) async {
-  await tester.tap(find.text('인증샷 추가'));
+  await tester.tap(find.text('사진 추가'));
   await tester.pumpAndSettle();
   await tester.tap(find.text(source.label));
   await tester.pumpAndSettle();
@@ -177,7 +177,7 @@ void main() {
     expect(find.text('MY RECORDS'), findsOneWidget);
   });
 
-  testWidgets('도감에서 조과 등록 화면으로 들어간다', (tester) async {
+  testWidgets('도감에서 기록 추가 화면으로 들어간다', (tester) async {
     await pumpApp(tester);
 
     await tester.tap(find.text('도감'));
@@ -187,14 +187,14 @@ void main() {
     await tester.tap(find.widgetWithText(HeaderButton, '등록'));
     await tester.pumpAndSettle();
 
-    expect(find.text('조과 등록'), findsOneWidget);
-    // 사진·어종·길이가 모두 비어 있으면 등록 버튼은 비활성이다
-    expect(find.text('인증샷 추가'), findsOneWidget);
-    expect(find.text('어종 선택'), findsOneWidget);
-    expect(find.text('도감에 등록하기'), findsOneWidget);
+    expect(find.text('기록 추가'), findsOneWidget);
+    // 사진·어종·길이가 모두 비어 있으면 저장 버튼은 비활성이다
+    expect(find.text('사진 추가'), findsOneWidget);
+    expect(find.text('선택'), findsOneWidget);
+    expect(find.text('기록 저장'), findsOneWidget);
   });
 
-  testWidgets('조과를 등록하면 도감 칸이 채워지고 획득 연출로 넘어간다', (tester) async {
+  testWidgets('기록을 추가하면 도감 칸이 채워지고 획득 연출로 넘어간다', (tester) async {
     final picker = FakePhotoPicker();
     await pumpApp(tester, photoPicker: picker);
 
@@ -206,33 +206,36 @@ void main() {
     // ① 사진 — 시트에서 갤러리를 고르면 대역 선택기가 한 장 내준다
     await pickPhoto(tester, PhotoSource.gallery);
     expect(picker.lastSource, PhotoSource.gallery);
-    expect(find.text('인증샷 추가'), findsNothing, reason: '미리보기로 바뀌어야 한다');
+    expect(find.text('사진 추가'), findsNothing, reason: '미리보기로 바뀌어야 한다');
     expect(find.text('다시 고르기'), findsOneWidget);
 
     // ② 어종 — 아직 등록하지 않은 종을 고른다.
     // 부시리는 시드에 기록이 없고 그리드 첫 화면에 보여 스크롤이 필요 없다.
-    await tester.tap(find.text('어종 선택'));
+    await tester.tap(find.text('선택'));
     await tester.pumpAndSettle();
     await tester.tap(find.text('부시리'));
     await tester.pumpAndSettle();
     expect(find.text('부시리'), findsOneWidget);
-    expect(find.text('어종 선택'), findsNothing);
+    expect(find.text('선택'), findsNothing);
 
-    // ③ 길이 — 시트가 닫혀 화면에 남은 입력란은 길이 하나뿐이다
-    await tester.enterText(find.byType(TextField), '62.5');
+    // ③ 길이 — 입력란이 셋(길이·포인트·메모)이라 힌트로 길이 칸을 집는다
+    final lengthField = find.byWidgetPredicate(
+      (w) => w is TextField && w.decoration?.hintText == '0.0',
+    );
+    await tester.enterText(lengthField, '62.5');
     await tester.pumpAndSettle();
     expect(find.text('62.5'), findsOneWidget);
 
-    await tester.tap(find.text('도감에 등록하기'));
+    await tester.tap(find.text('기록 저장'));
     await tester.pump();
-    expect(find.text('등록 중…'), findsOneWidget);
+    expect(find.text('저장 중…'), findsOneWidget);
     // 목 리포지토리의 220ms 지연을 넘긴다. pumpAndSettle은 돌아가는 애니메이션이
     // 없으면 시계를 그만큼 진행시키지 않아 등록 Future가 끝나지 않는다.
     await tester.pump(const Duration(milliseconds: 400));
     await tester.pumpAndSettle();
 
     // 첫 등록이므로 획득 연출 화면으로 간다
-    expect(find.text('조과 등록'), findsNothing, reason: '등록 폼에서 벗어나야 한다');
+    expect(find.text('기록 추가'), findsNothing, reason: '등록 폼에서 벗어나야 한다');
     expect(find.byType(CatchSuccessScreen), findsOneWidget);
     // 부시리는 희귀 등급이라 머리말이 희귀 문구로 갈린다
     expect(find.text('희귀 어종 획득'), findsOneWidget);

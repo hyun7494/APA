@@ -16,11 +16,21 @@ import '../widgets/photo_placeholder.dart';
 import '../widgets/press_scale.dart';
 import '../widgets/reveal.dart';
 
-/// 조과 등록 — 사진 · 어종 · 길이 · (선택) 장소·날짜·메모.
+/// 기록 추가 — 사진 · 어종 · 길이 · 일시 · 포인트 · 메모.
 ///
 /// 단계별 페이지 전환은 마찰만 늘리므로 **한 화면에 세로로 전부 배치**한다
 /// (기획서 5-4). 어종과 길이는 사용자가 직접 고르고 직접 잰다 — 자동 판별은
 /// 오탐이 영구 기록을 오염시키기 때문에 Rev 2에서 폐기했다.
+///
+/// 시안 `Deep Tide Light.dc.html` Screen 04 기준. 일시·포인트는 접어 두지 않고
+/// **자동 채움값을 처음부터 보여주고 고칠 수만 있게** 둔다 — 접어 두면 기본값이
+/// 무엇인지 모른 채 저장하게 된다.
+///
+/// 시안과 다른 두 곳은 **서버가 아직 못 받기 때문**이다. 백엔드가 열리면 함께 바꾼다:
+/// - 사진이 1장이다. 시안은 최대 5장(`PHOTOS · 1 / 5`)이지만
+///   `fishing_user_catches.photo_url` 이 단일 컬럼이다.
+/// - 길이가 필수다. 시안은 `길이 (선택)` 이지만 컬럼이 `NOT NULL` 이고
+///   `CatchCreateRequest.normalizeLength()` 가 null 이면 400 을 낸다.
 class CatchNewScreen extends ConsumerStatefulWidget {
   const CatchNewScreen({super.key, this.initialSpeciesId});
 
@@ -39,9 +49,12 @@ class _CatchNewScreenState extends ConsumerState<CatchNewScreen> {
   /// 서버 `fishing.photo.max-bytes` 와 같은 값.
   static const _maxPhotoBytes = 15 * 1024 * 1024;
 
+  /// 서버 `CatchCreateRequest.MEMO_LIMIT` 과 같은 값.
+  /// 시안은 500 이지만 컬럼이 `VARCHAR(300)` 이라 넘기면 서버가 거절한다.
+  static const _memoLimit = 300;
+
   Species? _species;
   PickedPhoto? _photo;
-  bool _expanded = false;
   bool _submitting = false;
   DateTime _caughtAt = DateTime.now();
 
@@ -97,9 +110,11 @@ class _CatchNewScreenState extends ConsumerState<CatchNewScreen> {
                 AppSpacing.navClearance,
               ),
               children: [
-                Reveal(child: Text('조과 등록', style: AppText.screenTitle)),
+                Reveal(child: Text('기록 추가', style: AppText.screenTitle)),
                 const SizedBox(height: 22),
 
+                const Reveal(index: 1, child: _SectionLabel('PHOTOS')),
+                const SizedBox(height: 10),
                 Reveal(index: 1, child: _PhotoField(
                   photo: _photo,
                   rare: _species?.rarity.isRare ?? false,
@@ -107,16 +122,7 @@ class _CatchNewScreenState extends ConsumerState<CatchNewScreen> {
                 )),
                 const SizedBox(height: AppSpacing.gap),
 
-                Reveal(
-                  index: 2,
-                  child: _SpeciesField(
-                    species: _species,
-                    onPick: _pickSpecies,
-                  ),
-                ),
-                const SizedBox(height: AppSpacing.gap),
-
-                Reveal(index: 3, child: _lengthField()),
+                Reveal(index: 2, child: _detailCard()),
 
                 if (_underLegalSize) ...[
                   const SizedBox(height: 10),
@@ -124,22 +130,22 @@ class _CatchNewScreenState extends ConsumerState<CatchNewScreen> {
                 ],
                 const SizedBox(height: AppSpacing.gap),
 
-                Reveal(index: 4, child: _optionalSection()),
+                Reveal(index: 3, child: _memoCard()),
                 const SizedBox(height: AppSpacing.section),
 
                 Reveal(
-                  index: 5,
+                  index: 4,
                   child: PrimaryButton(
-                    label: _submitting ? '등록 중…' : '도감에 등록하기',
+                    label: _submitting ? '저장 중…' : '기록 저장',
                     icon: AppIcon.check,
                     onPressed: _ready && !_submitting ? _submit : null,
                   ),
                 ),
                 const SizedBox(height: 14),
                 const Reveal(
-                  index: 6,
+                  index: 5,
                   child: NoticeLine(
-                    text: '도감은 검증되지 않은 개인 기록입니다. 어종과 길이는 직접 입력한 값이 그대로 저장됩니다.',
+                    text: '기록은 내 도감에만 저장됩니다. 게시판 공개는 저장 후 따로 선택합니다.',
                   ),
                 ),
               ],
@@ -150,145 +156,186 @@ class _CatchNewScreenState extends ConsumerState<CatchNewScreen> {
     );
   }
 
-  Widget _lengthField() {
-    return AppCard(
-      padding: const EdgeInsets.fromLTRB(18, 16, 18, 18),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          Row(
-            children: [
-              const LineIcon(
-                AppIcon.ruler,
-                size: 15,
-                color: AppColors.accent,
-                stroke: 1.4,
-              ),
-              const SizedBox(width: 8),
-              Expanded(child: Text('길이', style: AppText.cardLabel)),
-              Text('필수', style: AppText.caption),
-            ],
-          ),
-          const SizedBox(height: 14),
-          Row(
-            crossAxisAlignment: CrossAxisAlignment.baseline,
-            textBaseline: TextBaseline.alphabetic,
-            children: [
-              Expanded(
-                child: TextField(
-                  controller: _lengthController,
-                  onChanged: (_) => setState(() {}),
-                  keyboardType: const TextInputType.numberWithOptions(
-                    decimal: true,
-                  ),
-                  inputFormatters: [
-                    // 소수점 1자리까지만
-                    FilteringTextInputFormatter.allow(RegExp(r'^\d{0,3}\.?\d?')),
-                  ],
-                  cursorColor: AppColors.accent,
-                  style: AppText.numberLarge,
-                  decoration: const InputDecoration(
-                    hintText: '0.0',
-                    isDense: true,
-                  ),
-                ),
-              ),
-              Text('cm', style: AppText.numberMedium.copyWith(
-                color: AppColors.faint,
-                fontSize: 16,
-              )),
-            ],
-          ),
-        ],
-      ),
-    );
-  }
+  /// 어종 · 길이 · 일시 · 포인트 — 시안 Screen 04 의 한 장짜리 입력 카드.
+  ///
+  /// 넷을 각각 카드로 띄우면 화면이 세로로 길어져 저장 버튼이 접힌다.
+  /// 시안대로 한 카드 안에 행으로 눕힌다.
+  Widget _detailCard() {
+    final species = _species;
 
-  Widget _optionalSection() {
     return AppCard(
-      padding: EdgeInsets.fromLTRB(18, 16, 18, _expanded ? 18 : 16),
-      onTap: _expanded ? null : () => setState(() => _expanded = true),
+      padding: const EdgeInsets.symmetric(horizontal: 18),
       child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          Row(
-            children: [
-              Expanded(child: Text('선택 입력', style: AppText.cardLabel)),
-              Text(
-                _expanded ? '장소 · 날짜 · 메모' : '자세히 입력',
-                style: AppText.caption,
-              ),
-              const SizedBox(width: 6),
-              AnimatedRotation(
-                turns: _expanded ? 0.25 : 0,
-                duration: AppMotion.fast,
-                curve: AppMotion.state,
-                child: const LineIcon(
-                  AppIcon.chevronRight,
-                  size: 14,
-                  color: AppColors.faint,
-                  stroke: 1.5,
+          _tapRow(
+            label: '어종',
+            onTap: _pickSpecies,
+            value: Row(
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                Text(
+                  species?.name ?? '선택',
+                  style: species == null
+                      ? AppText.infoValue.copyWith(color: AppColors.faint)
+                      : AppText.infoValue,
                 ),
-              ),
-            ],
-          ),
-          if (_expanded) ...[
-            const SizedBox(height: 16),
-            _textRow(
-              icon: AppIcon.pin,
-              hint: '장소 (예: 기장 학리)',
-              controller: _spotController,
-            ),
-            const Divider(height: 24),
-            PressScale(
-              onTap: _pickDate,
-              child: Row(
-                children: [
+                if (species != null && species.rarity.isRare) ...[
+                  const SizedBox(width: 7),
                   const LineIcon(
-                    AppIcon.calendar,
-                    size: 16,
-                    color: AppColors.muted,
-                    stroke: 1.4,
-                  ),
-                  const SizedBox(width: 11),
-                  Expanded(child: Text('날짜', style: AppText.rowLabel)),
-                  Text(
-                    DateFormat('yyyy.MM.dd').format(_caughtAt),
-                    style: AppText.numberMedium,
+                    AppIcon.trophy,
+                    size: 13,
+                    color: AppColors.gold,
+                    stroke: 1.5,
                   ),
                 ],
-              ),
+              ],
             ),
-            const Divider(height: 24),
-            _textRow(
-              icon: AppIcon.pencil,
-              hint: '메모',
-              controller: _memoController,
+          ),
+          const CardDivider(),
+          _inputRow(
+            label: '길이',
+            controller: _lengthController,
+            hint: '0.0',
+            suffix: 'cm',
+            keyboardType: const TextInputType.numberWithOptions(decimal: true),
+            // 소수점 1자리까지만
+            formatters: [
+              FilteringTextInputFormatter.allow(RegExp(r'^\d{0,3}\.?\d?')),
+            ],
+          ),
+          const CardDivider(),
+          _tapRow(
+            label: '일시',
+            onTap: _pickDateTime,
+            // 시안은 분까지 보여준다 — 같은 날 여러 번 나간 기록이 구분된다.
+            value: Text(
+              DateFormat('MM.dd HH:mm').format(_caughtAt),
+              style: AppText.infoValue,
             ),
-          ],
+          ),
+          const CardDivider(),
+          _inputRow(
+            label: '포인트',
+            controller: _spotController,
+            hint: '기장 학리',
+          ),
         ],
       ),
     );
   }
 
-  Widget _textRow({
-    required AppIcon icon,
-    required String hint,
-    required TextEditingController controller,
+  /// 탭하면 선택기가 열리는 행.
+  Widget _tapRow({
+    required String label,
+    required Widget value,
+    required VoidCallback onTap,
   }) {
-    return Row(
-      children: [
-        LineIcon(icon, size: 16, color: AppColors.muted, stroke: 1.4),
-        const SizedBox(width: 11),
-        Expanded(
-          child: TextField(
-            controller: controller,
-            cursorColor: AppColors.accent,
-            style: AppText.body.copyWith(color: AppColors.ink),
-            decoration: InputDecoration(hintText: hint, isDense: true),
-          ),
+    return PressScale(
+      onTap: onTap,
+      scale: 0.99,
+      child: Padding(
+        padding: const EdgeInsets.symmetric(vertical: 15),
+        child: Row(
+          children: [
+            Expanded(child: Text(label, style: AppText.rowLabel)),
+            value,
+            const SizedBox(width: 8),
+            const LineIcon(
+              AppIcon.chevronRight,
+              size: 14,
+              color: AppColors.faint,
+              stroke: 1.5,
+            ),
+          ],
         ),
-      ],
+      ),
+    );
+  }
+
+  /// 그 자리에서 바로 입력하는 행. 값이 오른쪽에 붙어 [_tapRow] 와 세로선이 맞는다.
+  Widget _inputRow({
+    required String label,
+    required TextEditingController controller,
+    required String hint,
+    String? suffix,
+    TextInputType? keyboardType,
+    List<TextInputFormatter>? formatters,
+  }) {
+    return Padding(
+      padding: const EdgeInsets.symmetric(vertical: 4),
+      child: Row(
+        children: [
+          Text(label, style: AppText.rowLabel),
+          Expanded(
+            child: TextField(
+              controller: controller,
+              onChanged: (_) => setState(() {}),
+              keyboardType: keyboardType,
+              inputFormatters: formatters,
+              textAlign: TextAlign.right,
+              cursorColor: AppColors.accent,
+              style: AppText.infoValue,
+              decoration: InputDecoration(
+                hintText: hint,
+                hintStyle: AppText.infoValue.copyWith(color: AppColors.faint),
+                isDense: true,
+                contentPadding: const EdgeInsets.symmetric(vertical: 15),
+                border: InputBorder.none,
+                enabledBorder: InputBorder.none,
+                focusedBorder: InputBorder.none,
+              ),
+            ),
+          ),
+          if (suffix != null) ...[
+            const SizedBox(width: 4),
+            Text(suffix, style: AppText.unit),
+          ],
+          // 오른쪽 화살표가 있는 행과 폭을 맞춘다.
+          const SizedBox(width: 22),
+        ],
+      ),
+    );
+  }
+
+  /// 메모 — 시안은 대문자 라벨 + 글자수 카운터를 카드 바깥이 아니라 안에 둔다.
+  Widget _memoCard() {
+    // 서버는 Java `String.length()` 로 재므로 Dart 의 UTF-16 길이와 셈이 같다.
+    final used = _memoController.text.length;
+
+    return AppCard(
+      padding: const EdgeInsets.fromLTRB(18, 16, 18, 12),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Row(
+            children: [
+              Expanded(child: Text('MEMO', style: AppText.overline)),
+              Text(
+                '$used / $_memoLimit',
+                style: AppText.caption.copyWith(color: AppColors.disabled),
+              ),
+            ],
+          ),
+          TextField(
+            controller: _memoController,
+            onChanged: (_) => setState(() {}),
+            maxLines: null,
+            minLines: 3,
+            maxLength: _memoLimit,
+            cursorColor: AppColors.accent,
+            style: AppText.bodySmall.copyWith(color: AppColors.body),
+            decoration: const InputDecoration(
+              hintText: '그날의 물때, 채비, 입질 타이밍처럼 다음에 도움이 될 것들',
+              isDense: true,
+              border: InputBorder.none,
+              enabledBorder: InputBorder.none,
+              focusedBorder: InputBorder.none,
+              // 카운터를 위에 직접 그리므로 기본 카운터는 지운다.
+              counterText: '',
+            ),
+          ),
+        ],
+      ),
     );
   }
 
@@ -338,14 +385,31 @@ class _CatchNewScreenState extends ConsumerState<CatchNewScreen> {
     if (picked != null) setState(() => _species = picked);
   }
 
-  Future<void> _pickDate() async {
-    final picked = await showDatePicker(
+  /// 날짜를 고른 뒤 시각까지 이어서 묻는다. 시안이 분까지 보여주므로
+  /// 날짜만 받으면 00:00 으로 저장돼 화면에 보이는 값과 어긋난다.
+  Future<void> _pickDateTime() async {
+    final date = await showDatePicker(
       context: context,
       initialDate: _caughtAt,
       firstDate: DateTime(2020),
       lastDate: DateTime.now(),
     );
-    if (picked != null) setState(() => _caughtAt = picked);
+    if (date == null || !mounted) return;
+
+    final time = await showTimePicker(
+      context: context,
+      initialTime: TimeOfDay.fromDateTime(_caughtAt),
+    );
+    // 시각 선택을 취소하면 날짜만 반영하고 기존 시각을 지킨다.
+    setState(() {
+      _caughtAt = DateTime(
+        date.year,
+        date.month,
+        date.day,
+        time?.hour ?? _caughtAt.hour,
+        time?.minute ?? _caughtAt.minute,
+      );
+    });
   }
 
   Future<void> _submit() async {
@@ -431,6 +495,21 @@ class _PhotoSourceSheet extends StatelessWidget {
   }
 }
 
+/// 섹션을 여는 대문자 라벨 — 시안의 `PHOTOS` · `MEMO`.
+class _SectionLabel extends StatelessWidget {
+  const _SectionLabel(this.text);
+
+  final String text;
+
+  @override
+  Widget build(BuildContext context) {
+    return Padding(
+      padding: const EdgeInsets.only(left: 4),
+      child: Text(text, style: AppText.overline),
+    );
+  }
+}
+
 /// ① 사진 — 상단 큰 영역. 필수.
 class _PhotoField extends StatelessWidget {
   const _PhotoField({
@@ -499,77 +578,14 @@ class _PhotoField extends StatelessWidget {
                         stroke: 1.4,
                       ),
                       const SizedBox(height: 12),
-                      Text('인증샷 추가', style: AppText.sectionTitle),
+                      // '인증샷'이 아니라 '사진'이다 — 도감은 판정하지 않는다.
+                      Text('사진 추가', style: AppText.sectionTitle),
                       const SizedBox(height: 4),
                       Text('촬영하거나 갤러리에서 고르세요', style: AppText.caption),
                     ],
                   ),
                 ),
         ),
-      ),
-    );
-  }
-}
-
-/// ② 어종 — 탭하면 전체 화면 선택기가 열린다. 필수.
-class _SpeciesField extends StatelessWidget {
-  const _SpeciesField({required this.species, required this.onPick});
-
-  final Species? species;
-  final VoidCallback onPick;
-
-  @override
-  Widget build(BuildContext context) {
-    final s = species;
-
-    return AppCard(
-      onTap: onPick,
-      padding: const EdgeInsets.fromLTRB(18, 16, 18, 16),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          Row(
-            children: [
-              const LineIcon(
-                AppIcon.fish,
-                size: 15,
-                color: AppColors.accent,
-                stroke: 1.4,
-              ),
-              const SizedBox(width: 8),
-              Expanded(child: Text('어종', style: AppText.cardLabel)),
-              Text('필수', style: AppText.caption),
-            ],
-          ),
-          const SizedBox(height: 14),
-          Row(
-            children: [
-              Expanded(
-                child: Text(
-                  s?.name ?? '어종 선택',
-                  style: s == null
-                      ? AppText.cardLabel.copyWith(color: AppColors.faint)
-                      : AppText.cardLabel,
-                ),
-              ),
-              if (s != null && s.rarity.isRare) ...[
-                const LineIcon(
-                  AppIcon.trophy,
-                  size: 14,
-                  color: AppColors.gold,
-                  stroke: 1.5,
-                ),
-                const SizedBox(width: 8),
-              ],
-              const LineIcon(
-                AppIcon.chevronRight,
-                size: 15,
-                color: AppColors.faint,
-                stroke: 1.5,
-              ),
-            ],
-          ),
-        ],
       ),
     );
   }

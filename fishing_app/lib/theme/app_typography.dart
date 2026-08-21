@@ -91,6 +91,12 @@ abstract final class AppText {
   static TextStyle get navLabel =>
       _f(11, FontWeight.w600, 1.2, 0, color: AppColors.faint);
 
+  /// 섹션을 여는 대문자 라벨 — "PHOTOS", "MEMO" (10).
+  /// 시안의 `letter-spacing:.2em` 을 그대로 옮겼다. 자간이 넓어서 글자가
+  /// 오른쪽으로 밀리므로, 마지막 글자 뒤 여백을 감안하고 배치할 것.
+  static TextStyle get overline =>
+      _f(10, FontWeight.w700, 1.2, 2, color: AppColors.muted);
+
   static TextStyle _f(
     double size,
     FontWeight weight,

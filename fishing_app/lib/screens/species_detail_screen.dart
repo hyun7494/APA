@@ -329,7 +329,8 @@ class _Body extends ConsumerWidget {
         Reveal(
           index: 8,
           child: PrimaryButton(
-            label: '사진으로 기록 추가',
+            // 시안 Screen 03 의 버튼 문구.
+            label: '기록 추가하기',
             icon: AppIcon.camera,
             onPressed: () => context.go('/catch/new?speciesId=${species.id}'),
           ),
