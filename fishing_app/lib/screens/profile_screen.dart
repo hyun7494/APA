@@ -4,8 +4,10 @@ import 'package:go_router/go_router.dart';
 
 import '../models/profile.dart';
 import '../models/species.dart';
+import '../services/auth_controller.dart';
 import '../services/providers.dart';
 import '../theme/app_theme.dart';
+import '../widgets/app_buttons.dart';
 import '../widgets/app_card.dart';
 import '../widgets/async_view.dart';
 import '../widgets/collection_progress.dart';
@@ -24,8 +26,55 @@ class ProfileScreen extends ConsumerWidget {
     (icon: AppIcon.pin, label: '즐겨찾는 지역', route: null),
     (icon: AppIcon.bell, label: '알림 설정', route: null),
     (icon: AppIcon.headset, label: '고객센터', route: null),
-    (icon: AppIcon.logout, label: '로그아웃', route: null),
+    // 로그인 상태에 따라 라벨이 바뀌는 유일한 행이다. 아래 [_authLabel] 로 갈아끼운다.
+    (icon: AppIcon.logout, label: authLabel, route: null),
   ];
+
+  /// 메뉴 목록은 const 라 여기서 상태를 반영할 수 없다. 자리 표시자를 두고
+  /// 그릴 때 실제 라벨로 바꾼다.
+  @visibleForTesting
+  static const authLabel = '__AUTH__';
+
+  /// 로그아웃은 되돌리기 어려운 동작이라 한 번 되묻는다. 로그인은 안 묻는다 —
+  /// 어차피 다음 화면에서 취소할 수 있다.
+  static Future<void> _toggleAuth(BuildContext context, WidgetRef ref) async {
+    final loggedIn = ref.read(authControllerProvider).isLoggedIn;
+    if (!loggedIn) {
+      context.go('/login', extra: const <String, String?>{
+        'redirectTo': '/profile',
+      });
+      return;
+    }
+
+    final confirmed = await showDialog<bool>(
+      context: context,
+      builder: (dialogContext) => AlertDialog(
+        backgroundColor: AppColors.surface,
+        title: Text('로그아웃할까요?', style: AppText.cardLabel),
+        content: Text(
+          '기록은 계정에 남아 있어서 다시 로그인하면 그대로 보입니다.',
+          style: AppText.body,
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(dialogContext, false),
+            child: Text('취소', style: AppText.rowValue.copyWith(
+              color: AppColors.sub,
+            )),
+          ),
+          TextButton(
+            onPressed: () => Navigator.pop(dialogContext, true),
+            child: Text('로그아웃', style: AppText.rowValue.copyWith(
+              color: AppColors.alert,
+            )),
+          ),
+        ],
+      ),
+    );
+
+    if (confirmed != true) return;
+    await ref.read(authControllerProvider.notifier).signOut();
+  }
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
@@ -64,7 +113,7 @@ class ProfileScreen extends ConsumerWidget {
   }
 }
 
-class _Body extends StatelessWidget {
+class _Body extends ConsumerWidget {
   const _Body({
     required this.profile,
     required this.summary,
@@ -76,7 +125,7 @@ class _Body extends StatelessWidget {
   final List<({AppIcon icon, String label, String? route})> menu;
 
   @override
-  Widget build(BuildContext context) {
+  Widget build(BuildContext context, WidgetRef ref) {
     return ListView(
       physics: const BouncingScrollPhysics(),
       padding: const EdgeInsets.fromLTRB(
@@ -242,10 +291,21 @@ class _Body extends StatelessWidget {
                       child: Divider(),
                     ),
                   _MenuRow(
-                    item: menu[i],
+                    item: menu[i].label == ProfileScreen.authLabel
+                        // 로그인 상태에 따라 이 행만 문구가 바뀐다.
+                        ? (
+                            icon: menu[i].icon,
+                            label: ref.watch(authControllerProvider).isLoggedIn
+                                ? '로그아웃'
+                                : '로그인',
+                            route: null,
+                          )
+                        : menu[i],
                     onTap: () {
                       final route = menu[i].route;
-                      if (route != null) {
+                      if (menu[i].label == ProfileScreen.authLabel) {
+                        ProfileScreen._toggleAuth(context, ref);
+                      } else if (route != null) {
                         context.go(route);
                       } else {
                         ScaffoldMessenger.of(context).showSnackBar(
@@ -363,6 +423,14 @@ class _LoggedOut extends StatelessWidget {
               'APA 통합 계정으로 로그인하면\n도감과 조과 기록을 남길 수 있어요',
               style: AppText.body,
               textAlign: TextAlign.center,
+            ),
+            const SizedBox(height: 24),
+            // 여기까지 와서 로그인할 방법이 없으면 안내문만 읽고 되돌아가게 된다.
+            PrimaryButton(
+              label: '로그인',
+              onPressed: () => context.go('/login', extra: const <String, String?>{
+                'redirectTo': '/profile',
+              }),
             ),
           ],
         ),

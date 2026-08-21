@@ -7,6 +7,7 @@ import '../screens/catch_new_screen.dart';
 import '../screens/catch_success_screen.dart';
 import '../screens/collection_screen.dart';
 import '../screens/home_screen.dart';
+import '../screens/login_screen.dart';
 import '../screens/profile_screen.dart';
 import '../screens/region_search_screen.dart';
 import '../screens/score_detail_screen.dart';
@@ -27,6 +28,20 @@ import '../widgets/bottom_nav_bar.dart';
 GoRouter createAppRouter() => GoRouter(
   initialLocation: '/home',
   routes: [
+    // 셸 **밖**이다 — 로그인 화면에는 하단 탭이 뜨면 안 된다. 탭이 보이면 로그인을
+    // 건너뛸 수 있는 것처럼 보이고, 실제로 눌렀을 때 어디로 가야 할지도 모호해진다.
+    GoRoute(
+      path: '/login',
+      builder: (_, state) {
+        final extra = state.extra is Map<String, String?>
+            ? state.extra as Map<String, String?>
+            : const <String, String?>{};
+        return LoginScreen(
+          reason: extra['reason'],
+          redirectTo: extra['redirectTo'],
+        );
+      },
+    ),
     StatefulShellRoute.indexedStack(
       builder: (context, state, shell) => _Shell(shell: shell),
       branches: [

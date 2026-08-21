@@ -7,7 +7,10 @@ import 'package:intl/date_symbol_data_local.dart';
 
 import 'package:fishing_app/main.dart';
 import 'package:fishing_app/screens/catch_success_screen.dart';
+import 'package:fishing_app/services/auth_controller.dart';
+import 'package:fishing_app/services/auth_repository.dart';
 import 'package:fishing_app/services/photo_picker.dart';
+import 'package:fishing_app/services/social_sign_in.dart';
 import 'package:fishing_app/widgets/app_buttons.dart';
 import 'package:fishing_app/widgets/pill_chip.dart';
 import 'package:fishing_app/widgets/spot_card.dart';
@@ -40,9 +43,39 @@ class FakePhotoPicker implements PhotoPicker {
   }
 }
 
+/// 네트워크도 제공자 SDK 도 없는 인증 대역.
+///
+/// 진짜 [RemoteAuthRepository] 는 auth-service(:8081)로 HTTP 를 보내고 그 전에
+/// 카카오·구글 SDK 를 부른다. 위젯 테스트에서는 둘 다 응답이 없다.
+class FakeAuthRepository implements AuthRepository {
+  FakeAuthRepository({bool loggedIn = false}) : this._(loggedIn);
+
+  FakeAuthRepository._(this._loggedIn);
+
+  bool _loggedIn;
+  SocialProvider? lastProvider;
+
+  @override
+  Future<AuthUser> signIn(SocialProvider provider) async {
+    lastProvider = provider;
+    _loggedIn = true;
+    return const AuthUser(id: 7, nickname: '테스트조사');
+  }
+
+  @override
+  Future<void> signOut() async => _loggedIn = false;
+
+  @override
+  Future<bool> get isLoggedIn async => _loggedIn;
+}
+
 /// 세로로 긴 화면에서 띄운다 — 상세 화면이 한 번에 다 렌더되도록.
 /// (1080x4500 @3.0 = 360x1500 논리 픽셀)
-Future<void> pumpApp(WidgetTester tester, {PhotoPicker? photoPicker}) async {
+Future<void> pumpApp(
+  WidgetTester tester, {
+  PhotoPicker? photoPicker,
+  AuthRepository? auth,
+}) async {
   tester.view.physicalSize = const Size(1080, 4500);
   tester.view.devicePixelRatio = 3.0;
   addTearDown(tester.view.reset);
@@ -51,6 +84,8 @@ Future<void> pumpApp(WidgetTester tester, {PhotoPicker? photoPicker}) async {
       overrides: [
         if (photoPicker != null)
           photoPickerProvider.overrideWithValue(photoPicker),
+        // 기본값도 대역이다. 진짜 구현은 생성되는 순간 보안 저장소 채널을 두드린다.
+        authRepositoryProvider.overrideWithValue(auth ?? FakeAuthRepository()),
       ],
       child: const FishingApp(),
     ),
@@ -177,8 +212,38 @@ void main() {
     expect(find.text('MY RECORDS'), findsOneWidget);
   });
 
-  testWidgets('도감에서 기록 추가 화면으로 들어간다', (tester) async {
+  testWidgets('★ 비로그인으로 등록을 누르면 로그인 화면으로 보낸다', (tester) async {
     await pumpApp(tester);
+
+    await tester.tap(find.text('도감'));
+    await tester.pumpAndSettle();
+    await tester.tap(find.widgetWithText(HeaderButton, '등록'));
+    await tester.pumpAndSettle();
+
+    expect(find.text('기록 추가'), findsNothing, reason: '관문을 그냥 통과하면 안 된다');
+    expect(find.textContaining('로그인이 필요해요'), findsOneWidget);
+    expect(find.text('카카오로 시작하기'), findsOneWidget);
+    expect(find.text('Google로 시작하기'), findsOneWidget);
+  });
+
+  testWidgets('★ 로그인하면 원래 가려던 화면으로 이어진다', (tester) async {
+    final auth = FakeAuthRepository();
+    await pumpApp(tester, auth: auth);
+
+    await tester.tap(find.text('도감'));
+    await tester.pumpAndSettle();
+    await tester.tap(find.widgetWithText(HeaderButton, '등록'));
+    await tester.pumpAndSettle();
+
+    await tester.tap(find.text('카카오로 시작하기'));
+    await tester.pumpAndSettle();
+
+    expect(auth.lastProvider, SocialProvider.kakao);
+    expect(find.text('기록 추가'), findsOneWidget, reason: '로그인 후 원래 목적지로 가야 한다');
+  });
+
+  testWidgets('도감에서 기록 추가 화면으로 들어간다', (tester) async {
+    await pumpApp(tester, auth: FakeAuthRepository(loggedIn: true));
 
     await tester.tap(find.text('도감'));
     await tester.pumpAndSettle();
@@ -196,7 +261,11 @@ void main() {
 
   testWidgets('기록을 추가하면 도감 칸이 채워지고 획득 연출로 넘어간다', (tester) async {
     final picker = FakePhotoPicker();
-    await pumpApp(tester, photoPicker: picker);
+    await pumpApp(
+      tester,
+      photoPicker: picker,
+      auth: FakeAuthRepository(loggedIn: true),
+    );
 
     await tester.tap(find.text('도감'));
     await tester.pumpAndSettle();

@@ -57,6 +57,9 @@ class ApiClient {
   Future<bool> get isLoggedIn async =>
       await _storage.read(key: _accessTokenKey) != null;
 
+  /// 인터셉터를 타지 않는 요청(로그아웃)에 직접 붙이려고 꺼낸다.
+  Future<String?> get accessToken => _storage.read(key: _accessTokenKey);
+
   Future<void> _attachToken(
     RequestOptions options,
     RequestInterceptorHandler handler,

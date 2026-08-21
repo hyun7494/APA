@@ -5,6 +5,7 @@ import 'package:intl/intl.dart';
 
 import '../models/catch_record.dart';
 import '../models/species.dart';
+import '../services/login_gate.dart';
 import '../services/providers.dart';
 import '../theme/app_theme.dart';
 import '../widgets/app_buttons.dart';
@@ -332,7 +333,12 @@ class _Body extends ConsumerWidget {
             // 시안 Screen 03 의 버튼 문구.
             label: '기록 추가하기',
             icon: AppIcon.camera,
-            onPressed: () => context.go('/catch/new?speciesId=${species.id}'),
+            onPressed: () => requireLogin(
+              context,
+              ref,
+              destination: '/catch/new?speciesId=${species.id}',
+              reason: '조과를 등록하려면 로그인이 필요해요.\n기록은 계정에 저장됩니다.',
+            ),
           ),
         ),
       ],

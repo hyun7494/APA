@@ -3,6 +3,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 
 import '../models/species.dart';
+import '../services/login_gate.dart';
 import '../services/providers.dart';
 import '../theme/app_theme.dart';
 import '../widgets/app_buttons.dart';
@@ -47,7 +48,12 @@ class CollectionScreen extends ConsumerWidget {
                   label: '등록',
                   icon: AppIcon.camera,
                   filled: true,
-                  onPressed: () => context.go('/catch/new'),
+                  onPressed: () => requireLogin(
+                    context,
+                    ref,
+                    destination: '/catch/new',
+                    reason: '조과를 등록하려면 로그인이 필요해요.\n기록은 계정에 저장됩니다.',
+                  ),
                 ),
               ],
             ),

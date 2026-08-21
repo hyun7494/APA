@@ -46,3 +46,6 @@ app.*.map.json
 
 # Claude Code 로컬 설정 — 기기마다 다르다
 .claude/settings.local.json
+
+# 앱 키 · 서버 주소 (env.example.json 을 복사해서 채운다)
+env.json
