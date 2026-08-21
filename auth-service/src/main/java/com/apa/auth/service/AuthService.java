@@ -12,7 +12,6 @@ import com.apa.auth.repository.RefreshTokenRepository;
 import com.apa.auth.repository.UserAppLinkRepository;
 import com.apa.auth.repository.UserRepository;
 import com.apa.auth.social.SocialProfile;
-import com.apa.auth.social.SocialVerificationException;
 import com.apa.auth.social.SocialVerifiers;
 import com.apa.common.security.JwtTokenProvider;
 import lombok.RequiredArgsConstructor;
@@ -172,10 +171,5 @@ public class AuthService {
         if (appId == null || appId.isBlank()) return AuthProperties.DEFAULT_APP_ID;
         String trimmed = appId.trim().toUpperCase(java.util.Locale.ROOT);
         return trimmed.length() <= 20 ? trimmed : trimmed.substring(0, 20);
-    }
-
-    /** 제공자 장애는 401 이 아니라 503 이다 — 사용자가 고칠 수 있는 문제가 아니다. */
-    public static boolean isProviderOutage(SocialVerificationException e) {
-        return e.isProviderUnavailable();
     }
 }
