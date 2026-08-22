@@ -2,7 +2,9 @@ package com.apa.fishing.batch.publicapi;
 
 import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.ObjectMapper;
+import org.springframework.web.reactive.function.client.WebClientResponseException;
 
+import java.nio.charset.StandardCharsets;
 import java.util.function.BiFunction;
 
 /**
@@ -58,5 +60,26 @@ public final class PublicApiResponse {
 
     public static String summarize(String body) {
         return body.length() <= 200 ? body : body.substring(0, 200) + "…";
+    }
+
+    /**
+     * HTTP 오류의 <b>사유</b>까지 담은 메시지.
+     *
+     * <p>4xx·5xx 면 WebClient 는 본문을 주지 않고 예외를 던진다. 그런데 <b>진짜 원인은 그 본문에
+     * 있다</b> — 포털은 403 을 내면서 본문에 {@code SERVICE_KEY_IS_NOT_REGISTERED_ERROR} 같은
+     * 코드를 담는다. 상태만 남기면 로그에 "403 Forbidden" 이 전부라, 키가 틀린 것인지 활용신청이
+     * 죽은 것인지 트래픽을 넘긴 것인지 구분할 수 없다 (2026-08-19~22 에 여기서 사흘 헤맸다).
+     *
+     * <p>본문은 한 줄로 접어서 붙인다. 포털 오류 봉투는 여러 줄 JSON·XML 이라 그대로 넣으면
+     * 로그 한 건이 화면을 덮는다. <b>요청 URI 는 넣지 않는다 — 서비스키가 그 안에 있다.</b>
+     */
+    public static String describe(Exception e) {
+        if (e instanceof WebClientResponseException failure) {
+            String body = failure.getResponseBodyAsString(StandardCharsets.UTF_8);
+            if (body != null && !body.isBlank()) {
+                return e.getMessage() + " — 응답: " + summarize(body.replaceAll("\\s+", " ").trim());
+            }
+        }
+        return e.getMessage();
     }
 }

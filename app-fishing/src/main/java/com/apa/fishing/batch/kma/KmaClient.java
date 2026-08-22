@@ -1,6 +1,7 @@
 package com.apa.fishing.batch.kma;
 
 import com.apa.fishing.batch.KmaBaseTime;
+import com.apa.fishing.batch.publicapi.PublicApiResponse;
 import com.apa.fishing.batch.publicapi.PublicApiUri;
 import com.apa.fishing.config.PublicApiProperties;
 import org.springframework.stereotype.Component;
@@ -74,8 +75,8 @@ public class KmaClient {
                     .timeout(TIMEOUT)
                     .block();
         } catch (Exception e) {
-            throw new KmaApiException(
-                    "단기예보 호출 실패 (nx=" + nx + ", ny=" + ny + "): " + e.getMessage(), e);
+            throw new KmaApiException("단기예보 호출 실패 (nx=" + nx + ", ny=" + ny + "): "
+                    + PublicApiResponse.describe(e), e);
         }
 
         return VilageFcstParser.parse(body, targetDate);

@@ -1,5 +1,6 @@
 package com.apa.fishing.batch.khoa;
 
+import com.apa.fishing.batch.publicapi.PublicApiResponse;
 import com.apa.fishing.batch.publicapi.PublicApiUri;
 import com.apa.fishing.config.PublicApiProperties;
 import org.springframework.stereotype.Component;
@@ -86,8 +87,8 @@ public class KhoaClient {
                     .timeout(TIMEOUT)
                     .block();
         } catch (Exception e) {
-            throw new KhoaApiException(
-                    "바다낚시지수 호출 실패 (placeName=" + placeName + "): " + e.getMessage(), e);
+            throw new KhoaApiException("바다낚시지수 호출 실패 (placeName=" + placeName + "): "
+                    + PublicApiResponse.describe(e), e);
         }
 
         return FishingIndexParser.parse(body, targetDate);
