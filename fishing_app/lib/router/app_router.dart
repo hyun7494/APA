@@ -12,6 +12,7 @@ import '../screens/profile_screen.dart';
 import '../screens/region_search_screen.dart';
 import '../screens/score_detail_screen.dart';
 import '../screens/score_list_screen.dart';
+import '../screens/signup_screen.dart';
 import '../screens/species_detail_screen.dart';
 import '../theme/app_theme.dart';
 import '../widgets/bottom_nav_bar.dart';
@@ -40,6 +41,16 @@ GoRouter createAppRouter() => GoRouter(
           reason: extra['reason'],
           redirectTo: extra['redirectTo'],
         );
+      },
+    ),
+    // 로그인 화면 위에 쌓인다 (`push`) — 가입을 그만두면 로그인으로 되돌아가야 한다.
+    GoRoute(
+      path: '/signup',
+      builder: (_, state) {
+        final extra = state.extra is Map<String, String?>
+            ? state.extra as Map<String, String?>
+            : const <String, String?>{};
+        return SignUpScreen(redirectTo: extra['redirectTo']);
       },
     ),
     StatefulShellRoute.indexedStack(

@@ -48,16 +48,65 @@ class FakePhotoPicker implements PhotoPicker {
 /// 진짜 [RemoteAuthRepository] 는 auth-service(:8081)로 HTTP 를 보내고 그 전에
 /// 카카오·구글 SDK 를 부른다. 위젯 테스트에서는 둘 다 응답이 없다.
 class FakeAuthRepository implements AuthRepository {
-  FakeAuthRepository({bool loggedIn = false}) : this._(loggedIn);
+  FakeAuthRepository({bool loggedIn = false, bool linkRequired = false})
+    : this._(loggedIn, linkRequired);
 
-  FakeAuthRepository._(this._loggedIn);
+  FakeAuthRepository._(this._loggedIn, this.linkRequired);
 
   bool _loggedIn;
   SocialProvider? lastProvider;
 
+  /// 소셜 로그인 때 "같은 이메일의 계정이 이미 있다"를 흉내낼지.
+  /// 계정 연동 흐름을 위젯 테스트로 밟아 보려면 이 갈래가 필요하다.
+  final bool linkRequired;
+
+  String? lastEmail;
+  String? lastPassword;
+  String? lastNickname;
+  bool linkedSocial = false;
+
   @override
   Future<AuthUser> signIn(SocialProvider provider) async {
     lastProvider = provider;
+    if (linkRequired && !linkedSocial) {
+      throw SocialLinkRequired(
+        provider: provider,
+        token: 'fake-token',
+        email: 'hong@example.com',
+      );
+    }
+    _loggedIn = true;
+    return const AuthUser(id: 7, nickname: '테스트조사');
+  }
+
+  @override
+  Future<AuthUser> signUp({
+    required String email,
+    required String password,
+    required String nickname,
+  }) async {
+    lastEmail = email;
+    lastPassword = password;
+    lastNickname = nickname;
+    _loggedIn = true;
+    return AuthUser(id: 8, nickname: nickname);
+  }
+
+  @override
+  Future<AuthUser> signInWithEmail({
+    required String email,
+    required String password,
+  }) async {
+    lastEmail = email;
+    lastPassword = password;
+    _loggedIn = true;
+    return const AuthUser(id: 7, nickname: '테스트조사');
+  }
+
+  @override
+  Future<AuthUser> linkSocial(SocialLinkRequired link, String password) async {
+    lastPassword = password;
+    linkedSocial = true;
     _loggedIn = true;
     return const AuthUser(id: 7, nickname: '테스트조사');
   }
@@ -90,6 +139,17 @@ Future<void> pumpApp(
       child: const FishingApp(),
     ),
   );
+  await tester.pumpAndSettle();
+}
+
+/// 비로그인 상태에서 조과 등록을 눌러 로그인 화면까지 간다.
+///
+/// 로그인 화면은 직접 열 수 없다 — `redirectTo` 가 붙어야 "로그인 후 원래 목적지"까지
+/// 검증할 수 있고, 그게 이 화면의 존재 이유다.
+Future<void> goToLogin(WidgetTester tester) async {
+  await tester.tap(find.text('도감'));
+  await tester.pumpAndSettle();
+  await tester.tap(find.widgetWithText(HeaderButton, '등록'));
   await tester.pumpAndSettle();
 }
 
@@ -224,6 +284,105 @@ void main() {
     expect(find.textContaining('로그인이 필요해요'), findsOneWidget);
     expect(find.text('카카오로 시작하기'), findsOneWidget);
     expect(find.text('Google로 시작하기'), findsOneWidget);
+  });
+
+  testWidgets('★ 이메일·비밀번호로도 로그인할 수 있다 (소셜만 있는 게 아니다)', (tester) async {
+    final auth = FakeAuthRepository();
+    await pumpApp(tester, auth: auth);
+
+    await goToLogin(tester);
+
+    await tester.enterText(find.widgetWithText(TextField, '이메일'), 'hong@example.com');
+    await tester.enterText(find.widgetWithText(TextField, '비밀번호'), 'hyun1234');
+    await tester.tap(find.widgetWithText(PrimaryButton, '로그인'));
+    await tester.pumpAndSettle();
+
+    expect(auth.lastEmail, 'hong@example.com');
+    expect(auth.lastPassword, 'hyun1234');
+    expect(find.text('기록 추가'), findsOneWidget, reason: '로그인 후 원래 목적지로 가야 한다');
+  });
+
+  testWidgets('★ 회원가입으로 계정을 만들면 그대로 로그인 상태가 된다', (tester) async {
+    final auth = FakeAuthRepository();
+    await pumpApp(tester, auth: auth);
+
+    await goToLogin(tester);
+    await tester.tap(find.text('회원가입'));
+    await tester.pumpAndSettle();
+
+    expect(find.text('이메일로 시작하기'), findsOneWidget);
+
+    await tester.enterText(
+      find.widgetWithText(TextField, 'name@example.com'),
+      'hong@example.com',
+    );
+    await tester.enterText(find.widgetWithText(TextField, '8자 이상'), 'hyun1234');
+    await tester.enterText(find.widgetWithText(TextField, '비밀번호 확인'), 'hyun1234');
+    await tester.enterText(
+      find.widgetWithText(TextField, '도감과 게시판에 표시돼요'),
+      '테스트조사',
+    );
+    await tester.tap(find.widgetWithText(PrimaryButton, '가입하고 시작하기'));
+    await tester.pumpAndSettle();
+
+    expect(auth.lastEmail, 'hong@example.com');
+    expect(auth.lastNickname, '테스트조사');
+    // 가입 응답에 토큰이 함께 오므로 다시 로그인시키지 않는다.
+    expect(find.text('기록 추가'), findsOneWidget);
+  });
+
+  testWidgets('★ 비밀번호 확인이 다르면 서버까지 가지 않는다', (tester) async {
+    final auth = FakeAuthRepository();
+    await pumpApp(tester, auth: auth);
+
+    await goToLogin(tester);
+    await tester.tap(find.text('회원가입'));
+    await tester.pumpAndSettle();
+
+    await tester.enterText(
+      find.widgetWithText(TextField, 'name@example.com'),
+      'hong@example.com',
+    );
+    await tester.enterText(find.widgetWithText(TextField, '8자 이상'), 'hyun1234');
+    await tester.enterText(find.widgetWithText(TextField, '비밀번호 확인'), 'hyun9999');
+    await tester.enterText(
+      find.widgetWithText(TextField, '도감과 게시판에 표시돼요'),
+      '테스트조사',
+    );
+    await tester.tap(find.widgetWithText(PrimaryButton, '가입하고 시작하기'));
+    await tester.pumpAndSettle();
+
+    expect(auth.lastEmail, isNull, reason: '왕복하지 않고 그 자리에서 막아야 한다');
+    expect(find.text('비밀번호가 서로 다릅니다'), findsOneWidget);
+  });
+
+  testWidgets('★ 가입한 계정으로 카카오를 누르면 새 계정이 아니라 연동이 뜬다', (tester) async {
+    final auth = FakeAuthRepository(linkRequired: true);
+    await pumpApp(tester, auth: auth);
+
+    await goToLogin(tester);
+    await tester.tap(find.text('카카오로 시작하기'));
+    await tester.pumpAndSettle();
+
+    // 로그인이 끝난 것이 아니라 비밀번호를 한 번 더 묻는다.
+    expect(find.text('계정을 연결할까요?'), findsOneWidget);
+    expect(find.textContaining('hong@example.com'), findsOneWidget);
+    expect(find.text('기록 추가'), findsNothing);
+
+    // 뒤에 깔린 로그인 화면에도 '비밀번호' 칸이 있다. 대화상자 안으로 좁힌다.
+    await tester.enterText(
+      find.descendant(
+        of: find.byType(AlertDialog),
+        matching: find.byType(TextField),
+      ),
+      'hyun1234',
+    );
+    await tester.tap(find.text('연결하기'));
+    await tester.pumpAndSettle();
+
+    expect(auth.linkedSocial, isTrue);
+    expect(auth.lastPassword, 'hyun1234');
+    expect(find.text('기록 추가'), findsOneWidget, reason: '연동 후 원래 목적지로 가야 한다');
   });
 
   testWidgets('★ 로그인하면 원래 가려던 화면으로 이어진다', (tester) async {

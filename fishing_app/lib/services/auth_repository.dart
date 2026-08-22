@@ -33,10 +33,50 @@ class AuthException implements Exception {
   String toString() => message;
 }
 
+/// 소셜 신원은 확인됐는데 **같은 이메일로 자체 가입한 계정이 이미 있는** 경우
+/// (서버 409 `LINK_REQUIRED`).
+///
+/// 실패가 아니라 **한 단계 더 필요한 상태**다. 비밀번호를 받아 [AuthRepository.linkSocial]
+/// 로 넘기면 두 신원이 한 계정으로 합쳐지고 그대로 로그인된다. 여기서 새 계정을 만들어
+/// 버리면 도감·조과가 둘로 쪼개진다.
+@immutable
+class SocialLinkRequired implements Exception {
+  const SocialLinkRequired({
+    required this.provider,
+    required this.token,
+    required this.email,
+  });
+
+  final SocialProvider provider;
+
+  /// 방금 받은 소셜 토큰. **연동 확인 요청에 그대로 다시 실어 보낸다** —
+  /// 서버가 한 번 더 검증하므로 우리가 결과를 들고 있을 필요가 없다.
+  final String token;
+
+  /// 이미 가입돼 있는 주소. 화면에 보여 줘야 사용자가 어느 비밀번호인지 안다.
+  final String email;
+}
+
 /// 인증 계약. 구현은 [RemoteAuthRepository] 하나이고, 인터페이스인 이유는 테스트다 —
 /// 위젯 테스트가 진짜 auth-service 와 제공자 SDK 를 부를 수는 없다.
 abstract interface class AuthRepository {
+  /// @throws [SocialLinkRequired] 같은 이메일의 자체 가입 계정이 이미 있을 때
   Future<AuthUser> signIn(SocialProvider provider);
+
+  /// 자체 회원가입. 가입과 동시에 로그인 상태가 된다.
+  Future<AuthUser> signUp({
+    required String email,
+    required String password,
+    required String nickname,
+  });
+
+  Future<AuthUser> signInWithEmail({
+    required String email,
+    required String password,
+  });
+
+  /// 계정 연동 — [SocialLinkRequired] 를 비밀번호로 풀고 그대로 로그인한다.
+  Future<AuthUser> linkSocial(SocialLinkRequired link, String password);
 
   Future<void> signOut();
 
@@ -75,17 +115,66 @@ class RemoteAuthRepository implements AuthRepository {
   Future<AuthUser> signIn(SocialProvider provider) async {
     final credential = await _socialSignIn.signIn(provider);
 
+    return _exchange('/auth/login', {
+      'provider': credential.provider.code,
+      'token': credential.token,
+      'appId': appId,
+      // 409 LINK_REQUIRED 는 실패가 아니라 "비밀번호를 한 번 더 받아라"는 신호다.
+      // 토큰은 여기서만 알 수 있으므로 예외에 실어 올려보낸다.
+    }, onLinkRequired: (email) => SocialLinkRequired(
+      provider: credential.provider,
+      token: credential.token,
+      email: email,
+    ));
+  }
+
+  @override
+  Future<AuthUser> signUp({
+    required String email,
+    required String password,
+    required String nickname,
+  }) => _exchange('/auth/signup', {
+    'email': email,
+    'password': password,
+    'nickname': nickname,
+    'appId': appId,
+  });
+
+  @override
+  Future<AuthUser> signInWithEmail({
+    required String email,
+    required String password,
+  }) => _exchange('/auth/login/email', {
+    'email': email,
+    'password': password,
+    'appId': appId,
+  });
+
+  @override
+  Future<AuthUser> linkSocial(SocialLinkRequired link, String password) =>
+      _exchange('/auth/link/social', {
+        'provider': link.provider.code,
+        // 같은 소셜 토큰을 다시 보낸다. 서버가 한 번 더 검증한다.
+        'token': link.token,
+        'password': password,
+        'appId': appId,
+      });
+
+  /// 네 경로가 모두 같은 `TokenResponse` 를 돌려준다 — 교환·저장을 한 자리에 모은다.
+  ///
+  /// [onLinkRequired] 는 소셜 로그인만 넘긴다. 다른 경로에서는 서버가 409
+  /// `LINK_REQUIRED` 를 낼 일이 없다.
+  Future<AuthUser> _exchange(
+    String path,
+    Map<String, dynamic> body, {
+    SocialLinkRequired Function(String email)? onLinkRequired,
+  }) async {
     final Response<Map<String, dynamic>> res;
     try {
-      res = await _dio.post<Map<String, dynamic>>(
-        '/auth/login',
-        data: {
-          'provider': credential.provider.code,
-          'token': credential.token,
-          'appId': appId,
-        },
-      );
+      res = await _dio.post<Map<String, dynamic>>(path, data: body);
     } on DioException catch (e) {
+      final link = _linkRequired(e, onLinkRequired);
+      if (link != null) throw link;
       throw _toAuthException(e);
     }
 
@@ -95,6 +184,18 @@ class RemoteAuthRepository implements AuthRepository {
       refreshToken: data['refreshToken'] as String,
     );
     return AuthUser.fromJson(data['user'] as Map<String, dynamic>);
+  }
+
+  /// 문구가 아니라 `code` 로 알아본다. 서버 문구는 언제든 다듬을 수 있어야 한다.
+  SocialLinkRequired? _linkRequired(
+    DioException e,
+    SocialLinkRequired Function(String email)? build,
+  ) {
+    if (build == null || e.response?.statusCode != 409) return null;
+    final data = e.response?.data;
+    if (data is! Map || data['code'] != 'LINK_REQUIRED') return null;
+    final email = data['email'];
+    return build(email is String ? email : '');
   }
 
   /// 서버의 리프레시 토큰을 버리고 제공자 세션도 끊는다.
@@ -134,8 +235,10 @@ class RemoteAuthRepository implements AuthRepository {
         providerUnavailable: true,
       );
     }
-    if (status == 401) {
-      // 서버가 문구를 내려주면 그대로 쓴다 — "만료됐다"와 "탈퇴한 계정"은 다른 안내다.
+    // 400(형식 오류)·409(중복 가입)·401 은 모두 사용자에게 보여 줄 문구가 서버에 있다.
+    // "이미 가입된 이메일입니다"를 "로그인에 실패했습니다"로 덮으면 무엇을 고쳐야 할지
+    // 알 수 없어진다.
+    if (status == 400 || status == 401 || status == 409) {
       return AuthException(_serverMessage(e) ?? '로그인에 실패했습니다. 다시 시도해 주세요');
     }
     if (e.type == DioExceptionType.connectionError ||
