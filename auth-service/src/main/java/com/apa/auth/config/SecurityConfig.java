@@ -7,9 +7,11 @@ import jakarta.servlet.DispatcherType;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
 import org.springframework.context.annotation.Import;
+import org.springframework.http.HttpStatus;
 import org.springframework.security.config.Customizer;
 import org.springframework.security.config.annotation.web.builders.HttpSecurity;
 import org.springframework.security.web.SecurityFilterChain;
+import org.springframework.security.web.authentication.HttpStatusEntryPoint;
 import org.springframework.security.web.authentication.UsernamePasswordAuthenticationFilter;
 import org.springframework.web.cors.CorsConfiguration;
 import org.springframework.web.cors.CorsConfigurationSource;
@@ -38,6 +40,14 @@ public class SecurityConfig {
                 .csrf(csrf -> csrf.disable())           // 1. CSRF 해제
                 .formLogin(form -> form.disable())      // 2. 기본 로그인 페이지 해제
                 .httpBasic(basic -> basic.disable())    // 3. Basic 인증 해제
+                // formLogin·httpBasic 을 끄면 기본 진입점이 Http403ForbiddenEntryPoint 라
+                // **자격증명이 없을 때 403 이 나간다.** 그건 "인증했지만 권한 없음"이라는 뜻이고,
+                // 여기서 실제로 일어난 일은 "토큰이 없거나 만료됨"이라 401 이 맞다.
+                // 지금은 /auth/logout 하나뿐이고 프론트가 그 실패를 삼켜서 티가 안 나지만,
+                // 인증 엔드포인트가 하나만 더 붙거나 이쪽에 refresh 인터셉터가 걸리는 순간
+                // 403 은 "만료 → 갱신" 경로를 조용히 건너뛴다. app-fishing 도 같은 이유로 401 로 못박았다.
+                .exceptionHandling(e -> e.authenticationEntryPoint(
+                        new HttpStatusEntryPoint(HttpStatus.UNAUTHORIZED)))
                 .authorizeHttpRequests(auth -> auth     // 4. URL 권한 설정
                         // 스프링 부트는 처리 못 한 예외를 sendError() 로 /error 에 다시 태운다.
                         // 그 ERROR 디스패치에는 인증 정보가 없어서, 아래 anyRequest().authenticated()
