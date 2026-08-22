@@ -46,6 +46,17 @@ abstract interface class FishingRepository {
   /// GET /fishing/board?tag=&regionGroupId=
   Future<List<Post>> fetchPosts({PostCategory? category, int? regionGroupId});
 
+  /// 내 글 고치기. 인증 필요 — 남의 글은 서버가 404 로 막는다.
+  Future<PostDetail> updatePost({
+    required int id,
+    required PostCategory category,
+    required String title,
+    required String content,
+  });
+
+  /// 내 글 지우기. 댓글·좋아요는 서버가 함께 지운다.
+  Future<void> deletePost(int id);
+
   /// 글 상세. 목록과 달리 본문 전체가 온다. 읽기는 비로그인도 된다.
   Future<PostDetail> fetchPost(int id);
 

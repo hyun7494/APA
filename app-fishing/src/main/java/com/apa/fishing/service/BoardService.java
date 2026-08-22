@@ -114,6 +114,52 @@ public class BoardService {
         return PostResponse.from(saved);
     }
 
+    /**
+     * 글 고치기. 내 글만.
+     *
+     * <p><b>없는 글과 남의 글을 구분하지 않고 둘 다 404 다</b> — 403 을 내면 "그 id 는 존재하며
+     * 내 것이 아니다"를 알려주는 셈이다 ({@code CatchService} 와 같은 규칙).
+     */
+    @Transactional
+    public PostDetailResponse update(AuthenticatedUser user, Long id, PostCreateRequest request) {
+        FishingPost post = findOwned(user, id);
+
+        String title = required(request.title(), "제목을 입력해 주세요", TITLE_MAX, "제목이 너무 깁니다");
+        String content = required(request.content(), "내용을 입력해 주세요", CONTENT_MAX, "내용이 너무 깁니다");
+        PostCategory category = PostCategory.fromCode(request.category()).orElse(PostCategory.FREE);
+
+        FishingRegion region = null;
+        if (request.regionGroupId() != null) {
+            region = regionRepository.findById(request.regionGroupId())
+                    .orElseThrow(() -> new ResponseStatusException(
+                            HttpStatus.BAD_REQUEST,
+                            "지역을 찾을 수 없습니다: " + request.regionGroupId()));
+        }
+
+        post.edit(category, title, content, region);
+
+        boolean likedByMe = likeRepository.existsByPostIdAndUserId(id, user.userId());
+        return PostDetailResponse.from(post, likedByMe, user.userId());
+    }
+
+    /**
+     * 글 지우기. 내 글만.
+     *
+     * <p>댓글과 좋아요는 <b>DB 가 함께 지운다</b> ({@code ON DELETE CASCADE}, V9).
+     * 여기서 하나씩 지우면 새 자식 표가 생길 때마다 빠뜨릴 자리가 늘어난다.
+     */
+    @Transactional
+    public void delete(AuthenticatedUser user, Long id) {
+        postRepository.delete(findOwned(user, id));
+    }
+
+    private FishingPost findOwned(AuthenticatedUser user, Long id) {
+        return postRepository.findById(id)
+                .filter(post -> post.ownedBy(user.userId()))
+                .orElseThrow(() -> new ResponseStatusException(
+                        HttpStatus.NOT_FOUND, "게시글을 찾을 수 없습니다: " + id));
+    }
+
     // ─────────────────────────────────────────────────────────────── 댓글
 
     public List<CommentResponse> comments(Long postId, Long viewerId) {

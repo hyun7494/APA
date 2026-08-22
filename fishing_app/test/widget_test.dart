@@ -627,6 +627,64 @@ void main() {
     expect(find.textContaining('로그인이 필요해요'), findsOneWidget);
   });
 
+  testWidgets('★ 내 글만 수정·삭제가 보인다', (tester) async {
+    await pumpApp(tester, auth: FakeAuthRepository(loggedIn: true));
+
+    await tester.tap(find.text('게시판'));
+    await tester.pumpAndSettle();
+    // 시드 글은 user_id 가 없어 누구의 것도 아니다 (mine=false).
+    await tester.tap(find.text('오늘 학리에서 감성돔 4짜 손맛!'));
+    await tester.pumpAndSettle();
+    expect(find.text('삭제'), findsNothing, reason: '남의 글에는 없어야 한다');
+
+    // 내가 쓴 글에는 붙는다.
+    // ⚠️ BackRow 의 '게시판으로' 는 라벨이라 눌리지 않는다 (아이콘 버튼만 탭 대상).
+    //    같은 탭을 다시 누르면 그 브랜치의 첫 화면으로 되돌아간다.
+    await tester.tap(find.text('게시판'));
+    await tester.pumpAndSettle();
+    await tester.tap(find.widgetWithText(HeaderButton, '글쓰기'));
+    await tester.pumpAndSettle();
+    await tester.enterText(find.widgetWithText(TextField, '무슨 이야기인가요?'), '내가 쓴 글');
+    await tester.pump();
+    await tester.enterText(find.byType(TextField).last, '본문');
+    await tester.pump();
+    await tester.tap(find.widgetWithText(HeaderButton, '등록'));
+    await tester.pumpAndSettle();
+
+    await tester.tap(find.text('내가 쓴 글'));
+    await tester.pumpAndSettle();
+    expect(find.text('수정'), findsOneWidget);
+    expect(find.text('삭제'), findsOneWidget);
+  });
+
+  testWidgets('★ 글을 지우면 목록에서 사라진다 (되묻고 나서)', (tester) async {
+    await pumpApp(tester, auth: FakeAuthRepository(loggedIn: true));
+
+    await tester.tap(find.text('게시판'));
+    await tester.pumpAndSettle();
+    await tester.tap(find.widgetWithText(HeaderButton, '글쓰기'));
+    await tester.pumpAndSettle();
+    await tester.enterText(find.widgetWithText(TextField, '무슨 이야기인가요?'), '지울 글');
+    await tester.pump();
+    await tester.enterText(find.byType(TextField).last, '본문');
+    await tester.pump();
+    await tester.tap(find.widgetWithText(HeaderButton, '등록'));
+    await tester.pumpAndSettle();
+
+    await tester.tap(find.text('지울 글'));
+    await tester.pumpAndSettle();
+    await tester.tap(find.text('삭제'));
+    await tester.pumpAndSettle();
+
+    // 되돌릴 수 없는 동작이라 한 번 되묻는다.
+    expect(find.text('글을 지울까요?'), findsOneWidget);
+    await tester.tap(find.widgetWithText(TextButton, '삭제'));
+    await tester.pumpAndSettle();
+
+    expect(find.text('지울 글'), findsNothing, reason: '목록에서 사라져야 한다');
+    expect(find.text('글을 지웠어요'), findsOneWidget);
+  });
+
   testWidgets('게시판 탭 필터가 동작한다', (tester) async {
     await pumpApp(tester);
 

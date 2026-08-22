@@ -16,6 +16,7 @@ import org.springframework.web.bind.annotation.DeleteMapping;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.PathVariable;
 import org.springframework.web.bind.annotation.PostMapping;
+import org.springframework.web.bind.annotation.PutMapping;
 import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RequestParam;
@@ -70,6 +71,22 @@ public class BoardController {
     public ResponseEntity<PostResponse> write(@AuthenticationPrincipal AuthenticatedUser user,
                                               @RequestBody PostCreateRequest request) {
         return ResponseEntity.status(HttpStatus.CREATED).body(boardService.write(user, request));
+    }
+
+    /** 글 수정. 인증 필수이고 <b>남의 글은 404 다</b> (존재 여부를 알려주지 않는다). */
+    @PutMapping("/{id}")
+    public PostDetailResponse update(@AuthenticationPrincipal AuthenticatedUser user,
+                                     @PathVariable Long id,
+                                     @RequestBody PostCreateRequest request) {
+        return boardService.update(user, id, request);
+    }
+
+    /** 글 삭제. 댓글·좋아요는 DB 가 함께 지운다 (V9 의 ON DELETE CASCADE). */
+    @DeleteMapping("/{id}")
+    public ResponseEntity<Void> delete(@AuthenticationPrincipal AuthenticatedUser user,
+                                       @PathVariable Long id) {
+        boardService.delete(user, id);
+        return ResponseEntity.noContent().build();
     }
 
     /** 댓글 목록. 읽기는 비로그인도 된다. */

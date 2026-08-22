@@ -54,7 +54,18 @@ class _PostDetailScreenState extends ConsumerState<PostDetailScreen> {
         children: [
           const SizedBox(height: 18),
           // 글쓰기 화면과 같은 이유로 pop 이 아니라 go 다 — 스택에 쌓여 있지 않다.
-          BackRow(label: '게시판으로', onTap: () => context.go('/board')),
+          BackRow(
+            label: '게시판으로',
+            onTap: () => context.go('/board'),
+            // 수정·삭제는 **내 글에만** 보인다. 화면에서 감추는 것은 편의일 뿐이고,
+            // 실제 권한은 서버가 다시 본다 (남의 글은 404).
+            trailing: detail.valueOrNull?.mine == true
+                ? _OwnerActions(
+                    onEdit: () => context.go('/board/${widget.postId}/edit'),
+                    onDelete: _confirmDelete,
+                  )
+                : null,
+          ),
           Expanded(
             child: detail.when(
               loading: () => const Padding(
@@ -319,6 +330,61 @@ class _PostDetailScreenState extends ConsumerState<PostDetailScreen> {
     ref.read(postRevisionProvider.notifier).state++;
   }
 
+  /// 글 삭제는 되돌릴 수 없고 댓글까지 함께 사라진다. 한 번 되묻는다 —
+  /// 댓글이 달린 글이면 그 사실을 먼저 알려 준다.
+  Future<void> _confirmDelete() async {
+    final post = ref.read(postDetailProvider(widget.postId)).valueOrNull;
+    if (post == null) return;
+
+    final confirmed = await showDialog<bool>(
+      context: context,
+      builder: (dialogContext) => AlertDialog(
+        backgroundColor: AppColors.surface,
+        shape: RoundedRectangleBorder(
+          borderRadius: BorderRadius.circular(AppRadius.cardSmall),
+        ),
+        title: Text('글을 지울까요?', style: AppText.cardLabel),
+        content: Text(
+          post.commentCount > 0
+              ? '댓글 ${post.commentCount}개도 함께 지워지고, 되돌릴 수 없어요.'
+              : '지운 글은 되돌릴 수 없어요.',
+          style: AppText.body,
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(dialogContext, false),
+            child: Text('취소', style: AppText.rowValue.copyWith(
+              color: AppColors.sub,
+            )),
+          ),
+          TextButton(
+            onPressed: () => Navigator.pop(dialogContext, true),
+            child: Text('삭제', style: AppText.rowValue.copyWith(
+              color: AppColors.alert,
+            )),
+          ),
+        ],
+      ),
+    );
+    if (confirmed != true || !mounted) return;
+
+    try {
+      await ref.read(fishingRepositoryProvider).deletePost(widget.postId);
+    } on PostSubmitException catch (e) {
+      if (mounted) _toast(e.message);
+      return;
+    }
+    if (!mounted) return;
+
+    ref.invalidate(postsProvider);
+    // 지운 글의 상세로 돌아가면 404 다. 목록으로 보낸다.
+    final messenger = ScaffoldMessenger.of(context);
+    context.go('/board');
+    messenger
+      ..hideCurrentSnackBar()
+      ..showSnackBar(const SnackBar(content: Text('글을 지웠어요')));
+  }
+
   Future<void> _delete(Comment comment) async {
     try {
       await ref.read(fishingRepositoryProvider).deleteComment(comment.id);
@@ -395,4 +461,34 @@ class _CommentTile extends StatelessWidget {
       ),
     );
   }
+}
+
+/// 내 글에만 붙는 수정·삭제. 헤더 오른쪽에 작게 둔다 —
+/// 읽으러 온 사람에게는 본문이 주인공이고 이 둘은 부차적이다.
+class _OwnerActions extends StatelessWidget {
+  const _OwnerActions({required this.onEdit, required this.onDelete});
+
+  final VoidCallback onEdit;
+  final VoidCallback onDelete;
+
+  @override
+  Widget build(BuildContext context) {
+    return Row(
+      mainAxisSize: MainAxisSize.min,
+      children: [
+        _action('수정', AppColors.label, onEdit),
+        const SizedBox(width: 4),
+        _action('삭제', AppColors.alert, onDelete),
+      ],
+    );
+  }
+
+  Widget _action(String label, Color color, VoidCallback onTap) => PressScale(
+    onTap: onTap,
+    scale: 0.92,
+    child: Padding(
+      padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 6),
+      child: Text(label, style: AppText.caption.copyWith(color: color)),
+    ),
+  );
 }

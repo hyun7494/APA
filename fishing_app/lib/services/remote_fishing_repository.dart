@@ -159,6 +159,37 @@ class RemoteFishingRepository implements FishingRepository {
   }
 
   @override
+  Future<PostDetail> updatePost({
+    required int id,
+    required PostCategory category,
+    required String title,
+    required String content,
+  }) async {
+    try {
+      final res = await _dio.put<Map<String, dynamic>>(
+        '/fishing/board/$id',
+        data: {
+          'category': category.code,
+          'title': title,
+          'content': content,
+        },
+      );
+      return PostDetail.fromJson(res.data!);
+    } on DioException catch (e) {
+      throw PostSubmitException(_submitMessage(e, '글을 고치지 못했어요'));
+    }
+  }
+
+  @override
+  Future<void> deletePost(int id) async {
+    try {
+      await _dio.delete<void>('/fishing/board/$id');
+    } on DioException catch (e) {
+      throw PostSubmitException(_submitMessage(e, '글을 지우지 못했어요'));
+    }
+  }
+
+  @override
   Future<List<Comment>> fetchComments(int postId) async {
     final res = await _dio.get<List<dynamic>>('/fishing/board/$postId/comments');
     return _mapList(res.data, Comment.fromJson);

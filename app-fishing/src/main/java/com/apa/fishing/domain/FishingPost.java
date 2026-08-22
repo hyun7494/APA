@@ -63,6 +63,22 @@ public class FishingPost {
     private LocalDateTime createdAt;
 
     /**
+     * 글 고치기. <b>작성자·작성 시각·좋아요·댓글은 건드리지 않는다</b> —
+     * 고친 것은 내용이지 그 글에 달린 사람들의 반응이 아니다.
+     */
+    public void edit(PostCategory category, String title, String content, FishingRegion region) {
+        this.category = category;
+        this.title = title;
+        this.content = content;
+        this.region = region;
+    }
+
+    public boolean ownedBy(Long userId) {
+        // user_id 가 null 인 시드 글은 누구의 것도 아니다 — 아무도 못 고치고 못 지운다.
+        return this.userId != null && this.userId.equals(userId);
+    }
+
+    /**
      * 댓글·좋아요 수를 실제 개수로 맞춘다.
      *
      * <p><b>세어서 넣지, 직접 +1/-1 하지 않는다.</b> 증감식은 어딘가에서 한 번 어긋나면

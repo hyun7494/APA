@@ -134,6 +134,10 @@ class MockFishingRepository implements FishingRepository {
   final Set<int> _liked = {};
   int _nextCommentId = 1;
 
+  /// 내가 쓴 글. 서버는 `user_id` 로 알지만 목에는 사용자가 없어서 따로 센다 —
+  /// 이게 없으면 수정·삭제 버튼이 어디에도 안 뜬다. 시드 글은 여기 없다(남의 글).
+  final Set<int> _mine = {};
+
   @override
   Future<PostDetail> fetchPost(int id) async {
     await Future.delayed(_latency);
@@ -150,7 +154,43 @@ class MockFishingRepository implements FishingRepository {
       commentCount: _comments[id]?.length ?? post.commentCount,
       likedByMe: _liked.contains(id),
       regionName: post.regionName,
+      mine: _mine.contains(id),
     );
+  }
+
+  @override
+  Future<PostDetail> updatePost({
+    required int id,
+    required PostCategory category,
+    required String title,
+    required String content,
+  }) async {
+    await Future.delayed(_latency);
+    final i = _posts.indexWhere((p) => p.id == id);
+    final old = _posts[i];
+    _posts[i] = Post(
+      id: old.id,
+      category: category,
+      title: title,
+      summary: content,
+      authorNickname: old.authorNickname,
+      createdAt: old.createdAt,
+      likeCount: old.likeCount,
+      commentCount: old.commentCount,
+      hasImage: old.hasImage,
+      regionName: old.regionName,
+    );
+    return fetchPost(id);
+  }
+
+  @override
+  Future<void> deletePost(int id) async {
+    await Future.delayed(_latency);
+    _posts.removeWhere((p) => p.id == id);
+    // 서버는 ON DELETE CASCADE 로 함께 지운다 (V9).
+    _comments.remove(id);
+    _liked.remove(id);
+    _mine.remove(id);
   }
 
   @override
@@ -214,6 +254,7 @@ class MockFishingRepository implements FishingRepository {
     );
     // 목록 맨 앞에 넣는다 — 서버도 최신순이라 방금 쓴 글이 위에 보여야 한다.
     _posts.insert(0, post);
+    _mine.add(post.id);
     return post;
   }
 

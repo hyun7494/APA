@@ -2,7 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 
-import '../models/post.dart';
+import '../models/models.dart';
 import '../services/fishing_repository.dart';
 import '../services/providers.dart';
 import '../theme/app_theme.dart';
@@ -21,7 +21,13 @@ import '../widgets/reveal.dart';
 /// 여기까지 왔다는 것은 로그인이 끝났다는 뜻이다 — 관문은 [requireLogin] 이
 /// 게시판 화면에서 이미 통과시켰다. 그래도 서버는 토큰을 다시 확인한다.
 class PostNewScreen extends ConsumerStatefulWidget {
-  const PostNewScreen({super.key});
+  const PostNewScreen({super.key, this.postId});
+
+  /// 주면 **고치기**, 없으면 새 글. 화면이 거의 같아서 하나로 둔다 —
+  /// 따로 만들면 분류 칩·글자수 제한 같은 것이 두 곳에서 어긋난다.
+  final int? postId;
+
+  bool get isEdit => postId != null;
 
   @override
   ConsumerState<PostNewScreen> createState() => _PostNewScreenState();
@@ -34,8 +40,12 @@ class _PostNewScreenState extends ConsumerState<PostNewScreen> {
   PostCategory _category = PostCategory.catchReport;
   bool _saving = false;
 
-  /// 서버 `BoardService` 와 같은 값이다.
-  static const _titleMax = 255;
+  /// 고치기일 때 기존 글을 한 번만 채워 넣기 위한 표시.
+  bool _loaded = false;
+
+  /// 서버 `BoardService` 와 같은 값이다. 제목 컬럼이 VARCHAR(100) 이라 여기가 더 크면
+  /// 통과시켜 놓고 서버에서 400 을 받는다.
+  static const _titleMax = 100;
   static const _contentMax = 5000;
 
   @override
@@ -60,8 +70,26 @@ class _PostNewScreenState extends ConsumerState<PostNewScreen> {
       _title.text.trim().isNotEmpty &&
       _content.text.trim().isNotEmpty;
 
+  /// 고치기 화면은 기존 글로 시작한다. **한 번만** 채운다 —
+  /// 다시 채우면 사용자가 고치던 내용을 서버 값이 덮어쓴다.
+  void _fillOnce(PostDetail post) {
+    if (_loaded) return;
+    _loaded = true;
+    _title.text = post.title;
+    _content.text = post.content;
+    _category = post.category;
+  }
+
   @override
   Widget build(BuildContext context) {
+    if (widget.isEdit) {
+      final existing = ref.watch(postDetailProvider(widget.postId!)).valueOrNull;
+      if (existing == null) {
+        return const Center(child: CircularProgressIndicator());
+      }
+      _fillOnce(existing);
+    }
+
     // ⚠️ **자기 Scaffold 를 두지 않는다.** 셸(`app_router`)의 것을 쓴다 —
     //    조과 등록 화면과 같은 구조다. 여기에 Scaffold 를 하나 더 두면 스낵바가
     //    그 Scaffold 에 붙어서, 게시판으로 옮기는 순간 안내가 같이 사라진다.
@@ -72,12 +100,12 @@ class _PostNewScreenState extends ConsumerState<PostNewScreen> {
         children: [
           const SizedBox(height: 18),
           BackRow(
-            label: '게시판으로',
+            label: widget.isEdit ? '글로 돌아가기' : '게시판으로',
             // pop 이 아니라 go 다. 이 화면은 `requireLogin` 이 go 로 열어서
             // 브랜치 스택에 쌓인 것이 없다 — pop 하면 "there is nothing to pop" 이다.
             onTap: () {
               if (_saving) return;
-              context.go('/board');
+              context.go(widget.isEdit ? '/board/${widget.postId}' : '/board');
             },
             trailing: _saving
                 ? const SizedBox(
@@ -88,7 +116,7 @@ class _PostNewScreenState extends ConsumerState<PostNewScreen> {
                 : Opacity(
                     opacity: _canSubmit ? 1 : 0.35,
                     child: HeaderButton(
-                      label: '등록',
+                      label: widget.isEdit ? '저장' : '등록',
                       onPressed: _canSubmit ? _submit : () {},
                     ),
                   ),
@@ -103,7 +131,12 @@ class _PostNewScreenState extends ConsumerState<PostNewScreen> {
                 AppSpacing.navClearance,
               ),
               children: [
-                Reveal(child: Text('글쓰기', style: AppText.screenTitle)),
+                Reveal(
+                  child: Text(
+                    widget.isEdit ? '글 수정' : '글쓰기',
+                    style: AppText.screenTitle,
+                  ),
+                ),
                 const SizedBox(height: 22),
                 Reveal(child: Text('분류', style: AppText.overline)),
                 const SizedBox(height: 10),
@@ -149,7 +182,7 @@ class _PostNewScreenState extends ConsumerState<PostNewScreen> {
                         ),
                         isDense: true,
                         border: InputBorder.none,
-                        // 제목 255자는 넘길 일이 없다. 카운터가 있으면 시선만 끈다.
+                        // 제목 100자는 넘길 일이 없다. 카운터가 있으면 시선만 끈다.
                         counterText: '',
                       ),
                     ),
@@ -238,6 +271,8 @@ class _PostNewScreenState extends ConsumerState<PostNewScreen> {
     // 방금 쓴 글이 목록에 보여야 한다. 서버가 준 글 하나를 끼워 넣는 대신
     // 목록을 다시 받는다 — 정렬·요약·집계를 서버가 하므로 그 결과가 정답이다.
     ref.invalidate(postsProvider);
+    // 상세도 다시 받아야 고친 내용이 보인다.
+    if (widget.isEdit) ref.read(postRevisionProvider.notifier).state++;
     // 쓴 분류의 탭으로 옮겨 준다. 전체 탭이면 그대로 둔다.
     final selected = ref.read(selectedBoardTabProvider);
     if (selected != null && selected != _category) {

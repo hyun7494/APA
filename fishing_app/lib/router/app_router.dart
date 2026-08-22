@@ -120,6 +120,13 @@ GoRouter createAppRouter() => GoRouter(
               path: '/board/new',
               builder: (_, _) => const PostNewScreen(),
             ),
+            // 고치기는 글쓰기 화면을 그대로 쓴다 (`postId` 가 있으면 고치기 모드).
+            GoRoute(
+              path: '/board/:id/edit',
+              builder: (_, state) => PostNewScreen(
+                postId: int.tryParse(state.pathParameters['id'] ?? ''),
+              ),
+            ),
             // ⚠️ `/board/new` 보다 **뒤에** 둔다. 앞에 두면 `:id` 가 "new" 를 먼저
             //    삼켜서 글쓰기 화면으로 갈 수 없다.
             GoRoute(
