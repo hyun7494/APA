@@ -5,64 +5,330 @@ import com.apa.auth.domain.RefreshToken;
 import com.apa.auth.domain.SocialType;
 import com.apa.auth.domain.User;
 import com.apa.auth.domain.UserAppLink;
+import com.apa.auth.domain.UserSocialAccount;
+import com.apa.auth.dto.EmailLoginRequest;
+import com.apa.auth.dto.EmailSignUpRequest;
+import com.apa.auth.dto.SocialLinkRequest;
 import com.apa.auth.dto.SocialLoginRequest;
 import com.apa.auth.dto.TokenResponse;
+import com.apa.auth.exception.ConflictException;
+import com.apa.auth.exception.SocialLinkRequiredException;
 import com.apa.auth.exception.UnauthorizedException;
 import com.apa.auth.repository.RefreshTokenRepository;
 import com.apa.auth.repository.UserAppLinkRepository;
 import com.apa.auth.repository.UserRepository;
+import com.apa.auth.repository.UserSocialAccountRepository;
 import com.apa.auth.social.SocialProfile;
 import com.apa.auth.social.SocialVerifiers;
 import com.apa.common.security.JwtTokenProvider;
-import lombok.RequiredArgsConstructor;
 import org.springframework.dao.DataIntegrityViolationException;
+import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
 import java.time.LocalDateTime;
+import java.util.UUID;
 
 /**
- * 소셜 로그인과 토큰 재발급.
+ * 로그인 세 갈래와 토큰 재발급.
+ *
+ * <ul>
+ *   <li>자체 가입 — {@link #signUp}, {@link #loginWithEmail}</li>
+ *   <li>소셜 — {@link #login}</li>
+ *   <li>계정 연동 — {@link #linkSocial}. 위 둘이 같은 사람일 때 하나로 합친다</li>
+ * </ul>
  *
  * <p>스텁 로그인({@code testuser}/{@code hyun1234})은 {@link DevLoginService} 로 옮겼다.
  * 이제 여기에는 실제 계정만 흐른다.
  */
 @Service
-@RequiredArgsConstructor
 public class AuthService {
 
     private final UserRepository userRepository;
+    private final UserSocialAccountRepository socialAccountRepository;
     private final UserAppLinkRepository userAppLinkRepository;
     private final RefreshTokenRepository refreshTokenRepository;
     private final SocialVerifiers socialVerifiers;
     private final JwtTokenProvider jwtTokenProvider;
     private final AuthProperties authProperties;
+    private final PasswordEncoder passwordEncoder;
 
+    /**
+     * 없는 계정에 대고 대조할 가짜 해시.
+     *
+     * <p>계정이 없을 때 BCrypt 를 건너뛰면 응답이 눈에 띄게 빨라진다. 그 차이만으로
+     * <b>어떤 이메일이 가입돼 있는지 훑어볼 수 있다</b> — 실패 문구를 똑같이 맞춰 둔 의미가
+     * 없어진다. 매번 새 난수로 만들어 아무도 이 값을 맞힐 수 없게 한다.
+     */
+    private final String absentUserHash;
+
+    public AuthService(UserRepository userRepository,
+                       UserSocialAccountRepository socialAccountRepository,
+                       UserAppLinkRepository userAppLinkRepository,
+                       RefreshTokenRepository refreshTokenRepository,
+                       SocialVerifiers socialVerifiers,
+                       JwtTokenProvider jwtTokenProvider,
+                       AuthProperties authProperties,
+                       PasswordEncoder passwordEncoder) {
+        this.userRepository = userRepository;
+        this.socialAccountRepository = socialAccountRepository;
+        this.userAppLinkRepository = userAppLinkRepository;
+        this.refreshTokenRepository = refreshTokenRepository;
+        this.socialVerifiers = socialVerifiers;
+        this.jwtTokenProvider = jwtTokenProvider;
+        this.authProperties = authProperties;
+        this.passwordEncoder = passwordEncoder;
+        this.absentUserHash = passwordEncoder.encode(UUID.randomUUID().toString());
+    }
+
+    // ───────────────────────────────────────────────────────────── 자체 가입
+
+    /** 이메일·비밀번호로 가입하고 곧바로 로그인시킨다. 가입 직후 다시 로그인을 시키면 이탈한다. */
     @Transactional
-    public TokenResponse login(SocialLoginRequest request) {
-        SocialType provider = SocialType.from(request.provider())
-                .orElseThrow(() -> new UnauthorizedException(
-                        "지원하지 않는 로그인 방식입니다: " + request.provider()));
-
-        if (request.token() == null || request.token().isBlank()) {
-            throw new UnauthorizedException("로그인 토큰이 없습니다");
-        }
-
+    public TokenResponse signUp(EmailSignUpRequest request) {
+        String email = EmailAddress.require(request.email());
+        String rawPassword = PasswordPolicy.require(request.password());
         String appId = normalizeAppId(request.appId());
 
-        // 신뢰의 출발점. 이 호출이 성공해야만 아래 모든 것이 의미를 갖는다.
-        SocialProfile profile = socialVerifiers.get(provider).verify(request.token());
+        String nickname = request.nickname() == null || request.nickname().isBlank()
+                ? EmailAddress.toNickname(email)
+                : request.nickname().trim();
 
-        User user = findOrRegister(profile);
+        // 미리 조회해 봐야 동시 요청은 못 막는다. UNIQUE 제약이 진짜 방어선이고,
+        // 이 조회는 대부분의 경우에 더 친절한 메시지를 주기 위한 것이다.
+        if (userRepository.findByEmail(email).isPresent()) {
+            throw new ConflictException("이미 가입된 이메일입니다");
+        }
+
+        User user;
+        try {
+            user = userRepository.saveAndFlush(
+                    User.registerWithEmail(email, passwordEncoder.encode(rawPassword), nickname));
+        } catch (DataIntegrityViolationException e) {
+            throw new ConflictException("이미 가입된 이메일입니다");
+        }
+
+        linkApp(user.getId(), appId);
+        return issueTokens(user, appId);
+    }
+
+    /**
+     * 이메일 로그인.
+     *
+     * <p><b>없는 계정과 틀린 비밀번호를 구분해 알려 주지 않는다.</b> 둘이 갈리면
+     * 그것만으로 어떤 주소가 가입돼 있는지 훑어볼 수 있다.
+     */
+    @Transactional
+    public TokenResponse loginWithEmail(EmailLoginRequest request) {
+        String email = EmailAddress.normalize(request.email());
+        String appId = normalizeAppId(request.appId());
+        String rawPassword = request.password() == null ? "" : request.password();
+
+        User user = email == null ? null : userRepository.findByEmail(email).orElse(null);
+
+        if (user == null || !user.hasPassword()) {
+            passwordEncoder.matches(rawPassword, absentUserHash);  // 응답 시간을 맞춘다
+            throw new UnauthorizedException(loginFailureMessage(user));
+        }
+        if (!passwordEncoder.matches(rawPassword, user.getPasswordHash())) {
+            throw new UnauthorizedException("이메일 또는 비밀번호가 올바르지 않습니다");
+        }
+        if (!user.isActive()) {
+            throw new UnauthorizedException("탈퇴한 계정입니다");
+        }
+
+        linkApp(user.getId(), appId);
+        return issueTokens(user, appId);
+    }
+
+    /**
+     * 소셜로만 만든 계정에 이메일 로그인을 시도한 경우는 안내가 달라야 한다.
+     *
+     * <p>그 계정의 존재는 사용자가 이미 아는 사실이다 — 자기가 그 주소로 가입했으니까.
+     * 여기서까지 "이메일 또는 비밀번호가 올바르지 않습니다"로 뭉개면
+     * <b>자기 계정을 눈앞에 두고 들어갈 방법을 못 찾는다.</b>
+     */
+    private String loginFailureMessage(User user) {
+        if (user != null && !user.hasPassword()) {
+            return "소셜 로그인으로 가입한 계정입니다. 카카오 또는 Google 로 로그인해 주세요";
+        }
+        return "이메일 또는 비밀번호가 올바르지 않습니다";
+    }
+
+    // ───────────────────────────────────────────────────────────────── 소셜
+
+    /**
+     * 소셜 로그인 (기획서 v2 5-3). 없으면 가입하고, 있으면 로그인한다.
+     *
+     * @throws SocialLinkRequiredException 같은 이메일의 자체 가입 계정이 이미 있을 때.
+     *         프론트가 비밀번호를 받아 {@link #linkSocial} 로 다시 온다
+     */
+    @Transactional
+    public TokenResponse login(SocialLoginRequest request) {
+        String appId = normalizeAppId(request.appId());
+        SocialProfile profile = verifySocialToken(request.provider(), request.token());
+
+        User user = resolveSocialUser(profile);
         if (!user.isActive()) {
             throw new UnauthorizedException("탈퇴한 계정입니다");
         }
         user.syncProfile(profile.nickname(), profile.profileUrl());
 
         linkApp(user.getId(), appId);
-
         return issueTokens(user, appId);
     }
+
+    /**
+     * 계정 연동 — 자체 가입 계정에 소셜을 붙이고 그대로 로그인시킨다.
+     *
+     * <p>비밀번호를 다시 받는 이유는 {@link SocialLinkRequiredException} 에 적어 두었다.
+     */
+    @Transactional
+    public TokenResponse linkSocial(SocialLinkRequest request) {
+        String appId = normalizeAppId(request.appId());
+        SocialProfile profile = verifySocialToken(request.provider(), request.token());
+
+        if (!profile.hasVerifiedEmail()) {
+            // 올 수 없는 조합이다 — 확인된 주소가 없으면 애초에 연동을 요구하지 않는다.
+            throw new UnauthorizedException("연동할 수 있는 이메일을 제공자에게서 받지 못했습니다");
+        }
+
+        User user = userRepository.findByEmail(profile.email()).orElse(null);
+        String rawPassword = request.password() == null ? "" : request.password();
+
+        if (user == null || !user.hasPassword()) {
+            passwordEncoder.matches(rawPassword, absentUserHash);
+            throw new UnauthorizedException("비밀번호가 올바르지 않습니다");
+        }
+        if (!passwordEncoder.matches(rawPassword, user.getPasswordHash())) {
+            throw new UnauthorizedException("비밀번호가 올바르지 않습니다");
+        }
+        if (!user.isActive()) {
+            throw new UnauthorizedException("탈퇴한 계정입니다");
+        }
+
+        attachSocialAccount(user, profile);
+        // 닉네임은 덮지 않는다. 자체 가입 때 직접 정한 이름이 소셜 닉네임보다 우선이다.
+        user.syncProfile(null, profile.profileUrl());
+
+        linkApp(user.getId(), appId);
+        return issueTokens(user, appId);
+    }
+
+    private SocialProfile verifySocialToken(String rawProvider, String token) {
+        SocialType provider = SocialType.from(rawProvider)
+                .orElseThrow(() -> new UnauthorizedException(
+                        "지원하지 않는 로그인 방식입니다: " + rawProvider));
+
+        if (token == null || token.isBlank()) {
+            throw new UnauthorizedException("로그인 토큰이 없습니다");
+        }
+
+        // 신뢰의 출발점. 이 호출이 성공해야만 아래 모든 것이 의미를 갖는다.
+        return socialVerifiers.get(provider).verify(token);
+    }
+
+    /**
+     * 소셜 신원 → 계정. 세 갈래다.
+     *
+     * <ol>
+     *   <li>이미 붙어 있는 신원 → 그 계정으로 로그인</li>
+     *   <li>처음 보는 신원인데 <b>확인된 이메일</b>의 계정이 이미 있음 → 새로 만들지 않는다.
+     *       비밀번호가 있는 계정이면 연동 확인을 요구하고, 없으면(= 다른 소셜로만 만든 계정)
+     *       양쪽 제공자가 같은 주소의 소유를 확인해 준 셈이므로 그대로 잇는다</li>
+     *   <li>그 외 → 신규 가입</li>
+     * </ol>
+     */
+    private User resolveSocialUser(SocialProfile profile) {
+        UserSocialAccount linked = socialAccountRepository
+                .findBySocialTypeAndSocialId(profile.socialType(), profile.socialId())
+                .orElse(null);
+
+        if (linked != null) {
+            return userRepository.findById(linked.getUserId())
+                    .orElseThrow(() -> new UnauthorizedException("계정을 찾을 수 없습니다"));
+        }
+
+        if (profile.hasVerifiedEmail()) {
+            User owner = userRepository.findByEmail(profile.email()).orElse(null);
+            if (owner != null) {
+                if (!owner.isActive()) {
+                    throw new UnauthorizedException("탈퇴한 계정입니다");
+                }
+                if (owner.hasPassword()) {
+                    throw new SocialLinkRequiredException(owner.getEmail(), profile.socialType());
+                }
+                attachSocialAccount(owner, profile);
+                return owner;
+            }
+        }
+
+        return registerFromSocial(profile);
+    }
+
+    /**
+     * 신규 소셜 가입.
+     *
+     * <p>같은 사람이 두 기기에서 동시에 첫 로그인을 하면 두 요청이 모두 "없음"을 보고 INSERT 를
+     * 시도한다. {@code UNIQUE(social_type, social_id)} 가 한쪽을 튕겨내므로, 그때는 상대가 만든
+     * 행을 <b>다시 읽어</b> 쓴다. 이 처리를 빼면 첫 로그인이 간헐적으로 500 이 된다.
+     */
+    private User registerFromSocial(SocialProfile profile) {
+        try {
+            // 확인되지 않은 주소는 users.email 에 넣지 않는다. 넣어 두면 그 주소의 진짜
+            // 주인이 나중에 자체 가입을 하려 할 때 "이미 가입된 이메일"로 막힌다.
+            User user = userRepository.saveAndFlush(User.registerFromSocial(
+                    defaultNickname(profile),
+                    profile.profileUrl(),
+                    profile.hasVerifiedEmail() ? profile.email() : null));
+
+            socialAccountRepository.saveAndFlush(UserSocialAccount.link(
+                    user.getId(), profile.socialType(), profile.socialId(), profile.email()));
+            return user;
+        } catch (DataIntegrityViolationException e) {
+            return socialAccountRepository
+                    .findBySocialTypeAndSocialId(profile.socialType(), profile.socialId())
+                    .flatMap(account -> userRepository.findById(account.getUserId()))
+                    .orElseThrow(() -> e);
+        }
+    }
+
+    /** 기존 계정에 소셜 신원을 붙인다. 이미 같은 신원이 붙어 있으면 아무것도 하지 않는다. */
+    private void attachSocialAccount(User user, SocialProfile profile) {
+        UserSocialAccount sameProvider = socialAccountRepository
+                .findByUserIdAndSocialType(user.getId(), profile.socialType())
+                .orElse(null);
+
+        if (sameProvider != null) {
+            if (!sameProvider.getSocialId().equals(profile.socialId())) {
+                // 한 계정에 같은 제공자를 두 번 붙이면 어느 쪽으로 들어왔는지에 따라
+                // 프로필이 오락가락한다. DB 도 UNIQUE(user_id, social_type) 로 막는다.
+                throw new ConflictException("이 계정에는 이미 다른 "
+                        + providerName(profile.socialType()) + " 계정이 연결되어 있습니다");
+            }
+            return;  // 같은 신원이 이미 붙어 있다
+        }
+
+        try {
+            socialAccountRepository.saveAndFlush(UserSocialAccount.link(
+                    user.getId(), profile.socialType(), profile.socialId(), profile.email()));
+        } catch (DataIntegrityViolationException e) {
+            // 같은 순간 다른 요청이 먼저 붙였다. 결과가 같으면 실패시킬 이유가 없다.
+            UserSocialAccount winner = socialAccountRepository
+                    .findBySocialTypeAndSocialId(profile.socialType(), profile.socialId())
+                    .orElseThrow(() -> e);
+            if (!winner.getUserId().equals(user.getId())) {
+                throw new ConflictException("이미 다른 계정에 연결된 소셜 계정입니다");
+            }
+        }
+
+    }
+
+    private String providerName(SocialType type) {
+        return type == SocialType.KAKAO ? "카카오" : "Google";
+    }
+
+    // ───────────────────────────────────────────────────────────────── 토큰
 
     /**
      * 리프레시 토큰으로 재발급하고 <b>기존 토큰을 폐기한다(회전)</b>.
@@ -102,30 +368,6 @@ public class AuthService {
     @Transactional
     public void logout(long userId, String appId) {
         refreshTokenRepository.deleteByUserIdAndAppId(userId, normalizeAppId(appId));
-    }
-
-    /**
-     * 가입 또는 조회.
-     *
-     * <p>같은 사람이 두 기기에서 동시에 첫 로그인을 하면 두 요청이 모두 "없음"을 보고 INSERT 를
-     * 시도한다. {@code UNIQUE(social_type, social_id)} 가 한쪽을 튕겨내므로, 그때는 상대가 만든
-     * 행을 <b>다시 읽어</b> 쓴다. 이 처리를 빼면 첫 로그인이 간헐적으로 500 이 된다.
-     */
-    private User findOrRegister(SocialProfile profile) {
-        return userRepository.findBySocialTypeAndSocialId(profile.socialType(), profile.socialId())
-                .orElseGet(() -> {
-                    try {
-                        return userRepository.saveAndFlush(User.register(
-                                profile.socialType(),
-                                profile.socialId(),
-                                defaultNickname(profile),
-                                profile.profileUrl()));
-                    } catch (DataIntegrityViolationException e) {
-                        return userRepository
-                                .findBySocialTypeAndSocialId(profile.socialType(), profile.socialId())
-                                .orElseThrow(() -> e);
-                    }
-                });
     }
 
     /**

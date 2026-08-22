@@ -42,6 +42,28 @@ class GoogleTokenInfoParserTest {
     }
 
     @Test
+    @DisplayName("★ email_verified 는 문자열 \"true\" 로 온다 (JSON 불리언이 아니다)")
+    void readsVerifiedEmail() {
+        Map<String, Object> body = validBody();
+        body.put("email", "Hong@Gmail.com");
+        body.put("email_verified", "true");
+
+        SocialProfile profile = GoogleTokenInfoParser.parse(body, ALLOWED);
+
+        assertThat(profile.email()).isEqualTo("hong@gmail.com");
+        assertThat(profile.hasVerifiedEmail()).isTrue();
+    }
+
+    @Test
+    @DisplayName("email_verified 가 없으면 연동에 쓰지 않는다")
+    void doesNotTrustUnverifiedEmail() {
+        SocialProfile profile = GoogleTokenInfoParser.parse(validBody(), ALLOWED);
+
+        assertThat(profile.email()).isEqualTo("hong@gmail.com");
+        assertThat(profile.hasVerifiedEmail()).isFalse();
+    }
+
+    @Test
     @DisplayName("플랫폼별 클라이언트 ID 를 모두 허용한다")
     void acceptsAnyConfiguredAudience() {
         Map<String, Object> body = validBody();

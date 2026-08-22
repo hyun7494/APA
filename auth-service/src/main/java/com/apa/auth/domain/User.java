@@ -11,8 +11,13 @@ import java.time.LocalDateTime;
  * APA 공통 사용자. <b>앱별이 아니라 계정 단위다</b> — 낚시 앱과 이후 앱이 같은 행을 쓰고,
  * 어느 앱에서 들어왔는지는 {@link UserAppLink} 가 기록한다.
  *
- * <p>비밀번호 컬럼이 없다. 소셜 로그인만 받으므로 우리가 자격증명을 보관하지 않는다 —
- * 유출될 것이 없는 편이 낫다.
+ * <p>로그인 수단은 두 가지고 <b>한 계정이 둘 다 가질 수 있다</b>:
+ * <ul>
+ *   <li>이메일 + 비밀번호 — 이 행의 {@code email}/{@code passwordHash}</li>
+ *   <li>소셜 — {@link UserSocialAccount} 행들 (제공자마다 하나씩)</li>
+ * </ul>
+ * 둘을 잇는 것이 "계정 연동"이다. 소셜 신원을 이 표에 두면 한 사람이 카카오와 구글을
+ * 함께 쓸 수 없어서 밖으로 뺐다.
  */
 @Entity
 @Table(name = "users")
@@ -25,13 +30,28 @@ public class User {
     @GeneratedValue(strategy = GenerationType.IDENTITY)
     private Long id;
 
-    @Enumerated(EnumType.STRING)
-    @Column(name = "social_type", nullable = false, length = 10)
-    private SocialType socialType;
+    /**
+     * 로그인 아이디이자 계정을 잇는 열쇠. <b>항상 소문자로 저장한다</b> —
+     * {@code A@b.com} 과 {@code a@b.com} 이 다른 계정이 되면 사용자는 자기 계정을 잃는다.
+     *
+     * <p>소셜로만 들어온 계정은 제공자가 주소를 주지 않았으면 null 이다.
+     */
+    @Column(length = 255)
+    private String email;
 
-    /** 제공자가 준 고유 식별자. 카카오는 숫자, 구글은 sub 문자열이라 VARCHAR 로 받는다. */
-    @Column(name = "social_id", nullable = false, length = 100)
-    private String socialId;
+    /** BCrypt 해시. 소셜로만 가입한 계정은 null 이다 — 비밀번호가 없는 것이 정상이다. */
+    @Column(name = "password_hash", length = 100)
+    private String passwordHash;
+
+    /**
+     * 이 주소의 소유가 확인됐는가.
+     *
+     * <p>지금 true 가 되는 경로는 <b>제공자가 확인해 준 주소로 들어온 경우</b>뿐이다.
+     * 자체 가입은 확인 메일을 보낼 수단이 아직 없어 false 로 남는다. 이 값이 계정 연동의
+     * 안전장치라, 자체 가입 계정에 소셜을 붙일 때는 비밀번호를 한 번 더 받는다.
+     */
+    @Column(name = "email_verified", nullable = false)
+    private boolean emailVerified;
 
     @Column(nullable = false, length = 30)
     private String nickname;
@@ -52,10 +72,30 @@ public class User {
     @Column(name = "updated_at", nullable = false)
     private LocalDateTime updatedAt;
 
-    public static User register(SocialType socialType, String socialId, String nickname, String profileUrl) {
+    /** 자체 회원가입. {@code email} 은 정규화(소문자)된 값이어야 한다. */
+    public static User registerWithEmail(String email, String passwordHash, String nickname) {
+        User user = newActive(nickname, null);
+        user.email = email;
+        user.passwordHash = passwordHash;
+        user.emailVerified = false;
+        return user;
+    }
+
+    /**
+     * 소셜 가입.
+     *
+     * @param email 제공자가 <b>확인해 준</b> 주소만 넘긴다. 확인되지 않은 주소를 여기 넣으면
+     *              다음에 그 주소의 진짜 주인이 자체 가입을 하려 할 때 막힌다
+     */
+    public static User registerFromSocial(String nickname, String profileUrl, String email) {
+        User user = newActive(nickname, profileUrl);
+        user.email = email;
+        user.emailVerified = email != null;
+        return user;
+    }
+
+    private static User newActive(String nickname, String profileUrl) {
         User user = new User();
-        user.socialType = socialType;
-        user.socialId = socialId;
         user.nickname = trimNickname(nickname);
         user.profileUrl = trimProfileUrl(profileUrl);
         user.status = UserStatus.ACTIVE;
@@ -83,6 +123,10 @@ public class User {
             changed = true;
         }
         if (changed) this.updatedAt = LocalDateTime.now();
+    }
+
+    public boolean hasPassword() {
+        return passwordHash != null;
     }
 
     public boolean isActive() {

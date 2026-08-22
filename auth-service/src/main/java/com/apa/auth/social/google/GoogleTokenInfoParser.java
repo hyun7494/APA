@@ -5,6 +5,7 @@ import com.apa.auth.social.SocialProfile;
 import com.apa.auth.social.SocialVerificationException;
 
 import java.util.List;
+import java.util.Locale;
 import java.util.Map;
 import java.util.Set;
 
@@ -62,7 +63,24 @@ public final class GoogleTokenInfoParser {
                 SocialType.GOOGLE,
                 subject,
                 blankToNull(str(body.get("name"))),
-                blankToNull(str(body.get("picture"))));
+                blankToNull(str(body.get("picture"))),
+                normalizeEmail(str(body.get("email"))),
+                isTrue(body.get("email_verified")));
+    }
+
+    /** 계정 연동은 소문자 주소로 맞춰 본다. {@code A@Gmail.com} 이 다른 사람이 되면 안 된다. */
+    private static String normalizeEmail(String value) {
+        String email = blankToNull(value);
+        return email == null ? null : email.trim().toLowerCase(Locale.ROOT);
+    }
+
+    /**
+     * {@code tokeninfo} 는 {@code email_verified} 를 <b>문자열 {@code "true"}</b> 로 준다
+     * (JSON 불리언이 아니다). {@code Boolean.TRUE.equals(...)} 로 받으면 항상 false 가 되어
+     * 연동이 조용히 동작하지 않는다.
+     */
+    private static boolean isTrue(Object value) {
+        return value != null && "true".equalsIgnoreCase(String.valueOf(value));
     }
 
     private static String str(Object value) {

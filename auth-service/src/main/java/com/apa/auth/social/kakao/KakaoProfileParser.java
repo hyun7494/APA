@@ -4,6 +4,7 @@ import com.apa.auth.domain.SocialType;
 import com.apa.auth.social.SocialProfile;
 import com.apa.auth.social.SocialVerificationException;
 
+import java.util.Locale;
 import java.util.Map;
 
 /**
@@ -51,9 +52,21 @@ public final class KakaoProfileParser {
                 profile == null ? null : str(profile.get("thumbnail_image_url")),
                 properties == null ? null : str(properties.get("profile_image")));
 
+        // 이메일은 별도 동의 항목이다. 동의를 안 받았으면 kakao_account 에 아예 없다.
+        String email = account == null ? null : normalizeEmail(str(account.get("email")));
+        // 카카오는 미인증 주소도 내려준다. 그대로 믿고 계정을 이어 붙이면 안 된다.
+        boolean emailVerified = account != null && Boolean.TRUE.equals(account.get("is_email_verified"));
+
         // id 는 JSON 숫자라 Long 으로 오는데, 자리수가 커서 Integer 로 좁히면 안 된다.
         // 문자열로 바로 세운다.
-        return new SocialProfile(SocialType.KAKAO, String.valueOf(id), nickname, profileUrl);
+        return new SocialProfile(
+                SocialType.KAKAO, String.valueOf(id), nickname, profileUrl, email, emailVerified);
+    }
+
+    /** 계정 연동은 소문자 주소로 맞춰 본다. {@code A@Kakao.com} 이 다른 사람이 되면 안 된다. */
+    private static String normalizeEmail(String value) {
+        if (value == null || value.isBlank()) return null;
+        return value.trim().toLowerCase(Locale.ROOT);
     }
 
     @SuppressWarnings("unchecked")

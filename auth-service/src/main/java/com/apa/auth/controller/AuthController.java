@@ -1,14 +1,18 @@
 package com.apa.auth.controller;
 
+import com.apa.auth.dto.EmailLoginRequest;
+import com.apa.auth.dto.EmailSignUpRequest;
 import com.apa.auth.dto.LoginRequestDto;
 import com.apa.auth.dto.LoginResponseDto;
 import com.apa.auth.dto.RefreshRequest;
+import com.apa.auth.dto.SocialLinkRequest;
 import com.apa.auth.dto.SocialLoginRequest;
 import com.apa.auth.dto.TokenResponse;
 import com.apa.auth.service.AuthService;
 import com.apa.auth.service.DevLoginService;
 import com.apa.common.security.AuthenticatedUser;
 import lombok.RequiredArgsConstructor;
+import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.core.annotation.AuthenticationPrincipal;
 import org.springframework.web.bind.annotation.*;
@@ -21,10 +25,39 @@ public class AuthController {
     private final AuthService authService;
     private final DevLoginService devLoginService;
 
-    /** 소셜 로그인 (기획서 v2 5-3). 없으면 가입하고, 있으면 로그인한다. */
+    /** 자체 회원가입 (이메일 + 비밀번호). 가입과 동시에 토큰을 내려 바로 로그인 상태가 된다. */
+    @PostMapping("/signup")
+    public ResponseEntity<TokenResponse> signUp(@RequestBody EmailSignUpRequest request) {
+        return ResponseEntity.status(HttpStatus.CREATED).body(authService.signUp(request));
+    }
+
+    /** 자체 가입 계정 로그인. */
+    @PostMapping("/login/email")
+    public ResponseEntity<TokenResponse> loginWithEmail(@RequestBody EmailLoginRequest request) {
+        return ResponseEntity.ok(authService.loginWithEmail(request));
+    }
+
+    /**
+     * 소셜 로그인 (기획서 v2 5-3). 없으면 가입하고, 있으면 로그인한다.
+     *
+     * <p>같은 이메일로 자체 가입한 계정이 이미 있으면 <b>409 {@code LINK_REQUIRED}</b> 다.
+     * 프론트는 비밀번호를 받아 {@code /auth/link/social} 로 다시 온다.
+     */
     @PostMapping("/login")
     public ResponseEntity<TokenResponse> login(@RequestBody SocialLoginRequest request) {
         return ResponseEntity.ok(authService.login(request));
+    }
+
+    /**
+     * 계정 연동 — 자체 가입 계정에 소셜을 붙이고 그대로 로그인시킨다.
+     * {@code /auth/login} 이 낸 409 {@code LINK_REQUIRED} 에 대한 응답이다.
+     *
+     * <p>토큰 없이 부를 수 있다. 아직 로그인하지 않은 사람이 부르는 자리이고,
+     * 비밀번호와 소셜 토큰 <b>둘 다</b>를 검증하므로 인증 자체가 여기서 일어난다.
+     */
+    @PostMapping("/link/social")
+    public ResponseEntity<TokenResponse> linkSocial(@RequestBody SocialLinkRequest request) {
+        return ResponseEntity.ok(authService.linkSocial(request));
     }
 
     /**

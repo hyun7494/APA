@@ -27,8 +27,11 @@ public class SecurityConfig {
                 .formLogin(form -> form.disable())      // 2. 기본 로그인 페이지 해제
                 .httpBasic(basic -> basic.disable())    // 3. Basic 인증 해제
                 .authorizeHttpRequests(auth -> auth     // 4. URL 권한 설정
-                        // 로그인·재발급은 토큰이 없는 상태에서 부르는 것이라 열려 있어야 한다.
-                        .requestMatchers("/auth/login", "/auth/refresh", "/auth/dev-login").permitAll()
+                        // 가입·로그인·재발급은 토큰이 없는 상태에서 부르는 것이라 열려 있어야 한다.
+                        // /auth/link/social 도 마찬가지다 — 비밀번호와 소셜 토큰을 함께 받아
+                        // 그 자리에서 인증하므로, 들어올 때 들고 있는 토큰이 없다.
+                        .requestMatchers("/auth/signup", "/auth/login", "/auth/login/email",
+                                "/auth/link/social", "/auth/refresh", "/auth/dev-login").permitAll()
                         // 로그아웃은 다르다 — 누구의 토큰을 지울지 알아야 하므로 인증이 필요하다.
                         .requestMatchers("/auth/logout").authenticated()
                         .anyRequest().authenticated()

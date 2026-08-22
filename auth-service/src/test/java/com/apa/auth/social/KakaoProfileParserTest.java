@@ -107,6 +107,45 @@ class KakaoProfileParserTest {
     }
 
     @Test
+    @DisplayName("인증된 이메일이면 연동에 쓸 수 있다 (소문자로 맞춰서)")
+    void readsVerifiedEmail() {
+        Map<String, Object> body = withProfile();
+        @SuppressWarnings("unchecked")
+        Map<String, Object> account = (Map<String, Object>) body.get("kakao_account");
+        account.put("email", "Hong@Kakao.com");
+        account.put("is_email_verified", true);
+
+        SocialProfile parsed = KakaoProfileParser.parse(body);
+
+        assertThat(parsed.email()).isEqualTo("hong@kakao.com");
+        assertThat(parsed.hasVerifiedEmail()).isTrue();
+    }
+
+    @Test
+    @DisplayName("★ 미인증 이메일로는 계정을 잇지 않는다")
+    void doesNotTrustUnverifiedEmail() {
+        Map<String, Object> body = withProfile();
+        @SuppressWarnings("unchecked")
+        Map<String, Object> account = (Map<String, Object>) body.get("kakao_account");
+        account.put("email", "hong@kakao.com");
+        account.put("is_email_verified", false);
+
+        SocialProfile parsed = KakaoProfileParser.parse(body);
+
+        assertThat(parsed.email()).isEqualTo("hong@kakao.com");
+        assertThat(parsed.hasVerifiedEmail()).isFalse();
+    }
+
+    @Test
+    @DisplayName("이메일 동의를 안 받았으면 주소가 없다")
+    void allowsMissingEmail() {
+        SocialProfile parsed = KakaoProfileParser.parse(withProfile());
+
+        assertThat(parsed.email()).isNull();
+        assertThat(parsed.hasVerifiedEmail()).isFalse();
+    }
+
+    @Test
     @DisplayName("빈 응답을 거절한다")
     void rejectsNullBody() {
         assertThatThrownBy(() -> KakaoProfileParser.parse(null))
