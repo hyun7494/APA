@@ -10,7 +10,7 @@ import '../widgets/app_buttons.dart';
 import '../widgets/app_card.dart';
 import '../widgets/async_view.dart';
 import '../widgets/collection_progress.dart';
-import '../widgets/photo_placeholder.dart';
+import '../widgets/authed_photo.dart';
 import '../widgets/reveal.dart';
 
 /// 등록 완료 — 도감 칸이 새로 채워진 순간.
@@ -121,7 +121,9 @@ class _Body extends StatelessWidget {
                 child: Stack(
                   fit: StackFit.expand,
                   children: [
-                    _SaturationReveal(child: PhotoPlaceholder(rare: rare)),
+                    _SaturationReveal(
+                      child: AuthedPhoto(path: record?.photoUrl, rare: rare),
+                    ),
                     // 길이 배지는 채도 연출 밖에 둔다 — 글자가 같이
                     // 흑백으로 죽었다 살아나면 읽는 데 방해가 된다.
                     if (record != null)

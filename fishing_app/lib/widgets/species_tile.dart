@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 
 import '../models/species.dart';
 import '../theme/app_theme.dart';
+import 'authed_photo.dart';
 import 'photo_placeholder.dart';
 import 'press_scale.dart';
 
@@ -70,7 +71,8 @@ class _RecordedFace extends StatelessWidget {
     return Stack(
       fit: StackFit.expand,
       children: [
-        PhotoPlaceholder(rare: rare),
+        // 등록된 칸은 표지 사진, 미등록은 줄무늬. coverPhotoUrl 은 미등록이면 null 이다.
+        AuthedPhoto(path: entry.coverPhotoUrl, rare: rare, thumb: true),
         if (rare)
           Positioned(
             left: 6,

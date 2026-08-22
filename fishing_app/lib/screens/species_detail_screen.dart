@@ -11,7 +11,7 @@ import '../theme/app_theme.dart';
 import '../widgets/app_buttons.dart';
 import '../widgets/app_card.dart';
 import '../widgets/async_view.dart';
-import '../widgets/photo_placeholder.dart';
+import '../widgets/authed_photo.dart';
 import '../widgets/reveal.dart';
 
 /// 어종 상세 — 도감 페이지.
@@ -129,7 +129,10 @@ class _Body extends ConsumerWidget {
                     ? Stack(
                         fit: StackFit.expand,
                         children: [
-                          PhotoPlaceholder(rare: species.rarity.isRare),
+                          AuthedPhoto(
+                            path: entry.coverPhotoUrl,
+                            rare: species.rarity.isRare,
+                          ),
                           // 최대 길이는 사진 위 배지로 얹는다. 플레이스홀더가
                           // 실제 사진으로 바뀌어도 이 자리는 그대로다.
                           if (entry.bestLengthCm != null)
@@ -459,7 +462,12 @@ class _RecordRow extends StatelessWidget {
             height: 52,
             child: ClipRRect(
               borderRadius: BorderRadius.circular(12),
-              child: PhotoPlaceholder(rare: rare),
+              child: AuthedPhoto(
+                path: record.photoUrl,
+                rare: rare,
+                stripe: 5,
+                thumb: true,
+              ),
             ),
           ),
           const SizedBox(width: 14),
