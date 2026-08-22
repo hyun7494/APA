@@ -129,6 +129,71 @@ class MockFishingRepository implements FishingRepository {
         .toList();
   }
 
+  /// 목 저장소의 댓글·좋아요. 서버가 소유하는 것을 여기서는 메모리에 둔다.
+  final Map<int, List<Comment>> _comments = {};
+  final Set<int> _liked = {};
+  int _nextCommentId = 1;
+
+  @override
+  Future<PostDetail> fetchPost(int id) async {
+    await Future.delayed(_latency);
+    final post = _posts.firstWhere((p) => p.id == id);
+    return PostDetail(
+      id: post.id,
+      category: post.category,
+      title: post.title,
+      // 목 데이터에는 본문이 따로 없다. 목록 요약을 그대로 쓴다.
+      content: post.summary,
+      authorNickname: post.authorNickname,
+      createdAt: post.createdAt,
+      likeCount: post.likeCount + (_liked.contains(id) ? 1 : 0),
+      commentCount: _comments[id]?.length ?? post.commentCount,
+      likedByMe: _liked.contains(id),
+      regionName: post.regionName,
+    );
+  }
+
+  @override
+  Future<List<Comment>> fetchComments(int postId) async {
+    await Future.delayed(_latency);
+    return List.unmodifiable(_comments[postId] ?? const []);
+  }
+
+  @override
+  Future<Comment> createComment(int postId, String content) async {
+    await Future.delayed(_latency);
+    final comment = Comment(
+      id: _nextCommentId++,
+      authorNickname: MockData.profile.nickname,
+      content: content,
+      createdAt: DateTime.now(),
+      mine: true,
+    );
+    (_comments[postId] ??= []).add(comment);
+    return comment;
+  }
+
+  @override
+  Future<void> deleteComment(int commentId) async {
+    await Future.delayed(_latency);
+    for (final list in _comments.values) {
+      list.removeWhere((c) => c.id == commentId);
+    }
+  }
+
+  @override
+  Future<({int likeCount, bool likedByMe})> toggleLike(int postId) async {
+    await Future.delayed(_latency);
+    final liked = !_liked.contains(postId);
+    if (liked) {
+      _liked.add(postId);
+    } else {
+      _liked.remove(postId);
+    }
+    final base = _posts.firstWhere((p) => p.id == postId).likeCount;
+    return (likeCount: base + (liked ? 1 : 0), likedByMe: liked);
+  }
+
   @override
   Future<Post> createPost({
     required PostCategory category,

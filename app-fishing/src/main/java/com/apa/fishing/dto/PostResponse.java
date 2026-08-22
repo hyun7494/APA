@@ -27,6 +27,16 @@ public record PostResponse(
     private static final String ALL_BOARD = "ALL";
 
     public static PostResponse from(FishingPost post) {
+        return from(post, false);
+    }
+
+    /**
+     * @param likedByMe 보는 사람이 이 글을 좋아요 했는지. 비로그인이면 언제나 false 다.
+     *                  목록에서는 글마다 묻지 않고 한 번에 읽어 온 집합으로 채운다
+     *                  ({@code FishingPostLikeRepository.findLikedPostIds}) — 글마다 물으면
+     *                  20개 목록에 질의가 20번이다
+     */
+    public static PostResponse from(FishingPost post, boolean likedByMe) {
         String regionName = post.getRegion() == null ? null : post.getRegion().getName();
 
         return new PostResponse(
@@ -41,8 +51,7 @@ public record PostResponse(
                 post.isHasImage(),
                 regionName,
                 regionName == null ? ALL_BOARD : regionName,
-                // Step 9(인증)에서 로그인 유저 기준으로 채운다. 그전까지는 항상 false 다.
-                false
+                likedByMe
         );
     }
 

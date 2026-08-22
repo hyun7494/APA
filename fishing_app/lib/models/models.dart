@@ -1,5 +1,6 @@
 export 'catch_record.dart';
 export 'post.dart';
+export 'post_detail.dart';
 export 'profile.dart';
 export 'rating.dart';
 export 'region_group.dart';

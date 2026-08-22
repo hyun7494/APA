@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:go_router/go_router.dart';
 
 import '../models/post.dart';
 import '../services/login_gate.dart';
@@ -13,9 +14,9 @@ import '../widgets/reveal.dart';
 
 /// 게시판 — 전체/조황/자유/질문 탭 + 글 카드 목록.
 ///
-/// 목록은 비로그인도 본다 (기획서 5-5). **글쓰기만 로그인이 필요하다** — 글에는
-/// 작성자가 있어야 하기 때문이고, 그 판정은 [requireLogin] 한 군데가 한다.
-/// 좋아요·신고·댓글은 아직 없다 (계약서 3-8).
+/// 목록과 상세 읽기는 비로그인도 된다 (기획서 5-5). **글쓰기·댓글·좋아요만 로그인이
+/// 필요하다** — 셋 다 누가 했는지가 남기 때문이고, 그 판정은 [requireLogin] 이 한다.
+/// 신고는 아직 없다 (계약서 3-8).
 class BoardScreen extends ConsumerWidget {
   const BoardScreen({super.key});
 
@@ -124,6 +125,8 @@ class _PostCard extends StatelessWidget {
 
     return AppCard(
       padding: const EdgeInsets.fromLTRB(17, 16, 17, 14),
+      // 누르면 본문 전체와 댓글이 있는 상세로 간다. 읽기는 로그인이 필요 없다.
+      onTap: () => context.go('/board/${post.id}'),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [

@@ -153,6 +153,56 @@ class RemoteFishingRepository implements FishingRepository {
   }
 
   @override
+  Future<PostDetail> fetchPost(int id) async {
+    final res = await _dio.get<Map<String, dynamic>>('/fishing/board/$id');
+    return PostDetail.fromJson(res.data!);
+  }
+
+  @override
+  Future<List<Comment>> fetchComments(int postId) async {
+    final res = await _dio.get<List<dynamic>>('/fishing/board/$postId/comments');
+    return _mapList(res.data, Comment.fromJson);
+  }
+
+  @override
+  Future<Comment> createComment(int postId, String content) async {
+    try {
+      final res = await _dio.post<Map<String, dynamic>>(
+        '/fishing/board/$postId/comments',
+        data: {'content': content},
+      );
+      return Comment.fromJson(res.data!);
+    } on DioException catch (e) {
+      throw PostSubmitException(_submitMessage(e, '댓글을 남기지 못했어요'));
+    }
+  }
+
+  @override
+  Future<void> deleteComment(int commentId) async {
+    try {
+      await _dio.delete<void>('/fishing/board/comments/$commentId');
+    } on DioException catch (e) {
+      throw PostSubmitException(_submitMessage(e, '댓글을 지우지 못했어요'));
+    }
+  }
+
+  @override
+  Future<({int likeCount, bool likedByMe})> toggleLike(int postId) async {
+    try {
+      final res = await _dio.post<Map<String, dynamic>>(
+        '/fishing/board/$postId/like',
+      );
+      final data = res.data!;
+      return (
+        likeCount: (data['likeCount'] as num?)?.toInt() ?? 0,
+        likedByMe: data['likedByMe'] as bool? ?? false,
+      );
+    } on DioException catch (e) {
+      throw PostSubmitException(_submitMessage(e, '좋아요를 반영하지 못했어요'));
+    }
+  }
+
+  @override
   Future<Post> createPost({
     required PostCategory category,
     required String title,
@@ -171,15 +221,7 @@ class RemoteFishingRepository implements FishingRepository {
       );
       return Post.fromJson(res.data!);
     } on DioException catch (e) {
-      if (_isUnauthorized(e)) {
-        // 관문을 통과해 들어왔는데 여기서 401 이면 그 사이 토큰이 만료된 것이다.
-        throw const PostSubmitException('로그인이 만료되었어요. 다시 로그인해 주세요');
-      }
-      // 서버가 문구를 주면 그대로 쓴다 — "제목을 입력해 주세요"가
-      // "글을 올리지 못했어요"보다 언제나 낫다.
-      throw PostSubmitException(
-        _serverDetail(e) ?? '글을 올리지 못했어요. 잠시 후 다시 시도해 주세요',
-      );
+      throw PostSubmitException(_submitMessage(e, '글을 올리지 못했어요'));
     }
   }
 
@@ -194,6 +236,17 @@ class RemoteFishingRepository implements FishingRepository {
       if (e.response?.statusCode == 401) return null;
       rethrow;
     }
+  }
+
+  /// 쓰기 실패를 화면에 띄울 한 줄로 바꾼다.
+  ///
+  /// 서버가 문구를 주면 그대로 쓴다 — "제목을 입력해 주세요"가 "실패했어요"보다 언제나 낫다.
+  String _submitMessage(DioException e, String fallback) {
+    if (_isUnauthorized(e)) {
+      // 관문을 통과해 들어왔는데 여기서 401 이면 그 사이 토큰이 만료된 것이다.
+      return '로그인이 만료되었어요. 다시 로그인해 주세요';
+    }
+    return _serverDetail(e) ?? '$fallback. 잠시 후 다시 시도해 주세요';
   }
 
   /// 서버는 오류를 ProblemDetail(JSON) 로 내려준다.

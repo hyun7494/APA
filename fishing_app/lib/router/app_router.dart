@@ -8,6 +8,7 @@ import '../screens/catch_success_screen.dart';
 import '../screens/collection_screen.dart';
 import '../screens/home_screen.dart';
 import '../screens/login_screen.dart';
+import '../screens/post_detail_screen.dart';
 import '../screens/post_new_screen.dart';
 import '../screens/profile_screen.dart';
 import '../screens/region_search_screen.dart';
@@ -118,6 +119,14 @@ GoRouter createAppRouter() => GoRouter(
             GoRoute(
               path: '/board/new',
               builder: (_, _) => const PostNewScreen(),
+            ),
+            // ⚠️ `/board/new` 보다 **뒤에** 둔다. 앞에 두면 `:id` 가 "new" 를 먼저
+            //    삼켜서 글쓰기 화면으로 갈 수 없다.
+            GoRoute(
+              path: '/board/:id',
+              builder: (_, state) => PostDetailScreen(
+                postId: int.tryParse(state.pathParameters['id'] ?? '') ?? 0,
+              ),
             ),
           ],
         ),

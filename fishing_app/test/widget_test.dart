@@ -13,6 +13,7 @@ import 'package:fishing_app/services/photo_picker.dart';
 import 'package:fishing_app/services/social_sign_in.dart';
 import 'package:fishing_app/widgets/app_buttons.dart';
 import 'package:fishing_app/widgets/pill_chip.dart';
+import 'package:fishing_app/widgets/press_scale.dart';
 import 'package:fishing_app/widgets/spot_card.dart';
 import 'package:fishing_app/widgets/species_tile.dart';
 
@@ -524,6 +525,54 @@ void main() {
     //    사용자는 실패한 줄 알고 다시 눌러 같은 글을 두 번 올렸다.
     expect(find.textContaining('올리지 못했어요'), findsNothing);
     expect(find.text('글을 올렸어요'), findsOneWidget);
+  });
+
+  testWidgets('★ 글 카드를 누르면 상세로 가고 본문이 보인다 (비로그인도)', (tester) async {
+    await pumpApp(tester);
+
+    await tester.tap(find.text('게시판'));
+    await tester.pumpAndSettle();
+    await tester.tap(find.text('오늘 학리에서 감성돔 4짜 손맛!'));
+    await tester.pumpAndSettle();
+
+    // 카드에는 요약만 있었다. 상세는 본문과 댓글 자리를 함께 보여준다.
+    expect(find.text('게시판으로'), findsOneWidget);
+    expect(find.textContaining('댓글'), findsWidgets);
+    expect(find.textContaining('아직 댓글이 없어요'), findsOneWidget);
+  });
+
+  testWidgets('★ 로그인 상태에서 댓글을 남기면 목록에 붙는다', (tester) async {
+    await pumpApp(tester, auth: FakeAuthRepository(loggedIn: true));
+
+    await tester.tap(find.text('게시판'));
+    await tester.pumpAndSettle();
+    await tester.tap(find.text('오늘 학리에서 감성돔 4짜 손맛!'));
+    await tester.pumpAndSettle();
+
+    await tester.enterText(
+      find.widgetWithText(TextField, '댓글을 남겨보세요'),
+      '저도 어제 다녀왔어요',
+    );
+    await tester.pump();
+    await tester.tap(find.widgetWithText(PressScale, '등록'));
+    await tester.pumpAndSettle();
+
+    expect(find.text('저도 어제 다녀왔어요'), findsOneWidget);
+    expect(find.textContaining('아직 댓글이 없어요'), findsNothing);
+  });
+
+  testWidgets('★ 비로그인으로 좋아요를 누르면 로그인 화면으로 보낸다', (tester) async {
+    await pumpApp(tester);
+
+    await tester.tap(find.text('게시판'));
+    await tester.pumpAndSettle();
+    await tester.tap(find.text('오늘 학리에서 감성돔 4짜 손맛!'));
+    await tester.pumpAndSettle();
+
+    await tester.tap(find.textContaining('좋아요'));
+    await tester.pumpAndSettle();
+
+    expect(find.textContaining('로그인이 필요해요'), findsOneWidget);
   });
 
   testWidgets('게시판 탭 필터가 동작한다', (tester) async {

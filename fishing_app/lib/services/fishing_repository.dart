@@ -46,6 +46,20 @@ abstract interface class FishingRepository {
   /// GET /fishing/board?tag=&regionGroupId=
   Future<List<Post>> fetchPosts({PostCategory? category, int? regionGroupId});
 
+  /// 글 상세. 목록과 달리 본문 전체가 온다. 읽기는 비로그인도 된다.
+  Future<PostDetail> fetchPost(int id);
+
+  Future<List<Comment>> fetchComments(int postId);
+
+  /// 댓글 쓰기. 인증 필요.
+  Future<Comment> createComment(int postId, String content);
+
+  /// 내 댓글 삭제. 인증 필요 — 남의 댓글은 서버가 404 로 막는다.
+  Future<void> deleteComment(int commentId);
+
+  /// 좋아요 토글. 인증 필요. 누른 뒤의 **수와 상태를 서버가 정해서** 돌려준다.
+  Future<({int likeCount, bool likedByMe})> toggleLike(int postId);
+
   /// 글쓰기. 인증이 필요하다 — 서버가 작성자를 토큰에서 가져간다.
   ///
   /// @throws [PostSubmitException] 서버가 거절했을 때. 메시지를 그대로 띄우면 된다

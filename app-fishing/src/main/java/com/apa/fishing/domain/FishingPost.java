@@ -63,6 +63,20 @@ public class FishingPost {
     private LocalDateTime createdAt;
 
     /**
+     * 댓글·좋아요 수를 실제 개수로 맞춘다.
+     *
+     * <p><b>세어서 넣지, 직접 +1/-1 하지 않는다.</b> 증감식은 어딘가에서 한 번 어긋나면
+     * 그 뒤로 영영 틀린 채로 간다 — V9 이전의 시드 값이 그 상태였다.
+     */
+    public void syncCommentCount(int actual) {
+        this.commentCount = actual;
+    }
+
+    public void syncLikeCount(int actual) {
+        this.likeCount = actual;
+    }
+
+    /**
      * 새 글.
      *
      * @param authorNickname <b>토큰에서 온 값을 그대로 박아 둔다.</b> 나중에 사용자가 닉네임을

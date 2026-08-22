@@ -45,6 +45,10 @@ public class SecurityConfig {
             .authorizeHttpRequests(auth -> auth
                 .requestMatchers("/fishing/me/**").authenticated()
                 .requestMatchers(HttpMethod.POST, "/fishing/board/**").authenticated()
+                // 댓글 삭제. POST 규칙이 안 덮으므로 따로 적는다 —
+                // 빠뜨리면 anyRequest().permitAll() 이 받아서 **누구나 남의 댓글을 지운다.**
+                // (서비스가 본인 것인지 한 번 더 보긴 하지만, 두 겹이 맞다.)
+                .requestMatchers(HttpMethod.DELETE, "/fishing/board/**").authenticated()
                 .anyRequest().permitAll()      // 조회는 전부 공개
             )
             // 토큰이 없거나 상해도 이 필터는 통과시킨다 — 위 매처가 401 을 낸다.

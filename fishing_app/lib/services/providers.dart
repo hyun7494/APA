@@ -150,7 +150,26 @@ final speciesMasterProvider = Provider<List<Species>>((ref) => SpeciesSeed.all);
 
 final postsProvider = FutureProvider<List<Post>>((ref) {
   final category = ref.watch(selectedBoardTabProvider);
+  // 좋아요·댓글 수와 likedByMe 가 보는 사람에 따라 다르다.
+  ref.watch(postRevisionProvider);
+  ref.watch(loggedInProvider);
   return ref.watch(fishingRepositoryProvider).fetchPosts(category: category);
+});
+
+/// 글 상세를 바꾼 뒤(좋아요·댓글) 화면을 새로 받아오기 위한 신호.
+/// 조과 등록의 [collectionRevisionProvider] 와 같은 장치다.
+final postRevisionProvider = StateProvider<int>((ref) => 0);
+
+final postDetailProvider = FutureProvider.family<PostDetail, int>((ref, id) {
+  ref.watch(postRevisionProvider);
+  ref.watch(loggedInProvider);
+  return ref.watch(fishingRepositoryProvider).fetchPost(id);
+});
+
+final commentsProvider = FutureProvider.family<List<Comment>, int>((ref, postId) {
+  ref.watch(postRevisionProvider);
+  ref.watch(loggedInProvider);
+  return ref.watch(fishingRepositoryProvider).fetchComments(postId);
 });
 
 final profileProvider = FutureProvider<Profile?>((ref) {
