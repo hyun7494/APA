@@ -11,6 +11,7 @@ import '../services/providers.dart';
 import '../theme/app_theme.dart';
 import '../widgets/app_card.dart';
 import '../widgets/async_view.dart';
+import '../widgets/authed_photo.dart';
 import '../widgets/press_scale.dart';
 import '../widgets/reveal.dart';
 
@@ -99,6 +100,20 @@ class _PostDetailScreenState extends ConsumerState<PostDetailScreen> {
       ),
       children: [
         Reveal(child: _header(post)),
+        if (post.photoUrl != null) ...[
+          const SizedBox(height: 18),
+          Reveal(
+            index: 1,
+            child: ClipRRect(
+              borderRadius: BorderRadius.circular(AppRadius.cardTight),
+              child: AspectRatio(
+                aspectRatio: 4 / 3,
+                // 상세는 원본을 쓴다 — 화면 폭을 채우므로 썸네일이면 뭉개진다.
+                child: AuthedPhoto(path: post.photoUrl),
+              ),
+            ),
+          ),
+        ],
         const SizedBox(height: 18),
         Reveal(
           index: 1,

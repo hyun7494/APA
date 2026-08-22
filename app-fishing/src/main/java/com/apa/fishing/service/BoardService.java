@@ -21,6 +21,7 @@ import org.springframework.dao.DataIntegrityViolationException;
 import org.springframework.http.HttpStatus;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
+import org.springframework.web.multipart.MultipartFile;
 import org.springframework.web.server.ResponseStatusException;
 
 import java.util.List;
@@ -44,6 +45,7 @@ public class BoardService {
     private final FishingRegionRepository regionRepository;
     private final FishingPostCommentRepository commentRepository;
     private final FishingPostLikeRepository likeRepository;
+    private final PhotoStorageService photoStorage;
 
     // ─────────────────────────────────────────────────────────────── 목록·상세
 
@@ -93,7 +95,7 @@ public class BoardService {
      * <p>작성자는 <b>토큰에서 온다.</b> 요청 본문으로 받으면 아무나 남의 이름으로 쓸 수 있다.
      */
     @Transactional
-    public PostResponse write(AuthenticatedUser user, PostCreateRequest request) {
+    public PostResponse write(AuthenticatedUser user, PostCreateRequest request, MultipartFile photo) {
         String title = required(request.title(), "제목을 입력해 주세요", TITLE_MAX, "제목이 너무 깁니다");
         String content = required(request.content(), "내용을 입력해 주세요", CONTENT_MAX, "내용이 너무 깁니다");
 
@@ -109,7 +111,8 @@ public class BoardService {
         }
 
         FishingPost saved = postRepository.save(FishingPost.write(
-                category, title, content, user.userId(), nicknameOf(user), region));
+                category, title, content, user.userId(), nicknameOf(user), region,
+                storeIfPresent(photo)));
 
         return PostResponse.from(saved);
     }
@@ -121,7 +124,8 @@ public class BoardService {
      * 내 것이 아니다"를 알려주는 셈이다 ({@code CatchService} 와 같은 규칙).
      */
     @Transactional
-    public PostDetailResponse update(AuthenticatedUser user, Long id, PostCreateRequest request) {
+    public PostDetailResponse update(AuthenticatedUser user, Long id,
+                                     PostCreateRequest request, MultipartFile photo) {
         FishingPost post = findOwned(user, id);
 
         String title = required(request.title(), "제목을 입력해 주세요", TITLE_MAX, "제목이 너무 깁니다");
@@ -138,6 +142,14 @@ public class BoardService {
 
         post.edit(category, title, content, region);
 
+        // 사진 파트를 안 보내면 원래 사진을 그대로 둔다 (CatchService.update 와 같은 규칙) —
+        // 글자만 고치려고 사진을 다시 고르게 하면 안 된다.
+        String stored = storeIfPresent(photo);
+        if (stored != null) {
+            deleteIfPresent(post.getPhotoUrl());
+            post.attachPhoto(stored);
+        }
+
         boolean likedByMe = likeRepository.existsByPostIdAndUserId(id, user.userId());
         return PostDetailResponse.from(post, likedByMe, user.userId());
     }
@@ -150,7 +162,21 @@ public class BoardService {
      */
     @Transactional
     public void delete(AuthenticatedUser user, Long id) {
-        postRepository.delete(findOwned(user, id));
+        FishingPost post = findOwned(user, id);
+        // 파일은 DB 가 지워 주지 않는다. 행보다 먼저 지워도 되는 이유는, 실패해도
+        // 남는 것이 고아 파일 하나뿐이고 글은 정상적으로 사라지기 때문이다.
+        deleteIfPresent(post.getPhotoUrl());
+        postRepository.delete(post);
+    }
+
+    private String storeIfPresent(MultipartFile photo) {
+        return (photo == null || photo.isEmpty()) ? null : photoStorage.storeForBoard(photo);
+    }
+
+    private void deleteIfPresent(String photoUrl) {
+        if (photoUrl != null) {
+            photoStorage.delete(photoUrl);
+        }
     }
 
     private FishingPost findOwned(AuthenticatedUser user, Long id) {

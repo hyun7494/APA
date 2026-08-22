@@ -13,6 +13,7 @@ import '../widgets/app_buttons.dart';
 import '../widgets/app_card.dart';
 import '../widgets/async_view.dart';
 import '../widgets/photo_placeholder.dart';
+import '../widgets/photo_source_sheet.dart';
 import '../widgets/press_scale.dart';
 import '../widgets/reveal.dart';
 
@@ -47,7 +48,6 @@ class _CatchNewScreenState extends ConsumerState<CatchNewScreen> {
   final _memoController = TextEditingController();
 
   /// 서버 `fishing.photo.max-bytes` 와 같은 값.
-  static const _maxPhotoBytes = 15 * 1024 * 1024;
 
   /// 서버 `CatchCreateRequest.MEMO_LIMIT` 과 같은 값.
   /// 시안은 500 이지만 컬럼이 `VARCHAR(300)` 이라 넘기면 서버가 거절한다.
@@ -342,38 +342,16 @@ class _CatchNewScreenState extends ConsumerState<CatchNewScreen> {
   // ── 동작 ────────────────────────────────────────────────────
 
   Future<void> _pickPhoto() async {
-    final source = await showModalBottomSheet<PhotoSource>(
-      context: context,
-      backgroundColor: Colors.transparent,
-      builder: (_) => const _PhotoSourceSheet(),
-    );
-    if (source == null || !mounted) return;
-
-    try {
-      final picked = await ref.read(photoPickerProvider).pick(source);
-      if (picked == null || !mounted) return;
-
-      // 서버 한도(15MB)를 넘는 사진은 여기서 잘라낸다. 올려 보고 400 을
-      // 받으면 업로드 시간을 통째로 날린 뒤에야 알게 된다.
-      if (picked.sizeBytes > _maxPhotoBytes) {
-        _toast('사진이 너무 커요 (${_mb(picked.sizeBytes)}MB). 15MB 아래로 줄여주세요');
-        return;
-      }
-      setState(() => _photo = picked);
-    } on UnsupportedPhotoException catch (e) {
-      if (mounted) _toast(e.message);
-    } catch (_) {
-      // 카메라·앨범 권한 거부가 여기로 온다. 플랫폼마다 예외 타입이 달라
-      // 하나로 묶고, 사용자가 할 수 있는 일만 알려준다.
-      if (mounted) _toast('사진을 가져오지 못했어요. 설정에서 사진·카메라 권한을 확인해 주세요');
-    }
+    // 시트·크기 한도·권한 안내는 글쓰기 화면과 공유한다 (`pickPhotoFromSheet`).
+    final picked = await pickPhotoFromSheet(context, ref, onMessage: _toast);
+    if (picked == null || !mounted) return;
+    setState(() => _photo = picked);
   }
 
   void _toast(String message) => ScaffoldMessenger.of(
     context,
   ).showSnackBar(SnackBar(content: Text(message)));
 
-  static String _mb(int bytes) => (bytes / 1024 / 1024).toStringAsFixed(1);
 
   Future<void> _pickSpecies() async {
     final picked = await showModalBottomSheet<Species>(
@@ -438,60 +416,6 @@ class _CatchNewScreenState extends ConsumerState<CatchNewScreen> {
       ).showSnackBar(const SnackBar(content: Text('기록이 추가되었습니다')));
       context.go('/collection/${result.record.speciesId}');
     }
-  }
-}
-
-/// 사진을 어디서 가져올지 고르는 시트.
-class _PhotoSourceSheet extends StatelessWidget {
-  const _PhotoSourceSheet();
-
-  @override
-  Widget build(BuildContext context) {
-    return SafeArea(
-      child: Container(
-        margin: const EdgeInsets.all(AppSpacing.screen),
-        padding: const EdgeInsets.all(8),
-        decoration: BoxDecoration(
-          color: AppColors.surface,
-          borderRadius: BorderRadius.circular(AppRadius.card),
-        ),
-        child: Column(
-          mainAxisSize: MainAxisSize.min,
-          children: [
-            for (final source in PhotoSource.values) ...[
-              if (source != PhotoSource.values.first)
-                const CardDivider(margin: EdgeInsets.symmetric(horizontal: 10)),
-              PressScale(
-                onTap: () => Navigator.pop(context, source),
-                scale: 0.98,
-                child: Padding(
-                  padding: const EdgeInsets.symmetric(
-                    horizontal: 12,
-                    vertical: 16,
-                  ),
-                  child: Row(
-                    children: [
-                      LineIcon(
-                        source == PhotoSource.camera
-                            ? AppIcon.camera
-                            : AppIcon.book,
-                        size: 19,
-                        color: AppColors.accent,
-                        stroke: 1.5,
-                      ),
-                      const SizedBox(width: 12),
-                      Expanded(
-                        child: Text(source.label, style: AppText.rowValue),
-                      ),
-                    ],
-                  ),
-                ),
-              ),
-            ],
-          ],
-        ),
-      ),
-    );
   }
 }
 

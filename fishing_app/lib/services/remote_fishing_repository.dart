@@ -3,6 +3,7 @@ import 'package:dio/dio.dart';
 import '../models/models.dart';
 import 'api_client.dart';
 import 'fishing_repository.dart';
+import 'photo_picker.dart';
 
 /// 실제 app-fishing(:8086, `/fishing/**`) 호출 구현.
 ///
@@ -164,15 +165,12 @@ class RemoteFishingRepository implements FishingRepository {
     required PostCategory category,
     required String title,
     required String content,
+    PickedPhoto? photo,
   }) async {
     try {
       final res = await _dio.put<Map<String, dynamic>>(
         '/fishing/board/$id',
-        data: {
-          'category': category.code,
-          'title': title,
-          'content': content,
-        },
+        data: _postForm(category, title, content, photo),
       );
       return PostDetail.fromJson(res.data!);
     } on DioException catch (e) {
@@ -233,22 +231,42 @@ class RemoteFishingRepository implements FishingRepository {
     }
   }
 
+  /// 글쓰기·고치기가 같은 폼을 보낸다.
+  ///
+  /// 사진이 붙으면서 JSON 이 아니라 multipart 가 됐다 — 조과 등록과 같은 모양이다.
+  /// **사진이 없으면 파트를 아예 넣지 않는다.** 고치기에서 빈 파트를 보내면 서버가
+  /// "사진을 뗐다"로 읽을 여지가 생긴다.
+  FormData _postForm(
+    PostCategory category,
+    String title,
+    String content,
+    PickedPhoto? photo,
+  ) => FormData.fromMap({
+    'category': category.code,
+    'title': title,
+    'content': content,
+    if (photo != null)
+      'photo': MultipartFile.fromBytes(
+        photo.bytes,
+        filename: photo.name,
+        // 서버는 선언된 Content-Type 으로만 형식을 판정한다 (registerCatch 주석 참고).
+        contentType: DioMediaType.parse(photo.mimeType),
+      ),
+  });
+
   @override
   Future<Post> createPost({
     required PostCategory category,
     required String title,
     required String content,
+    PickedPhoto? photo,
   }) async {
     // 작성자(user_id·닉네임)는 보내지 않는다. 서버가 토큰에서 가져간다 —
     // 본문으로 받으면 아무나 남의 이름으로 쓸 수 있다.
     try {
       final res = await _dio.post<Map<String, dynamic>>(
         '/fishing/board',
-        data: {
-          'category': category.code,
-          'title': title,
-          'content': content,
-        },
+        data: _postForm(category, title, content, photo),
       );
       return Post.fromJson(res.data!);
     } on DioException catch (e) {

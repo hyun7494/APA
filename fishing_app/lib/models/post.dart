@@ -34,6 +34,7 @@ class Post {
     required this.likeCount,
     required this.commentCount,
     required this.hasImage,
+    this.photoUrl,
     this.regionName,
     this.boardKey = 'ALL',
     this.likedByMe = false,
@@ -54,6 +55,10 @@ class Post {
   /// 사진 첨부 여부 — 카드에 📷 표시
   final bool hasImage;
 
+  /// 붙인 사진. 없으면 null 이고 카드는 사진 자리를 만들지 않는다.
+  /// **공개 경로**(`/fishing/board/photos/...`)라 비로그인도 볼 수 있다.
+  final String? photoUrl;
+
   /// "부산 기장" — 카드 메타에 태그와 함께 노출
   final String? regionName;
 
@@ -73,6 +78,7 @@ class Post {
     likeCount: (json['likeCount'] as num?)?.toInt() ?? 0,
     commentCount: (json['commentCount'] as num?)?.toInt() ?? 0,
     hasImage: json['hasImage'] as bool? ?? false,
+    photoUrl: json['photoUrl'] as String?,
     regionName: json['regionName'] as String?,
     boardKey: json['boardKey'] as String? ?? 'ALL',
     likedByMe: json['likedByMe'] as bool? ?? false,
@@ -88,6 +94,7 @@ class Post {
     'likeCount': likeCount,
     'commentCount': commentCount,
     'hasImage': hasImage,
+    'photoUrl': photoUrl,
     'regionName': regionName,
     'boardKey': boardKey,
     'likedByMe': likedByMe,

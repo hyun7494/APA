@@ -4,19 +4,22 @@ import 'package:go_router/go_router.dart';
 
 import '../models/models.dart';
 import '../services/fishing_repository.dart';
+import '../services/photo_picker.dart';
 import '../services/providers.dart';
 import '../theme/app_theme.dart';
 import '../widgets/app_buttons.dart';
 import '../widgets/app_card.dart';
 import '../widgets/async_view.dart';
+import '../widgets/authed_photo.dart';
+import '../widgets/photo_source_sheet.dart';
+import '../widgets/press_scale.dart';
 import '../widgets/pill_chip.dart';
 import '../widgets/reveal.dart';
 
 /// 글쓰기 (계약서 3-8).
 ///
-/// 받는 것은 셋뿐이다 — 분류·제목·내용. **사진 첨부는 아직 없다**: 서버가
-/// `hasImage` 를 false 로 고정해 두었고, 게시판 카드도 이미지를 그리지 않는다.
-/// 붙이려면 조과 등록의 사진 파이프라인을 재사용하면 된다.
+/// 받는 것은 넷이다 — 사진·분류·제목·내용. **사진은 선택**이다: 조황 글에는 사진이
+/// 본체지만 질문 글에까지 강요할 이유가 없다.
 ///
 /// 여기까지 왔다는 것은 로그인이 끝났다는 뜻이다 — 관문은 [requireLogin] 이
 /// 게시판 화면에서 이미 통과시켰다. 그래도 서버는 토큰을 다시 확인한다.
@@ -42,6 +45,13 @@ class _PostNewScreenState extends ConsumerState<PostNewScreen> {
 
   /// 고치기일 때 기존 글을 한 번만 채워 넣기 위한 표시.
   bool _loaded = false;
+
+  /// 새로 고른 사진. null 이면 **건드리지 않는다** — 고치기에서 이 값이 null 이면
+  /// 서버가 기존 사진을 그대로 둔다.
+  PickedPhoto? _photo;
+
+  /// 고치기 화면에서 원래 붙어 있던 사진. 미리보기에만 쓴다.
+  String? _existingPhotoUrl;
 
   /// 서버 `BoardService` 와 같은 값이다. 제목 컬럼이 VARCHAR(100) 이라 여기가 더 크면
   /// 통과시켜 놓고 서버에서 400 을 받는다.
@@ -78,6 +88,7 @@ class _PostNewScreenState extends ConsumerState<PostNewScreen> {
     _title.text = post.title;
     _content.text = post.content;
     _category = post.category;
+    _existingPhotoUrl = post.photoUrl;
   }
 
   @override
@@ -138,6 +149,12 @@ class _PostNewScreenState extends ConsumerState<PostNewScreen> {
                   ),
                 ),
                 const SizedBox(height: 22),
+
+                Reveal(child: Text('사진', style: AppText.overline)),
+                const SizedBox(height: 10),
+                Reveal(child: _photoField()),
+                const SizedBox(height: 22),
+
                 Reveal(child: Text('분류', style: AppText.overline)),
                 const SizedBox(height: 10),
                 Reveal(
@@ -236,6 +253,82 @@ class _PostNewScreenState extends ConsumerState<PostNewScreen> {
         ],
       ),
     );
+  }
+
+  /// 사진 칸. 고른 것이 있으면 그것을, 없으면 (고치기라면) 원래 사진을 보여 준다.
+  ///
+  /// **선택이다.** 조과 등록과 달리 글은 사진 없이도 올릴 수 있다 — 질문 글에
+  /// 사진을 강요할 이유가 없다.
+  Widget _photoField() {
+    final picked = _photo;
+
+    return PressScale(
+      onTap: _saving ? null : _pickPhoto,
+      scale: 0.99,
+      child: AspectRatio(
+        aspectRatio: 16 / 9,
+        child: ClipRRect(
+          borderRadius: BorderRadius.circular(AppRadius.tile),
+          child: Stack(
+            fit: StackFit.expand,
+            children: [
+              if (picked != null)
+                Image.memory(picked.bytes, fit: BoxFit.cover)
+              else
+                AuthedPhoto(path: _existingPhotoUrl),
+              if (picked == null && _existingPhotoUrl == null)
+                Center(
+                  child: Column(
+                    mainAxisSize: MainAxisSize.min,
+                    children: [
+                      const LineIcon(
+                        AppIcon.camera,
+                        size: 26,
+                        color: AppColors.faint,
+                        stroke: 1.5,
+                      ),
+                      const SizedBox(height: 8),
+                      Text(
+                        '사진 추가 (선택)',
+                        style: AppText.caption.copyWith(color: AppColors.label),
+                      ),
+                    ],
+                  ),
+                )
+              else
+                // 이미 사진이 있으면 "바꾸기"를 얹는다 — 눌러야 바뀐다는 것을 알려야 한다.
+                Positioned(
+                  right: 8,
+                  bottom: 8,
+                  child: Container(
+                    padding: const EdgeInsets.symmetric(
+                      horizontal: 10,
+                      vertical: 5,
+                    ),
+                    decoration: BoxDecoration(
+                      color: AppColors.scrim,
+                      borderRadius: BorderRadius.circular(AppRadius.chip),
+                    ),
+                    child: Text(
+                      '사진 바꾸기',
+                      style: AppText.badgeSmall.copyWith(
+                        color: AppColors.onAccent,
+                      ),
+                    ),
+                  ),
+                ),
+            ],
+          ),
+        ),
+      ),
+    );
+  }
+
+  Future<void> _pickPhoto() async {
+    // 조과 등록과 같은 시트·한도·권한 안내를 쓴다.
+    final picked = await pickPhotoFromSheet(context, ref, onMessage: _toast);
+    if (picked == null || !mounted) return;
+    setState(() => _photo = picked);
   }
 
   Future<void> _submit() async {

@@ -20,6 +20,8 @@ public record PostDetailResponse(
         int likeCount,
         int commentCount,
         boolean hasImage,
+        /** 붙인 사진. 없으면 null 이고 프론트는 자리를 만들지 않는다. */
+        String photoUrl,
         String regionName,
         String boardKey,
         boolean likedByMe,
@@ -42,6 +44,7 @@ public record PostDetailResponse(
                 post.getLikeCount(),
                 post.getCommentCount(),
                 post.isHasImage(),
+                post.getPhotoUrl(),
                 regionName,
                 regionName == null ? ALL_BOARD : regionName,
                 likedByMe,

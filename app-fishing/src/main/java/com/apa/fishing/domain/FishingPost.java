@@ -59,6 +59,15 @@ public class FishingPost {
     @Column(name = "has_image", nullable = false)
     private boolean hasImage;
 
+    /**
+     * 붙인 사진. 없으면 null 이다.
+     *
+     * <p>{@code hasImage} 는 이 값이 있느냐로만 정해진다 — 둘을 따로 두면 어긋난다.
+     * V10 이전에는 시드가 {@code has_image=true} 를 박아 놓고 사진이 없었다.
+     */
+    @Column(name = "photo_url", length = 255)
+    private String photoUrl;
+
     @Column(name = "created_at", nullable = false)
     private LocalDateTime createdAt;
 
@@ -71,6 +80,12 @@ public class FishingPost {
         this.title = title;
         this.content = content;
         this.region = region;
+    }
+
+    /** 사진을 갈아 끼운다. null 을 주면 사진을 뗀다. */
+    public void attachPhoto(String photoUrl) {
+        this.photoUrl = photoUrl;
+        this.hasImage = photoUrl != null;
     }
 
     public boolean ownedBy(Long userId) {
@@ -105,7 +120,8 @@ public class FishingPost {
                                     String content,
                                     Long userId,
                                     String authorNickname,
-                                    FishingRegion region) {
+                                    FishingRegion region,
+                                    String photoUrl) {
         FishingPost post = new FishingPost();
         post.category = category;
         post.title = title;
@@ -116,8 +132,8 @@ public class FishingPost {
         // 좋아요·댓글 수는 0 에서 시작한다. 컬럼이 NOT NULL 이라 비워 둘 수 없다.
         post.likeCount = 0;
         post.commentCount = 0;
-        // 사진 첨부는 아직 없다 (계약서 3-8). 붙이면 이 값이 실제 첨부 여부가 된다.
-        post.hasImage = false;
+        post.photoUrl = photoUrl;
+        post.hasImage = photoUrl != null;
         post.createdAt = LocalDateTime.now();
         return post;
     }

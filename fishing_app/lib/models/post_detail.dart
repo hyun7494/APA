@@ -15,6 +15,7 @@ class PostDetail {
     required this.likeCount,
     required this.commentCount,
     required this.likedByMe,
+    this.photoUrl,
     this.regionName,
     this.mine = false,
   });
@@ -34,6 +35,9 @@ class PostDetail {
   /// 내가 좋아요를 눌러 둔 상태인가. 비로그인이면 언제나 false 다.
   final bool likedByMe;
 
+  /// 붙인 사진. **공개 경로**라 비로그인도 볼 수 있다.
+  final String? photoUrl;
+
   /// null 이면 지역 없는 글이고 화면에는 "전체" 로 뜬다.
   final String? regionName;
 
@@ -51,6 +55,7 @@ class PostDetail {
     likeCount: (json['likeCount'] as num?)?.toInt() ?? 0,
     commentCount: (json['commentCount'] as num?)?.toInt() ?? 0,
     likedByMe: json['likedByMe'] as bool? ?? false,
+    photoUrl: json['photoUrl'] as String?,
     regionName: json['regionName'] as String?,
     mine: json['mine'] as bool? ?? false,
   );
@@ -68,6 +73,7 @@ class PostDetail {
         likeCount: likeCount,
         commentCount: commentCount,
         likedByMe: likedByMe,
+        photoUrl: photoUrl,
         regionName: regionName,
         mine: mine,
       );

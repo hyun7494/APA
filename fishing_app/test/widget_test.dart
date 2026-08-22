@@ -627,6 +627,33 @@ void main() {
     expect(find.textContaining('로그인이 필요해요'), findsOneWidget);
   });
 
+  testWidgets('★ 사진을 붙여 글을 쓸 수 있다 (사진은 선택)', (tester) async {
+    final picker = FakePhotoPicker();
+    await pumpApp(
+      tester,
+      photoPicker: picker,
+      auth: FakeAuthRepository(loggedIn: true),
+    );
+
+    await tester.tap(find.text('게시판'));
+    await tester.pumpAndSettle();
+    await tester.tap(find.widgetWithText(HeaderButton, '글쓰기'));
+    await tester.pumpAndSettle();
+
+    // 사진 없이도 올릴 수 있어야 한다 — 질문 글에 사진을 강요하지 않는다.
+    expect(find.text('사진 추가 (선택)'), findsOneWidget);
+
+    await tester.tap(find.text('사진 추가 (선택)'));
+    await tester.pumpAndSettle();
+    await tester.tap(find.text(PhotoSource.gallery.label));
+    await tester.pumpAndSettle();
+
+    expect(picker.lastSource, PhotoSource.gallery);
+    // 고른 사진이 그 자리에 미리보기로 뜨고, 안내 문구는 물러난다.
+    expect(find.text('사진 추가 (선택)'), findsNothing);
+    expect(find.text('사진 바꾸기'), findsOneWidget);
+  });
+
   testWidgets('★ 내 글만 수정·삭제가 보인다', (tester) async {
     await pumpApp(tester, auth: FakeAuthRepository(loggedIn: true));
 

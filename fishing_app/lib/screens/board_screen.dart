@@ -8,6 +8,7 @@ import '../services/providers.dart';
 import '../theme/app_theme.dart';
 import '../widgets/app_buttons.dart';
 import '../widgets/app_card.dart';
+import '../widgets/authed_photo.dart';
 import '../widgets/async_view.dart';
 import '../widgets/pill_chip.dart';
 import '../widgets/reveal.dart';
@@ -167,7 +168,9 @@ class _PostCard extends StatelessWidget {
                   overflow: TextOverflow.ellipsis,
                 ),
               ),
-              if (post.hasImage) ...[
+              // 사진이 있으면 카드에 사진 자체가 뜬다. 아이콘은 사진을 못 보던
+              // 시절의 대체물이라, 둘을 같이 두면 같은 말을 두 번 한다.
+              if (post.hasImage && post.photoUrl == null) ...[
                 const SizedBox(width: 6),
                 const LineIcon(
                   AppIcon.image,
@@ -178,6 +181,17 @@ class _PostCard extends StatelessWidget {
               ],
             ],
           ),
+          if (post.photoUrl != null) ...[
+            const SizedBox(height: 13),
+            ClipRRect(
+              borderRadius: BorderRadius.circular(AppRadius.tile),
+              child: AspectRatio(
+                aspectRatio: 16 / 9,
+                // 목록은 320px 판으로 충분하다 — 카드 폭이 그보다 작다.
+                child: AuthedPhoto(path: post.photoUrl, thumb: true),
+              ),
+            ),
+          ],
           const SizedBox(height: 13),
           Text(post.title, style: AppText.sectionTitle),
           const SizedBox(height: 6),

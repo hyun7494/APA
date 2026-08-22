@@ -3,6 +3,7 @@ import '../data/mock_data.dart';
 import '../data/species_seed.dart';
 import '../models/models.dart';
 import 'fishing_repository.dart';
+import 'photo_picker.dart';
 
 /// 시드 데이터로 응답하는 구현.
 /// 백엔드 app-fishing이 뜨기 전까지 기본값이다.
@@ -164,6 +165,7 @@ class MockFishingRepository implements FishingRepository {
     required PostCategory category,
     required String title,
     required String content,
+    PickedPhoto? photo,
   }) async {
     await Future.delayed(_latency);
     final i = _posts.indexWhere((p) => p.id == id);
@@ -177,7 +179,7 @@ class MockFishingRepository implements FishingRepository {
       createdAt: old.createdAt,
       likeCount: old.likeCount,
       commentCount: old.commentCount,
-      hasImage: old.hasImage,
+      hasImage: photo != null || old.hasImage,
       regionName: old.regionName,
     );
     return fetchPost(id);
@@ -239,6 +241,7 @@ class MockFishingRepository implements FishingRepository {
     required PostCategory category,
     required String title,
     required String content,
+    PickedPhoto? photo,
   }) async {
     await Future.delayed(_latency);
     final post = Post(
@@ -250,7 +253,7 @@ class MockFishingRepository implements FishingRepository {
       createdAt: DateTime.now(),
       likeCount: 0,
       commentCount: 0,
-      hasImage: false,
+      hasImage: photo != null,
     );
     // 목록 맨 앞에 넣는다 — 서버도 최신순이라 방금 쓴 글이 위에 보여야 한다.
     _posts.insert(0, post);

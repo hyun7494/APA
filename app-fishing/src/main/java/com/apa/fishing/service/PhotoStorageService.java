@@ -34,7 +34,16 @@ import java.util.regex.Pattern;
 public class PhotoStorageService {
 
     /** 저장된 사진이 서빙되는 경로. DB {@code photo_url} 에 이 형태로 들어간다. */
+    /** 조과 인증샷. <b>본인만 열람</b>이라 인증이 걸린 경로다. */
     public static final String PUBLIC_PATH = "/fishing/me/photos/";
+
+    /**
+     * 게시글 사진. <b>누구나 열람</b>이다 — 글 자체가 공개고, 사진은 글쓴이가 공개하려고 붙인 것이다.
+     *
+     * <p>같은 폴더에 같은 방식으로 저장한다. 접근 정책을 가르는 것은 <b>URL 앞부분뿐</b>이고,
+     * 그 경로를 SecurityConfig 가 열어 두느냐 막느냐로 결정된다.
+     */
+    public static final String BOARD_PATH = "/fishing/board/photos/";
 
     private static final String THUMB_SUFFIX = "_thumb";
     private static final String EXTENSION = ".jpg";
@@ -79,6 +88,15 @@ public class PhotoStorageService {
 
         log.debug("조과 사진 저장: {} ({}KB → {}KB)", name, source.length / 1024, full.length / 1024);
         return PUBLIC_PATH + name;
+    }
+
+    /**
+     * 게시글 사진 저장. {@link #store} 와 같은 파일을 만들고 <b>공개 경로</b>로 주소만 바꾼다.
+     *
+     * @return DB 에 넣을 URL ({@link #BOARD_PATH} + 파일명)
+     */
+    public String storeForBoard(MultipartFile file) {
+        return BOARD_PATH + fileNameOf(store(file));
     }
 
     /** 서빙용 읽기. 파일이 없으면 빈 값이다 — 호출부가 404 로 바꾼다. */

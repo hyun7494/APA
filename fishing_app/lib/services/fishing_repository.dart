@@ -1,4 +1,5 @@
 import '../models/models.dart';
+import 'photo_picker.dart';
 
 /// app-fishing 백엔드 계약 (기획서 4-2).
 ///
@@ -47,11 +48,14 @@ abstract interface class FishingRepository {
   Future<List<Post>> fetchPosts({PostCategory? category, int? regionGroupId});
 
   /// 내 글 고치기. 인증 필요 — 남의 글은 서버가 404 로 막는다.
+  /// [photo] 를 안 주면 **기존 사진을 그대로 둔다** — 글자만 고치려고 사진을 다시
+  /// 고르게 하면 안 된다.
   Future<PostDetail> updatePost({
     required int id,
     required PostCategory category,
     required String title,
     required String content,
+    PickedPhoto? photo,
   });
 
   /// 내 글 지우기. 댓글·좋아요는 서버가 함께 지운다.
@@ -78,6 +82,7 @@ abstract interface class FishingRepository {
     required PostCategory category,
     required String title,
     required String content,
+    PickedPhoto? photo,
   });
 
   /// GET /fishing/me/profile — 비로그인이면 null

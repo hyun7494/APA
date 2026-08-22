@@ -10,6 +10,7 @@ import com.apa.fishing.dto.PostResponse;
 import com.apa.fishing.service.BoardService;
 import lombok.RequiredArgsConstructor;
 import org.springframework.http.HttpStatus;
+import org.springframework.http.MediaType;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.core.annotation.AuthenticationPrincipal;
 import org.springframework.web.bind.annotation.DeleteMapping;
@@ -20,6 +21,8 @@ import org.springframework.web.bind.annotation.PutMapping;
 import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RequestParam;
+import org.springframework.web.bind.annotation.RequestPart;
+import org.springframework.web.multipart.MultipartFile;
 import org.springframework.web.bind.annotation.RestController;
 
 import java.util.List;
@@ -67,18 +70,34 @@ public class BoardController {
      * <p>작성자는 요청 본문이 아니라 <b>토큰에서</b> 가져간다. 본문으로 받으면 아무나
      * 남의 이름으로 쓸 수 있다.
      */
-    @PostMapping
+    @PostMapping(consumes = MediaType.MULTIPART_FORM_DATA_VALUE)
     public ResponseEntity<PostResponse> write(@AuthenticationPrincipal AuthenticatedUser user,
-                                              @RequestBody PostCreateRequest request) {
-        return ResponseEntity.status(HttpStatus.CREATED).body(boardService.write(user, request));
+                                              @RequestParam String category,
+                                              @RequestParam String title,
+                                              @RequestParam String content,
+                                              @RequestParam(required = false) Long regionGroupId,
+                                              @RequestPart(required = false) MultipartFile photo) {
+        var request = new PostCreateRequest(category, title, content, regionGroupId);
+        return ResponseEntity.status(HttpStatus.CREATED)
+                .body(boardService.write(user, request, photo));
     }
 
-    /** 글 수정. 인증 필수이고 <b>남의 글은 404 다</b> (존재 여부를 알려주지 않는다). */
-    @PutMapping("/{id}")
+    /**
+     * 글 수정. 인증 필수이고 <b>남의 글은 404 다</b> (존재 여부를 알려주지 않는다).
+     *
+     * <p>사진 파트를 안 보내면 기존 사진을 그대로 둔다 — 글자만 고치려고 사진을 다시
+     * 고르게 하면 안 된다 ({@code CatchController.update} 와 같은 규칙).
+     */
+    @PutMapping(path = "/{id}", consumes = MediaType.MULTIPART_FORM_DATA_VALUE)
     public PostDetailResponse update(@AuthenticationPrincipal AuthenticatedUser user,
                                      @PathVariable Long id,
-                                     @RequestBody PostCreateRequest request) {
-        return boardService.update(user, id, request);
+                                     @RequestParam String category,
+                                     @RequestParam String title,
+                                     @RequestParam String content,
+                                     @RequestParam(required = false) Long regionGroupId,
+                                     @RequestPart(required = false) MultipartFile photo) {
+        var request = new PostCreateRequest(category, title, content, regionGroupId);
+        return boardService.update(user, id, request, photo);
     }
 
     /** 글 삭제. 댓글·좋아요는 DB 가 함께 지운다 (V9 의 ON DELETE CASCADE). */
