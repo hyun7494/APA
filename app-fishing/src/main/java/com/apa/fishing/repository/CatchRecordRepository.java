@@ -79,4 +79,6 @@ public interface CatchRecordRepository extends JpaRepository<CatchRecord, Long> 
      * 파일명을 안다고 남의 사진이 나가면 안 된다.
      */
     boolean existsByUserIdAndPhotoUrl(Long userId, String photoUrl);
+    /** 마이페이지의 조과 기록 수 (계약서 3-7). */
+    long countByUserId(Long userId);
 }

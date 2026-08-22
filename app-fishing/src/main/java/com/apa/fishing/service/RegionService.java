@@ -9,6 +9,7 @@ import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
+import java.util.Collection;
 import java.util.List;
 import java.util.Map;
 import java.util.stream.Collectors;
@@ -34,6 +35,15 @@ public class RegionService {
         return toResponses(
                 regionRepository.findByNameContainingIgnoreCaseOrAreaContainingIgnoreCaseOrderByIdAsc(
                         keyword, keyword));
+    }
+
+    /**
+     * 즐겨찾는 지역 칩 (마이페이지). 목록이 비면 질의하지 않는다 —
+     * 즐겨찾기가 없는 사용자가 대부분인데 그때마다 포인트를 전부 읽을 이유가 없다.
+     */
+    public List<RegionGroupResponse> findByIds(Collection<Long> ids) {
+        if (ids == null || ids.isEmpty()) return List.of();
+        return toResponses(regionRepository.findAllById(ids));
     }
 
     /**

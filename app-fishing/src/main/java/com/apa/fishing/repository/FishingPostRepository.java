@@ -26,4 +26,11 @@ public interface FishingPostRepository extends JpaRepository<FishingPost, Long> 
             """)
     List<FishingPost> findFiltered(@Param("category") PostCategory category,
                                    @Param("regionGroupId") Long regionGroupId);
+    /**
+     * 마이페이지의 작성 글 수 (계약서 3-7).
+     *
+     * <p>{@code user_id} 가 nullable 이다 — 시드 글에는 작성자가 없다.
+     * null 인 행은 어느 사용자의 것도 아니므로 이 셈에 들어오지 않는다.
+     */
+    long countByUserId(Long userId);
 }
