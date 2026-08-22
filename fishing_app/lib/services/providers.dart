@@ -3,6 +3,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../data/species_seed.dart';
 import '../models/models.dart';
 import 'api_client.dart';
+import 'auth_controller.dart';
 import 'fishing_repository.dart';
 import 'mock_fishing_repository.dart';
 import 'remote_fishing_repository.dart';
@@ -80,6 +81,7 @@ final collectionRevisionProvider = StateProvider<int>((ref) => 0);
 
 final collectionProvider = FutureProvider<List<CollectionEntry>>((ref) {
   ref.watch(collectionRevisionProvider);
+  ref.watch(loggedInProvider);
   return ref.watch(fishingRepositoryProvider).fetchCollection();
 });
 
@@ -123,6 +125,7 @@ final collectionSummaryProvider = Provider<AsyncValue<CollectionSummary>>((ref) 
 final collectionEntryProvider =
     FutureProvider.family<CollectionEntry, int>((ref, speciesId) {
       ref.watch(collectionRevisionProvider);
+      ref.watch(loggedInProvider);
       return ref
           .watch(fishingRepositoryProvider)
           .fetchCollectionEntry(speciesId);
@@ -132,6 +135,7 @@ final collectionEntryProvider =
 final catchesProvider =
     FutureProvider.family<List<CatchRecord>, int?>((ref, speciesId) {
       ref.watch(collectionRevisionProvider);
+      ref.watch(loggedInProvider);
       return ref
           .watch(fishingRepositoryProvider)
           .fetchCatches(speciesId: speciesId);
@@ -149,6 +153,7 @@ final postsProvider = FutureProvider<List<Post>>((ref) {
   return ref.watch(fishingRepositoryProvider).fetchPosts(category: category);
 });
 
-final profileProvider = FutureProvider<Profile?>(
-  (ref) => ref.watch(fishingRepositoryProvider).fetchProfile(),
-);
+final profileProvider = FutureProvider<Profile?>((ref) {
+  ref.watch(loggedInProvider);
+  return ref.watch(fishingRepositoryProvider).fetchProfile();
+});

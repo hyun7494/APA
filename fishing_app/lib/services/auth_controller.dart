@@ -195,6 +195,20 @@ class AuthController extends StateNotifier<AuthState> {
   }
 }
 
+/// 로그인 상태 한 조각.
+///
+/// **사용자별 데이터를 읽는 provider 는 전부 이걸 구독해야 한다** (`providers.dart` 의
+/// 프로필·도감·기록). `FutureProvider` 는 한 번 계산하면 앱이 사는 동안 캐시하는데,
+/// 그 결과가 "누가 보느냐"에 따라 달라지기 때문이다. 안 구독하면 두 방향으로 깨진다 —
+/// 비로그인으로 마이페이지를 한 번 열면 로그인해도 계속 "로그인이 필요해요"가 뜨고,
+/// 반대로 <b>로그아웃해도 이전 사용자의 프로필과 도감이 화면에 남는다.</b>
+///
+/// [AuthState] 전체가 아니라 `isLoggedIn` 만 고른다. 그대로 구독하면 스피너가 돌고
+/// 멈출 때(`pending`)마다 사용자 데이터를 다시 받아온다.
+final loggedInProvider = Provider<bool>(
+  (ref) => ref.watch(authControllerProvider.select((s) => s.isLoggedIn)),
+);
+
 final socialSignInProvider = Provider<SocialSignIn>(
   (ref) => PlatformSocialSignIn(),
 );
