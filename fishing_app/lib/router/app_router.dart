@@ -8,6 +8,7 @@ import '../screens/catch_success_screen.dart';
 import '../screens/collection_screen.dart';
 import '../screens/home_screen.dart';
 import '../screens/login_screen.dart';
+import '../screens/post_new_screen.dart';
 import '../screens/profile_screen.dart';
 import '../screens/region_search_screen.dart';
 import '../screens/score_detail_screen.dart';
@@ -110,10 +111,14 @@ GoRouter createAppRouter() => GoRouter(
         StatefulShellBranch(
           routes: [GoRoute(path: '/home', builder: (_, _) => const HomeScreen())],
         ),
-        // 3 · 게시판
+        // 3 · 게시판 (글쓰기가 같은 브랜치에 쌓인다)
         StatefulShellBranch(
           routes: [
             GoRoute(path: '/board', builder: (_, _) => const BoardScreen()),
+            GoRoute(
+              path: '/board/new',
+              builder: (_, _) => const PostNewScreen(),
+            ),
           ],
         ),
         // 4 · 마이

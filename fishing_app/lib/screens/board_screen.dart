@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../models/post.dart';
+import '../services/login_gate.dart';
 import '../services/providers.dart';
 import '../theme/app_theme.dart';
 import '../widgets/app_buttons.dart';
@@ -12,7 +13,9 @@ import '../widgets/reveal.dart';
 
 /// 게시판 — 전체/조황/자유/질문 탭 + 글 카드 목록.
 ///
-/// 글쓰기·좋아요는 인증이 필요해 백엔드 연동 후에 붙인다.
+/// 목록은 비로그인도 본다 (기획서 5-5). **글쓰기만 로그인이 필요하다** — 글에는
+/// 작성자가 있어야 하기 때문이고, 그 판정은 [requireLogin] 한 군데가 한다.
+/// 좋아요·신고·댓글은 아직 없다 (계약서 3-8).
 class BoardScreen extends ConsumerWidget {
   const BoardScreen({super.key});
 
@@ -38,8 +41,11 @@ class BoardScreen extends ConsumerWidget {
                   label: '글쓰기',
                   icon: AppIcon.pencil,
                   filled: true,
-                  onPressed: () => ScaffoldMessenger.of(context).showSnackBar(
-                    const SnackBar(content: Text('글쓰기는 로그인 연동 후 지원됩니다')),
+                  onPressed: () => requireLogin(
+                    context,
+                    ref,
+                    destination: '/board/new',
+                    reason: '글을 쓰려면 로그인이 필요해요.\n작성자 이름이 함께 올라갑니다.',
                   ),
                 ),
               ],

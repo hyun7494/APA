@@ -46,6 +46,28 @@ abstract interface class FishingRepository {
   /// GET /fishing/board?tag=&regionGroupId=
   Future<List<Post>> fetchPosts({PostCategory? category, int? regionGroupId});
 
+  /// 글쓰기. 인증이 필요하다 — 서버가 작성자를 토큰에서 가져간다.
+  ///
+  /// @throws [PostSubmitException] 서버가 거절했을 때. 메시지를 그대로 띄우면 된다
+  Future<Post> createPost({
+    required PostCategory category,
+    required String title,
+    required String content,
+  });
+
   /// GET /fishing/me/profile — 비로그인이면 null
   Future<Profile?> fetchProfile();
+}
+
+/// 글쓰기가 실패했을 때 화면에 그대로 띄울 수 있는 메시지.
+///
+/// 화면이 `DioException` 을 알지 않게 하려고 둔다 — 알게 되면 저장소를 갈아끼운
+/// 테스트에서도 그 타입을 흉내내야 한다. `UnsupportedPhotoException` 과 같은 결이다.
+class PostSubmitException implements Exception {
+  const PostSubmitException(this.message);
+
+  final String message;
+
+  @override
+  String toString() => message;
 }

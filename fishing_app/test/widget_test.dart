@@ -472,6 +472,44 @@ void main() {
     expect(find.text('17'), findsWidgets);
   });
 
+  testWidgets('★ 비로그인으로 글쓰기를 누르면 로그인 화면으로 보낸다', (tester) async {
+    await pumpApp(tester);
+
+    await tester.tap(find.text('게시판'));
+    await tester.pumpAndSettle();
+    await tester.tap(find.widgetWithText(HeaderButton, '글쓰기'));
+    await tester.pumpAndSettle();
+
+    expect(find.textContaining('로그인이 필요해요'), findsOneWidget);
+    // 예전에는 "로그인 연동 후 지원됩니다" 스낵바만 뜨고 끝이었다.
+    expect(find.textContaining('연동 후'), findsNothing);
+  });
+
+  testWidgets('★ 로그인 상태에서 글을 쓰면 목록 맨 앞에 뜬다', (tester) async {
+    await pumpApp(tester, auth: FakeAuthRepository(loggedIn: true));
+
+    await tester.tap(find.text('게시판'));
+    await tester.pumpAndSettle();
+    await tester.tap(find.widgetWithText(HeaderButton, '글쓰기'));
+    await tester.pumpAndSettle();
+
+    expect(find.text('글쓰기'), findsWidgets, reason: '관문을 그냥 통과해야 한다');
+
+    await tester.enterText(
+      find.widgetWithText(TextField, '무슨 이야기인가요?'),
+      '학리에서 감성돔 4짜',
+    );
+    // 본문 칸은 힌트가 두 줄이라 문구로 찾지 않는다 — 화면의 두 번째(마지막) 입력이다.
+    await tester.enterText(
+      find.byType(TextField).last,
+      '새벽 물때에 입질이 좋았습니다.',
+    );
+    await tester.tap(find.widgetWithText(HeaderButton, '등록'));
+    await tester.pumpAndSettle();
+
+    expect(find.text('학리에서 감성돔 4짜'), findsOneWidget, reason: '쓴 글이 목록에 보여야 한다');
+  });
+
   testWidgets('게시판 탭 필터가 동작한다', (tester) async {
     await pumpApp(tester);
 

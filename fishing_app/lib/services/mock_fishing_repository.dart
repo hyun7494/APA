@@ -21,6 +21,9 @@ class MockFishingRepository implements FishingRepository {
   /// 등록 결과를 공유해서 실행 순서에 따라 결과가 달라진다.
   final List<CatchRecord> _catches = [...CatchSeed.all];
 
+  /// 글쓰기가 목록에 반영되도록 들고 있는다 — [_catches] 와 같은 이유다.
+  final List<Post> _posts = [...MockData.posts];
+
   @override
   Future<List<RegionGroup>> fetchRegions() async {
     await Future.delayed(_latency);
@@ -121,9 +124,32 @@ class MockFishingRepository implements FishingRepository {
     int? regionGroupId,
   }) async {
     await Future.delayed(_latency);
-    return MockData.posts
+    return _posts
         .where((p) => category == null || p.category == category)
         .toList();
+  }
+
+  @override
+  Future<Post> createPost({
+    required PostCategory category,
+    required String title,
+    required String content,
+  }) async {
+    await Future.delayed(_latency);
+    final post = Post(
+      id: DateTime.now().millisecondsSinceEpoch,
+      category: category,
+      title: title,
+      summary: content,
+      authorNickname: MockData.profile.nickname,
+      createdAt: DateTime.now(),
+      likeCount: 0,
+      commentCount: 0,
+      hasImage: false,
+    );
+    // 목록 맨 앞에 넣는다 — 서버도 최신순이라 방금 쓴 글이 위에 보여야 한다.
+    _posts.insert(0, post);
+    return post;
   }
 
   @override

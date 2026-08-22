@@ -2,6 +2,18 @@ spring:
   application:
     name: app-fishing
 
+  mvc:
+    problemdetails:
+      # ResponseStatusException 에 적은 이유(reason)를 응답 본문에 실어 보낸다.
+      #
+      # 이게 꺼져 있으면 부트의 옛 오류 모양({timestamp,status,error,path})으로 나가는데,
+      # 거기에는 문구를 담을 자리가 message 뿐이고 그마저 기본값이 never 라 잘려 나간다.
+      # 그래서 "어종을 찾을 수 없습니다"·"제목을 입력해 주세요" 같은 안내가 **하나도
+      # 사용자에게 닿지 않았다** — 앱은 전부 "잠시 후 다시 시도해 주세요"로 뭉갠다.
+      #
+      # 켜면 auth-service 와 같은 RFC 7807 모양이 되고, 프론트가 읽는 자리도 `detail` 하나로 같아진다.
+      enabled: true
+
   datasource:
     url: jdbc:postgresql://localhost:5432/apa?currentSchema=fishing
     username: apa_user

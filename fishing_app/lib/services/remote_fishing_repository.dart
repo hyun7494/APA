@@ -153,6 +153,37 @@ class RemoteFishingRepository implements FishingRepository {
   }
 
   @override
+  Future<Post> createPost({
+    required PostCategory category,
+    required String title,
+    required String content,
+  }) async {
+    // 작성자(user_id·닉네임)는 보내지 않는다. 서버가 토큰에서 가져간다 —
+    // 본문으로 받으면 아무나 남의 이름으로 쓸 수 있다.
+    try {
+      final res = await _dio.post<Map<String, dynamic>>(
+        '/fishing/board',
+        data: {
+          'category': category.code,
+          'title': title,
+          'content': content,
+        },
+      );
+      return Post.fromJson(res.data!);
+    } on DioException catch (e) {
+      if (_isUnauthorized(e)) {
+        // 관문을 통과해 들어왔는데 여기서 401 이면 그 사이 토큰이 만료된 것이다.
+        throw const PostSubmitException('로그인이 만료되었어요. 다시 로그인해 주세요');
+      }
+      // 서버가 문구를 주면 그대로 쓴다 — "제목을 입력해 주세요"가
+      // "글을 올리지 못했어요"보다 언제나 낫다.
+      throw PostSubmitException(
+        _serverDetail(e) ?? '글을 올리지 못했어요. 잠시 후 다시 시도해 주세요',
+      );
+    }
+  }
+
+  @override
   Future<Profile?> fetchProfile() async {
     if (!await _client.isLoggedIn) return null;
     try {
@@ -163,6 +194,14 @@ class RemoteFishingRepository implements FishingRepository {
       if (e.response?.statusCode == 401) return null;
       rethrow;
     }
+  }
+
+  /// 서버는 오류를 ProblemDetail(JSON) 로 내려준다.
+  static String? _serverDetail(DioException e) {
+    final data = e.response?.data;
+    if (data is Map && data['detail'] is String) return data['detail'] as String;
+    if (data is String && data.isNotEmpty) return data;
+    return null;
   }
 
   /// 인증 실패는 "로그인 안 됨"이지 오류가 아니다. [ApiClient]의 인터셉터가 refresh를
