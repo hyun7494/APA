@@ -37,6 +37,24 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
   final _email = TextEditingController();
   final _password = TextEditingController();
 
+  /// 입력 형식 오류처럼 **서버에 가기 전에** 우리가 아는 것. 서버가 준 문구
+  /// ([AuthState.error])와 같은 자리에 그린다 — 사용자에게는 둘 다 그냥 "안 된 이유"다.
+  String? _localError;
+
+  @override
+  void initState() {
+    super.initState();
+    // 고치기 시작하면 지운다. 방금 바꾼 값에 대한 판정이 아직 없는데
+    // 빨간 문구가 남아 있으면 그것부터 의심하게 된다.
+    _email.addListener(_clearErrors);
+    _password.addListener(_clearErrors);
+  }
+
+  void _clearErrors() {
+    if (_localError != null) setState(() => _localError = null);
+    ref.read(authControllerProvider.notifier).clearError();
+  }
+
   @override
   void dispose() {
     _email.dispose();
@@ -47,16 +65,6 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
   @override
   Widget build(BuildContext context) {
     final auth = ref.watch(authControllerProvider);
-
-    ref.listen(authControllerProvider, (previous, next) {
-      final error = next.error;
-      if (error != null && error != previous?.error) {
-        ScaffoldMessenger.of(context)
-          ..hideCurrentSnackBar()
-          ..showSnackBar(SnackBar(content: Text(error.message)));
-        ref.read(authControllerProvider.notifier).clearError();
-      }
-    });
 
     return Scaffold(
       backgroundColor: AppColors.bg,
@@ -163,6 +171,8 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
           onSubmitted: _signInWithEmail,
         ),
         const SizedBox(height: 14),
+        // 방금 누른 버튼 **바로 위**다. 화면 맨 아래 스낵바로 띄우면 눈이 가지 않는다.
+        AuthErrorBox(message: _localError ?? auth.error?.message),
         _BusyButton(
           label: '로그인',
           busy: auth.emailBusy,
@@ -216,7 +226,7 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
   Future<void> _signInWithEmail() async {
     // 서버도 검사하지만, 왕복 한 번을 돌고 와서 "입력해 주세요"를 듣는 것은 낭비다.
     if (_email.text.trim().isEmpty || _password.text.isEmpty) {
-      _toast('이메일과 비밀번호를 입력해 주세요');
+      setState(() => _localError = '이메일과 비밀번호를 입력해 주세요');
       return;
     }
 
@@ -245,11 +255,13 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
   ///
   /// 여기서 그냥 새 계정을 만들면 사용자는 **같은 이메일로 계정 두 개**를 갖게 되고,
   /// 도감과 조과가 어느 쪽에 쌓였는지 알 수 없게 된다.
-  Future<void> _askToLink(SocialLinkRequired link) async {
+  /// @param error 앞선 시도의 실패 문구. **대화상자 안에** 그린다 —
+  ///              화면의 오류 자리는 이 대화상자에 가려서 보이지 않는다.
+  Future<void> _askToLink(SocialLinkRequired link, {String? error}) async {
     final password = await showDialog<String>(
       context: context,
       barrierDismissible: false,
-      builder: (_) => _LinkDialog(link: link),
+      builder: (_) => _LinkDialog(link: link, error: error),
     );
     if (!mounted) return;
 
@@ -263,16 +275,14 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
     if (!mounted) return;
     if (ok) {
       _leave(context);
-    } else {
-      // 비밀번호를 잘못 친 것뿐일 수 있다. 소셜 로그인부터 다시 시키지 않는다.
-      await _askToLink(link);
+      return;
     }
-  }
 
-  void _toast(String message) {
-    ScaffoldMessenger.of(context)
-      ..hideCurrentSnackBar()
-      ..showSnackBar(SnackBar(content: Text(message)));
+    // 비밀번호를 잘못 친 것뿐일 수 있다. 소셜 로그인부터 다시 시키지 않고 다시 묻되,
+    // **왜 실패했는지를 들고** 간다. 그냥 다시 물으면 사용자는 무엇이 틀렸는지 모른다.
+    final message = ref.read(authControllerProvider).error?.message;
+    notifier.clearError();
+    await _askToLink(link, error: message ?? '비밀번호가 올바르지 않습니다');
   }
 
   void _goToSignUp(BuildContext context) => context.push(
@@ -321,9 +331,12 @@ class _BusyButton extends StatelessWidget {
 
 /// 계정 연동 확인 창.
 class _LinkDialog extends StatefulWidget {
-  const _LinkDialog({required this.link});
+  const _LinkDialog({required this.link, this.error});
 
   final SocialLinkRequired link;
+
+  /// 앞선 시도가 실패한 이유. 없으면 첫 시도다.
+  final String? error;
 
   @override
   State<_LinkDialog> createState() => _LinkDialogState();
@@ -365,6 +378,7 @@ class _LinkDialogState extends State<_LinkDialog> {
             style: AppText.bodySmall,
           ),
           const SizedBox(height: 16),
+          AuthErrorBox(message: widget.error),
           // 카드 위가 아니라 대화상자 안이라 흰 면이 배경과 겹친다. 회색 면으로 눌러 넣는다.
           Container(
             decoration: BoxDecoration(

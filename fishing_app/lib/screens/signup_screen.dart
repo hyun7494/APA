@@ -31,8 +31,26 @@ class _SignUpScreenState extends ConsumerState<SignUpScreen> {
   final _passwordConfirm = TextEditingController();
   final _nickname = TextEditingController();
 
+  /// 서버에 가기 전에 우리가 아는 오류. 서버가 준 문구와 같은 자리에 그린다.
+  String? _localError;
+
   /// 서버 규칙과 같은 값이다 (`PasswordPolicy.MIN_LENGTH`).
   static const _minPasswordLength = 8;
+
+  @override
+  void initState() {
+    super.initState();
+    // 고치기 시작하면 지운다 — 방금 바꾼 값에 대한 판정이 아직 없는데
+    // 빨간 문구가 남아 있으면 그것부터 의심하게 된다.
+    for (final field in [_email, _password, _passwordConfirm, _nickname]) {
+      field.addListener(_clearErrors);
+    }
+  }
+
+  void _clearErrors() {
+    if (_localError != null) setState(() => _localError = null);
+    ref.read(authControllerProvider.notifier).clearError();
+  }
 
   @override
   void dispose() {
@@ -46,14 +64,6 @@ class _SignUpScreenState extends ConsumerState<SignUpScreen> {
   @override
   Widget build(BuildContext context) {
     final auth = ref.watch(authControllerProvider);
-
-    ref.listen(authControllerProvider, (previous, next) {
-      final error = next.error;
-      if (error != null && error != previous?.error) {
-        _toast(error.message);
-        ref.read(authControllerProvider.notifier).clearError();
-      }
-    });
 
     return Scaffold(
       backgroundColor: AppColors.bg,
@@ -152,6 +162,9 @@ class _SignUpScreenState extends ConsumerState<SignUpScreen> {
                 ),
               ),
               const SizedBox(height: 28),
+              // 방금 누른 버튼 바로 위. "이미 가입된 이메일입니다" 를 스낵바로 4초 띄우면
+              // 그 뒤로 무엇을 해야 할지(로그인하러 갈지) 정할 시간이 없다.
+              AuthErrorBox(message: _localError ?? auth.error?.message),
 
               if (auth.emailBusy)
                 Container(
@@ -198,14 +211,14 @@ class _SignUpScreenState extends ConsumerState<SignUpScreen> {
     final password = _password.text;
     final nickname = _nickname.text.trim();
 
-    if (email.isEmpty) return _toast('이메일을 입력해 주세요');
+    if (email.isEmpty) return _fail('이메일을 입력해 주세요');
     if (password.length < _minPasswordLength) {
-      return _toast('비밀번호는 $_minPasswordLength자 이상이어야 합니다');
+      return _fail('비밀번호는 $_minPasswordLength자 이상이어야 합니다');
     }
     if (password != _passwordConfirm.text) {
-      return _toast('비밀번호가 서로 다릅니다');
+      return _fail('비밀번호가 서로 다릅니다');
     }
-    if (nickname.isEmpty) return _toast('닉네임을 입력해 주세요');
+    if (nickname.isEmpty) return _fail('닉네임을 입력해 주세요');
 
     final ok = await ref.read(authControllerProvider.notifier).signUp(
       email: email,
@@ -218,9 +231,5 @@ class _SignUpScreenState extends ConsumerState<SignUpScreen> {
     context.go(widget.redirectTo ?? '/home');
   }
 
-  void _toast(String message) {
-    ScaffoldMessenger.of(context)
-      ..hideCurrentSnackBar()
-      ..showSnackBar(SnackBar(content: Text(message)));
-  }
+  void _fail(String message) => setState(() => _localError = message);
 }

@@ -148,3 +148,55 @@ class AuthDivider extends StatelessWidget {
     );
   }
 }
+
+/// 로그인·가입 실패를 입력칸 바로 옆에 남겨 두는 자리.
+///
+/// **스낵바로는 부족하다.** 화면 맨 아래에 4초 떴다 사라지는 것은 방금 누른 버튼에서 멀고,
+/// 눈을 잠깐 떼면 놓친다. 로그인 실패는 "다음에 무엇을 해야 하는지"를 정해야 하는 오류라
+/// 사용자가 다시 시도할 때까지 **눈앞에 남아 있어야** 한다.
+class AuthErrorBox extends StatelessWidget {
+  const AuthErrorBox({super.key, required this.message});
+
+  /// null 이면 아무것도 그리지 않는다 — 자리도 차지하지 않는다.
+  final String? message;
+
+  @override
+  Widget build(BuildContext context) {
+    final message = this.message;
+    if (message == null) return const SizedBox.shrink();
+
+    return Padding(
+      padding: const EdgeInsets.only(bottom: 12),
+      child: Container(
+        width: double.infinity,
+        padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 12),
+        decoration: BoxDecoration(
+          color: AppColors.alert.withValues(alpha: 0.07),
+          borderRadius: BorderRadius.circular(12),
+          border: Border.all(color: AppColors.alert.withValues(alpha: 0.25)),
+        ),
+        child: Row(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            const Padding(
+              padding: EdgeInsets.only(top: 1),
+              child: LineIcon(
+                AppIcon.info,
+                size: 16,
+                color: AppColors.alert,
+                stroke: 1.7,
+              ),
+            ),
+            const SizedBox(width: 10),
+            Expanded(
+              child: Text(
+                message,
+                style: AppText.bodySmall.copyWith(color: AppColors.alert),
+              ),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+}

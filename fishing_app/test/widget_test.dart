@@ -119,6 +119,36 @@ class FakeAuthRepository implements AuthRepository {
   Future<bool> get isLoggedIn async => _loggedIn;
 }
 
+/// 언제나 실패하는 인증 대역. 서버가 401 을 낸 상황을 흉내낸다.
+class FailingAuthRepository implements AuthRepository {
+  @override
+  Future<AuthUser> signInWithEmail({
+    required String email,
+    required String password,
+  }) async => throw const AuthException('이메일 또는 비밀번호가 올바르지 않습니다');
+
+  @override
+  Future<AuthUser> signIn(SocialProvider provider) async =>
+      throw const AuthException('로그인에 실패했습니다');
+
+  @override
+  Future<AuthUser> signUp({
+    required String email,
+    required String password,
+    required String nickname,
+  }) async => throw const AuthException('이미 가입된 이메일입니다');
+
+  @override
+  Future<AuthUser> linkSocial(SocialLinkRequired link, String password) async =>
+      throw const AuthException('비밀번호가 올바르지 않습니다');
+
+  @override
+  Future<void> signOut() async {}
+
+  @override
+  Future<bool> get isLoggedIn async => false;
+}
+
 /// 세로로 긴 화면에서 띄운다 — 상세 화면이 한 번에 다 렌더되도록.
 /// (1080x4500 @3.0 = 360x1500 논리 픽셀)
 Future<void> pumpApp(
@@ -355,6 +385,28 @@ void main() {
 
     expect(auth.lastEmail, isNull, reason: '왕복하지 않고 그 자리에서 막아야 한다');
     expect(find.text('비밀번호가 서로 다릅니다'), findsOneWidget);
+  });
+
+  testWidgets('★ 로그인이 실패하면 이유가 화면에 남는다', (tester) async {
+    await pumpApp(tester, auth: FailingAuthRepository());
+
+    await goToLogin(tester);
+    await tester.enterText(find.widgetWithText(TextField, '이메일'), 'a@b.com');
+    await tester.pump();
+    await tester.enterText(find.widgetWithText(TextField, '비밀번호'), 'hyun1234');
+    await tester.pump();
+    await tester.tap(find.widgetWithText(PrimaryButton, '로그인'));
+    await tester.pumpAndSettle();
+
+    // ⚠️ pumpAndSettle 이 지난 뒤에도 남아 있어야 한다. 스낵바였을 때는 4초 뒤
+    //    스스로 사라져서, 눈을 잠깐 뗀 사용자는 이유를 영영 못 봤다.
+    expect(find.text('이메일 또는 비밀번호가 올바르지 않습니다'), findsOneWidget);
+    expect(find.text('기록 추가'), findsNothing, reason: '실패했으니 통과시키면 안 된다');
+
+    // 고치기 시작하면 사라진다 — 방금 바꾼 값에 대한 판정이 아직 없다.
+    await tester.enterText(find.widgetWithText(TextField, '이메일'), 'a@b.co');
+    await tester.pumpAndSettle();
+    expect(find.text('이메일 또는 비밀번호가 올바르지 않습니다'), findsNothing);
   });
 
   testWidgets('★ 가입한 계정으로 카카오를 누르면 새 계정이 아니라 연동이 뜬다', (tester) async {
