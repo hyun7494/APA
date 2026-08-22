@@ -504,10 +504,26 @@ void main() {
       find.byType(TextField).last,
       '새벽 물때에 입질이 좋았습니다.',
     );
+    // 리빌드를 기다린다. 안 기다리면 등록 버튼이 아직 비활성 콜백을 물고 있어
+    // 탭이 아무 일도 하지 않는다.
+    await tester.pump();
     await tester.tap(find.widgetWithText(HeaderButton, '등록'));
     await tester.pumpAndSettle();
 
+    // 글쓰기 화면을 떠나 게시판으로 돌아와야 한다.
+    // ⚠️ 이 단언이 **먼저**다. find.text 는 EditableText 도 잡기 때문에, 화면을 못 떠났으면
+    //    입력칸에 남은 제목이 "목록에 보인다"로 잘못 통과한다 — 실제로 그렇게 통과했었다.
+    expect(find.byType(TextField), findsNothing, reason: '글쓰기 화면을 떠나야 한다');
     expect(find.text('학리에서 감성돔 4짜'), findsOneWidget, reason: '쓴 글이 목록에 보여야 한다');
+
+    // ★ 저장이 됐는데 실패로 안내하면 안 된다.
+    //
+    //    처음 만들 때 화면 전환(context.pop)이 try 안에 있었다. 이 화면은 requireLogin 이
+    //    go 로 열어서 스택에 쌓인 것이 없어 pop 이 던졌고, 그 예외가 저장 실패로 둔갑해
+    //    "글을 올리지 못했어요"가 떴다 — 글은 이미 저장된 뒤였다.
+    //    사용자는 실패한 줄 알고 다시 눌러 같은 글을 두 번 올렸다.
+    expect(find.textContaining('올리지 못했어요'), findsNothing);
+    expect(find.text('글을 올렸어요'), findsOneWidget);
   });
 
   testWidgets('게시판 탭 필터가 동작한다', (tester) async {
