@@ -13,6 +13,7 @@ import '../widgets/app_card.dart';
 import '../widgets/async_view.dart';
 import '../widgets/authed_photo.dart';
 import '../widgets/press_scale.dart';
+import '../widgets/report_sheet.dart';
 import '../widgets/reveal.dart';
 
 /// 글 상세 (계약서 3-6-1).
@@ -58,14 +59,19 @@ class _PostDetailScreenState extends ConsumerState<PostDetailScreen> {
           BackRow(
             label: '게시판으로',
             onTap: () => context.go('/board'),
-            // 수정·삭제는 **내 글에만** 보인다. 화면에서 감추는 것은 편의일 뿐이고,
-            // 실제 권한은 서버가 다시 본다 (남의 글은 404).
-            trailing: detail.valueOrNull?.mine == true
-                ? _OwnerActions(
-                    onEdit: () => context.go('/board/${widget.postId}/edit'),
-                    onDelete: _confirmDelete,
-                  )
-                : null,
+            // 내 글이면 수정·삭제, 남의 글이면 신고. 한 자리에 하나만 둔다 —
+            // 내 글을 신고할 일은 없고 (서버도 400 이다), 남의 글은 고칠 수 없다.
+            // 화면에서 감추는 것은 편의일 뿐이고 실제 권한은 서버가 다시 본다.
+            trailing: switch (detail.valueOrNull?.mine) {
+              true => _OwnerActions(
+                onEdit: () => context.go('/board/${widget.postId}/edit'),
+                onDelete: _confirmDelete,
+              ),
+              false => _action('신고', AppColors.label, _report),
+              // 아직 안 불러왔다. 글이 뜨기 전에 버튼만 먼저 보이면
+              // 무엇에 대한 신고인지 모르는 채로 누를 수 있다.
+              null => null,
+            },
           ),
           Expanded(
             child: detail.when(
@@ -411,6 +417,31 @@ class _PostDetailScreenState extends ConsumerState<PostDetailScreen> {
     ref.read(postRevisionProvider.notifier).state++;
   }
 
+  /// 글 신고 (계약서 3-8).
+  ///
+  /// 사유를 고르는 시트를 먼저 띄우고, **로그인은 보내기 직전에 본다.** 순서를 바꾸면
+  /// 신고하려던 사람이 사유도 못 본 채 로그인 화면으로 튕긴다.
+  Future<void> _report() async {
+    final draft = await pickReportReason(context);
+    if (draft == null || !mounted) return;
+
+    if (!await _ensureLoggedIn('신고하려면 로그인이 필요해요.')) return;
+
+    final bool already;
+    try {
+      already = await ref
+          .read(fishingRepositoryProvider)
+          .reportPost(widget.postId, reason: draft.reason, detail: draft.detail);
+    } on PostSubmitException catch (e) {
+      if (mounted) _toast(e.message);
+      return;
+    }
+    if (!mounted) return;
+
+    // 두 번째 신고도 실패가 아니다 — 결과(이 글은 신고돼 있다)가 같아서 문구만 갈린다.
+    _toast(already ? '이미 신고한 글이에요' : '신고를 접수했어요');
+  }
+
   /// 로그인 화면으로 보내면 이 화면을 떠난다. 돌아올 곳을 글 상세로 지정해 둔다.
   Future<bool> _ensureLoggedIn(String reason) async {
     final loggedIn = await ref.read(authRepositoryProvider).isLoggedIn;
@@ -478,8 +509,18 @@ class _CommentTile extends StatelessWidget {
   }
 }
 
-/// 내 글에만 붙는 수정·삭제. 헤더 오른쪽에 작게 둔다 —
-/// 읽으러 온 사람에게는 본문이 주인공이고 이 둘은 부차적이다.
+/// 헤더 오른쪽의 작은 글자 버튼 — 수정·삭제·신고가 같은 크기로 붙는다.
+/// 읽으러 온 사람에게는 본문이 주인공이라 셋 다 부차적으로 둔다.
+Widget _action(String label, Color color, VoidCallback onTap) => PressScale(
+  onTap: onTap,
+  scale: 0.92,
+  child: Padding(
+    padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 6),
+    child: Text(label, style: AppText.caption.copyWith(color: color)),
+  ),
+);
+
+/// 내 글에만 붙는 수정·삭제.
 class _OwnerActions extends StatelessWidget {
   const _OwnerActions({required this.onEdit, required this.onDelete});
 
@@ -498,12 +539,4 @@ class _OwnerActions extends StatelessWidget {
     );
   }
 
-  Widget _action(String label, Color color, VoidCallback onTap) => PressScale(
-    onTap: onTap,
-    scale: 0.92,
-    child: Padding(
-      padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 6),
-      child: Text(label, style: AppText.caption.copyWith(color: color)),
-    ),
-  );
 }

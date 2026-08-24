@@ -3,6 +3,7 @@ export 'post.dart';
 export 'post_detail.dart';
 export 'profile.dart';
 export 'rating.dart';
+export 'report.dart';
 export 'region_group.dart';
 export 'species.dart';
 export 'spot.dart';

@@ -223,6 +223,23 @@ class RemoteFishingRepository implements FishingRepository {
   }
 
   @override
+  Future<bool> reportPost(
+    int postId, {
+    required ReportReason reason,
+    String? detail,
+  }) async {
+    try {
+      final res = await _dio.post<Map<String, dynamic>>(
+        '/fishing/board/$postId/report',
+        data: {'reason': reason.code, 'detail': ?detail},
+      );
+      return res.data?['alreadyReported'] as bool? ?? false;
+    } on DioException catch (e) {
+      throw PostSubmitException(_submitMessage(e, '신고를 접수하지 못했어요'));
+    }
+  }
+
+  @override
   Future<({int likeCount, bool likedByMe})> toggleLike(int postId) async {
     try {
       final res = await _dio.post<Map<String, dynamic>>(

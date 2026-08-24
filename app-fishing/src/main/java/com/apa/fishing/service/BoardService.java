@@ -12,8 +12,11 @@ import com.apa.fishing.dto.LikeResponse;
 import com.apa.fishing.dto.PostCreateRequest;
 import com.apa.fishing.dto.PostDetailResponse;
 import com.apa.fishing.dto.PostResponse;
+import com.apa.fishing.dto.ReportRequest;
+import com.apa.fishing.dto.ReportResponse;
 import com.apa.fishing.repository.FishingPostCommentRepository;
 import com.apa.fishing.repository.FishingPostLikeRepository;
+import com.apa.fishing.repository.FishingPostReportRepository;
 import com.apa.fishing.repository.FishingPostRepository;
 import com.apa.fishing.repository.FishingRegionRepository;
 import lombok.RequiredArgsConstructor;
@@ -45,6 +48,7 @@ public class BoardService {
     private final FishingRegionRepository regionRepository;
     private final FishingPostCommentRepository commentRepository;
     private final FishingPostLikeRepository likeRepository;
+    private final FishingPostReportRepository reportRepository;
     private final PhotoStorageService photoStorage;
 
     // ─────────────────────────────────────────────────────────────── 목록·상세
@@ -261,6 +265,40 @@ public class BoardService {
         post.syncLikeCount((int) likeRepository.countByPostId(postId));
 
         return new LikeResponse(post.getLikeCount(), liked);
+    }
+
+    // ─────────────────────────────────────────────────────────────── 신고
+
+    /**
+     * 글 신고 (계약서 3-8).
+     *
+     * <p><b>내 글은 신고할 수 없다.</b> 자기 글이 마음에 안 들면 지우면 되고, 허용하면
+     * 신고 수를 스스로 부풀릴 수 있다.
+     *
+     * <p>두 번째 신고는 <b>오류가 아니다.</b> 사용자가 보는 결과(이 글은 신고돼 있다)가 같은데
+     * 409 를 내면 앱은 "실패" 를 띄우게 된다. 대신 {@code alreadyReported} 로 구분해
+     * "이미 신고한 글이에요" 라고 말해 줄 수 있게 한다.
+     *
+     * <p>⚠️ <b>신고를 받아도 글은 그대로 있다.</b> 자동으로 내리지 않는다 — 신고 몇 건으로
+     * 글이 사라지면 여럿이 맞춰서 멀쩡한 글을 지우는 데 쓸 수 있다. 운영자 화면이 붙을
+     * 때까지 이 표는 쌓이기만 한다 (V12 주석 참고).
+     */
+    @Transactional
+    public ReportResponse report(AuthenticatedUser user, Long postId, ReportRequest request) {
+        FishingPost post = findPostOrThrow(postId);
+
+        if (post.ownedBy(user.userId())) {
+            throw new ResponseStatusException(
+                    HttpStatus.BAD_REQUEST, "내가 쓴 글은 신고할 수 없습니다");
+        }
+
+        // 넣어 보고 몇 줄이 들어갔는지로 판단한다. "조회 후 저장" 은 같은 순간 두 번 눌리면
+        // UNIQUE 에 걸리고, 그 예외는 잡아도 트랜잭션이 이미 롤백 전용이라 500 이 된다
+        // (자세한 이유는 insertIfAbsent 주석).
+        int inserted = reportRepository.insertIfAbsent(
+                postId, user.userId(), request.reason().name(), request.detail());
+
+        return new ReportResponse(inserted == 0);
     }
 
     // ─────────────────────────────────────────────────────────────── 공통

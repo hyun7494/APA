@@ -7,6 +7,8 @@ import com.apa.fishing.dto.LikeResponse;
 import com.apa.fishing.dto.PostCreateRequest;
 import com.apa.fishing.dto.PostDetailResponse;
 import com.apa.fishing.dto.PostResponse;
+import com.apa.fishing.dto.ReportRequest;
+import com.apa.fishing.dto.ReportResponse;
 import com.apa.fishing.service.BoardService;
 import lombok.RequiredArgsConstructor;
 import org.springframework.http.HttpStatus;
@@ -146,6 +148,29 @@ public class BoardController {
     public LikeResponse toggleLike(@AuthenticationPrincipal AuthenticatedUser user,
                                    @PathVariable Long id) {
         return boardService.toggleLike(user, id);
+    }
+
+    /**
+     * 글 신고 (계약서 3-8). 인증 필수 — {@code POST /fishing/board/**} 규칙이 덮는다.
+     *
+     * <p>사유는 목록에서 고른다. 자유 입력만 받으면 나중에 세거나 정렬할 수 없다.
+     * {@code 기타} 를 골랐을 때만 설명이 필수다 ({@link ReportRequest} 참고).
+     *
+     * <p>이미 신고해 둔 글이어도 <b>200 이다.</b> 사용자가 보는 결과는 같고, 응답의
+     * {@code alreadyReported} 로 문구만 갈린다.
+     */
+    @PostMapping("/{id}/report")
+    public ReportResponse report(@AuthenticationPrincipal AuthenticatedUser user,
+                                 @PathVariable Long id,
+                                 @RequestBody ReportCreateBody body) {
+        return boardService.report(user, id, ReportRequest.of(body.reason(), body.detail()));
+    }
+
+    /**
+     * 신고 요청 본문. {@link ReportRequest} 와 나눠 둔 이유는 <b>정규화 전후를 가르기</b>
+     * 위해서다 — 이쪽은 앱이 보낸 날것(문자열 사유)이고, 저쪽은 검증을 통과한 값이다.
+     */
+    public record ReportCreateBody(String reason, String detail) {
     }
 
     /** 비로그인이면 principal 자체가 없다. */

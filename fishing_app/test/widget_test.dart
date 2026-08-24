@@ -703,6 +703,100 @@ void main() {
     expect(find.textContaining('로그인이 필요해요'), findsOneWidget);
   });
 
+  // ── 신고 (계약서 3-8) ─────────────────────────────────────────
+
+  /// 게시판 → 첫 글 상세.
+  Future<void> openPost(WidgetTester tester) async {
+    await tester.tap(find.text('게시판'));
+    await tester.pumpAndSettle();
+    await tester.tap(find.text('오늘 학리에서 감성돔 4짜 손맛!'));
+    await tester.pumpAndSettle();
+  }
+
+  testWidgets('★ 남의 글은 신고할 수 있고, 사유를 골라야 보낼 수 있다', (tester) async {
+    await pumpApp(tester, auth: FakeAuthRepository(loggedIn: true));
+    await openPost(tester);
+
+    await tester.tap(find.text('신고'));
+    await tester.pumpAndSettle();
+    expect(find.text('이 글을 신고할까요?'), findsOneWidget);
+    // 신고해도 글이 남는다는 것을 시트에서 미리 말해 준다.
+    expect(find.textContaining('바로 내려가지는 않아요'), findsOneWidget);
+
+    // 사유를 고르기 전에는 보낼 수 없다.
+    expect(
+      tester.widget<PrimaryButton>(find.widgetWithText(PrimaryButton, '신고하기'))
+          .onPressed,
+      isNull,
+    );
+
+    await tester.tap(find.text('스팸 · 광고'));
+    await tester.pumpAndSettle();
+    await tester.tap(find.widgetWithText(PrimaryButton, '신고하기'));
+    await tester.pumpAndSettle();
+
+    expect(find.text('신고를 접수했어요'), findsOneWidget);
+  });
+
+  testWidgets('★ 같은 글을 두 번 신고하면 실패가 아니라 "이미 신고" 다', (tester) async {
+    await pumpApp(tester, auth: FakeAuthRepository(loggedIn: true));
+    await openPost(tester);
+
+    for (final expected in ['신고를 접수했어요', '이미 신고한 글이에요']) {
+      // 앞선 스낵바가 시트 버튼을 덮는다. 사라질 때까지 기다린다 (기본 4초).
+      await tester.pumpAndSettle(const Duration(seconds: 5));
+      await tester.tap(find.text('신고'));
+      await tester.pumpAndSettle();
+      await tester.tap(find.text('욕설 · 비방'));
+      await tester.pumpAndSettle();
+      await tester.tap(find.widgetWithText(PrimaryButton, '신고하기'));
+      await tester.pumpAndSettle();
+
+      expect(find.text(expected), findsOneWidget);
+    }
+  });
+
+  testWidgets('★ `기타` 는 설명을 적어야 보낼 수 있다', (tester) async {
+    await pumpApp(tester, auth: FakeAuthRepository(loggedIn: true));
+    await openPost(tester);
+
+    await tester.tap(find.text('신고'));
+    await tester.pumpAndSettle();
+    await tester.tap(find.text('기타'));
+    await tester.pumpAndSettle();
+
+    // 사유는 골랐지만 설명이 비어 있다 — 사유 이름만으로는 처리할 수 없는 신고다.
+    expect(
+      tester.widget<PrimaryButton>(find.widgetWithText(PrimaryButton, '신고하기'))
+          .onPressed,
+      isNull,
+    );
+
+    await tester.enterText(find.byType(TextField).last, '같은 사진을 계속 올려요');
+    await tester.pumpAndSettle();
+    await tester.tap(find.widgetWithText(PrimaryButton, '신고하기'));
+    await tester.pumpAndSettle();
+
+    expect(find.text('신고를 접수했어요'), findsOneWidget);
+  });
+
+  testWidgets('★ 비로그인으로 신고하면 사유를 고른 뒤 로그인 화면으로 보낸다', (tester) async {
+    await pumpApp(tester);
+    await openPost(tester);
+
+    // 순서가 중요하다 — 사유도 못 본 채 튕기면 무엇을 하려던 건지 알 수 없다.
+    await tester.tap(find.text('신고'));
+    await tester.pumpAndSettle();
+    expect(find.text('이 글을 신고할까요?'), findsOneWidget);
+
+    await tester.tap(find.text('스팸 · 광고'));
+    await tester.pumpAndSettle();
+    await tester.tap(find.widgetWithText(PrimaryButton, '신고하기'));
+    await tester.pumpAndSettle();
+
+    expect(find.textContaining('로그인이 필요해요'), findsOneWidget);
+  });
+
   testWidgets('★ 사진을 붙여 글을 쓸 수 있다 (사진은 선택)', (tester) async {
     final picker = FakePhotoPicker();
     await pumpApp(
@@ -739,6 +833,8 @@ void main() {
     await tester.tap(find.text('오늘 학리에서 감성돔 4짜 손맛!'));
     await tester.pumpAndSettle();
     expect(find.text('삭제'), findsNothing, reason: '남의 글에는 없어야 한다');
+    // 그 자리에 신고가 대신 붙는다 (계약서 3-8).
+    expect(find.text('신고'), findsOneWidget);
 
     // 내가 쓴 글에는 붙는다.
     // ⚠️ BackRow 의 '게시판으로' 는 라벨이라 눌리지 않는다 (아이콘 버튼만 탭 대상).
@@ -758,6 +854,8 @@ void main() {
     await tester.pumpAndSettle();
     expect(find.text('수정'), findsOneWidget);
     expect(find.text('삭제'), findsOneWidget);
+    // 내 글은 신고할 수 없다 — 서버도 400 이다.
+    expect(find.text('신고'), findsNothing);
   });
 
   testWidgets('★ 글을 지우면 목록에서 사라진다 (되묻고 나서)', (tester) async {

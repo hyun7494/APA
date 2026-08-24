@@ -75,6 +75,20 @@ abstract interface class FishingRepository {
   /// 좋아요 토글. 인증 필요. 누른 뒤의 **수와 상태를 서버가 정해서** 돌려준다.
   Future<({int likeCount, bool likedByMe})> toggleLike(int postId);
 
+  /// 글 신고. 인증 필요 — 내 글은 서버가 400 으로 막는다 (계약서 3-8).
+  ///
+  /// 신고가 몇 건 쌓였는지는 **일부러 안 받는다.** 그 수가 보이면 몇 건이면 글이
+  /// 내려가는지 재 볼 수 있고, 여럿이 맞춰 특정 글을 노리는 데 쓰인다.
+  ///
+  /// @return 이미 신고해 둔 글이었으면 true. 두 번째 신고는 오류가 아니다 —
+  ///         사용자가 보는 결과(이 글은 신고돼 있다)가 같아서 문구만 갈린다
+  /// @throws [PostSubmitException] 서버가 거절했을 때
+  Future<bool> reportPost(
+    int postId, {
+    required ReportReason reason,
+    String? detail,
+  });
+
   /// 글쓰기. 인증이 필요하다 — 서버가 작성자를 토큰에서 가져간다.
   ///
   /// @throws [PostSubmitException] 서버가 거절했을 때. 메시지를 그대로 띄우면 된다

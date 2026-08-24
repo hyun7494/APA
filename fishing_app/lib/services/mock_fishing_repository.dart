@@ -132,6 +132,7 @@ class MockFishingRepository implements FishingRepository {
   /// 목 저장소의 댓글·좋아요. 서버가 소유하는 것을 여기서는 메모리에 둔다.
   final Map<int, List<Comment>> _comments = {};
   final Set<int> _liked = {};
+  final Set<int> _reported = {};
   int _nextCommentId = 1;
 
   /// 내가 쓴 글. 서버는 `user_id` 로 알지만 목에는 사용자가 없어서 따로 센다 —
@@ -233,6 +234,20 @@ class MockFishingRepository implements FishingRepository {
     }
     final base = _posts.firstWhere((p) => p.id == postId).likeCount;
     return (likeCount: base + (liked ? 1 : 0), likedByMe: liked);
+  }
+
+  @override
+  Future<bool> reportPost(
+    int postId, {
+    required ReportReason reason,
+    String? detail,
+  }) async {
+    await Future.delayed(_latency);
+    // 서버와 같은 규칙 둘 — 내 글은 못 신고하고, 두 번째 신고는 오류가 아니다.
+    if (_mine.contains(postId)) {
+      throw const PostSubmitException('내가 쓴 글은 신고할 수 없어요');
+    }
+    return !_reported.add(postId);
   }
 
   @override
