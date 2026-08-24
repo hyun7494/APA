@@ -77,8 +77,16 @@ public interface CatchRecordRepository extends JpaRepository<CatchRecord, Long> 
     /**
      * 사진 서빙의 소유자 확인. 인증샷은 기본적으로 본인만 열람이라(기획서 7장)
      * 파일명을 안다고 남의 사진이 나가면 안 된다.
+     *
+     * <p>사진이 별도 표로 나가서(V11) 파생 쿼리 이름으로는 표현되지 않는다.
      */
-    boolean existsByUserIdAndPhotoUrl(Long userId, String photoUrl);
+    @Query("""
+            select count(c) > 0 from CatchRecord c
+            join c.photoUrls p
+            where c.userId = :userId and p = :photoUrl
+            """)
+    boolean existsPhotoOwnedBy(@Param("userId") Long userId, @Param("photoUrl") String photoUrl);
+
     /** 마이페이지의 조과 기록 수 (계약서 3-7). */
     long countByUserId(Long userId);
 }

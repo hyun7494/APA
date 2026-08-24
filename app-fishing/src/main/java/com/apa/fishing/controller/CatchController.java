@@ -55,33 +55,43 @@ public class CatchController {
     @PostMapping(consumes = MediaType.MULTIPART_FORM_DATA_VALUE)
     public CatchResultResponse register(@AuthenticationPrincipal AuthenticatedUser user,
                                         @RequestParam Long speciesId,
-                                        @RequestParam Double lengthCm,
+                                        @RequestParam(required = false) Double lengthCm,
                                         @RequestParam(required = false) Integer weightG,
                                         @RequestParam(required = false) String caughtAt,
                                         @RequestParam(required = false) Long regionGroupId,
                                         @RequestParam(required = false) String spotName,
                                         @RequestParam(required = false) String memo,
-                                        @RequestPart(required = false) MultipartFile photo) {
+                                        @RequestPart(required = false) List<MultipartFile> photos) {
         var request = CatchCreateRequest.of(
                 speciesId, lengthCm, weightG, caughtAt, regionGroupId, spotName, memo);
-        return catchService.register(user.userId(), request, photo);
+        return catchService.register(user.userId(), request, photos);
     }
 
-    /** 사진 파트를 안 보내면 기존 인증샷을 그대로 둔다. */
+    /**
+     * 사진 파트를 안 보내고 {@code keepPhotoUrls} 도 없으면 기존 인증샷을 그대로 둔다.
+     *
+     * <p>{@code keepPhotoUrls} 는 <b>남길 장의 목록</b>이다 (파트를 여러 번 보낸다).
+     * 안 보내면 사진을 건드리지 않고, 빈 값이면 다 뗀다 — 둘을 구분해야 길이만 고치는
+     * 흔한 경우가 사진을 날리지 않는다. 목록에 <b>이 기록의 것이 아닌 URL 이 섞이면 400</b> 이다
+     * ({@code CatchService.requireOwnPhotos}) — 조용히 걸러 내면 결과가 삭제라서다.
+     *
+     * <p>새로 올린 장은 남긴 장 <b>뒤에</b> 붙는다. 최종 목록의 첫 장이 도감 칸의 표지다.
+     */
     @PutMapping(path = "/{id}", consumes = MediaType.MULTIPART_FORM_DATA_VALUE)
     public CatchResponse update(@AuthenticationPrincipal AuthenticatedUser user,
                                 @PathVariable Long id,
                                 @RequestParam Long speciesId,
-                                @RequestParam Double lengthCm,
+                                @RequestParam(required = false) Double lengthCm,
                                 @RequestParam(required = false) Integer weightG,
                                 @RequestParam(required = false) String caughtAt,
                                 @RequestParam(required = false) Long regionGroupId,
                                 @RequestParam(required = false) String spotName,
                                 @RequestParam(required = false) String memo,
-                                @RequestPart(required = false) MultipartFile photo) {
+                                @RequestParam(required = false) List<String> keepPhotoUrls,
+                                @RequestPart(required = false) List<MultipartFile> photos) {
         var request = CatchCreateRequest.of(
                 speciesId, lengthCm, weightG, caughtAt, regionGroupId, spotName, memo);
-        return catchService.update(user.userId(), id, request, photo);
+        return catchService.update(user.userId(), id, request, keepPhotoUrls, photos);
     }
 
     /**

@@ -1,6 +1,8 @@
 package com.apa.fishing.domain;
 
+import jakarta.persistence.CollectionTable;
 import jakarta.persistence.Column;
+import jakarta.persistence.ElementCollection;
 import jakarta.persistence.Entity;
 import jakarta.persistence.FetchType;
 import jakarta.persistence.GeneratedValue;
@@ -8,13 +10,18 @@ import jakarta.persistence.GenerationType;
 import jakarta.persistence.Id;
 import jakarta.persistence.JoinColumn;
 import jakarta.persistence.ManyToOne;
+import jakarta.persistence.OrderColumn;
 import jakarta.persistence.Table;
+import org.hibernate.annotations.BatchSize;
+
 import lombok.AccessLevel;
 import lombok.Getter;
 import lombok.NoArgsConstructor;
 
 import java.math.BigDecimal;
 import java.time.LocalDateTime;
+import java.util.ArrayList;
+import java.util.List;
 
 /**
  * 조과 기록. 도감 획득 여부는 별도 플래그가 아니라 <b>이 테이블에 해당 species_id 레코드가
@@ -49,14 +56,30 @@ public class CatchRecord {
     private Species species;
 
     /**
-     * 인증샷 URL. 기획서상 필수지만 컬럼은 nullable 이다 — 프론트가 아직 image_picker 를 붙이지
-     * 않아 사진 없이 등록되는 경로가 살아 있다 (V7 주석 참고). 피커가 붙으면 서비스단에서 막는다.
+     * 인증샷. 시안대로 <b>최대 5장</b>이고 <b>순서가 있다</b> — 첫 장이 도감 칸의 표지가 된다.
+     *
+     * <p>엔티티가 아니라 {@code @ElementCollection} 인 이유: 사진은 기록에 딸린 값이지 스스로
+     * 존재하는 것이 아니다. 기록을 지우면 함께 사라지고, 따로 조회할 일도 없다.
+     *
+     * <p>{@code @BatchSize} 는 도감 때문이다. 어종 36칸이 각자 기록을 들고 있어서, 없으면
+     * 사진을 읽느라 질의가 기록 수만큼 나간다.
      */
-    @Column(name = "photo_url")
-    private String photoUrl;
+    @ElementCollection(fetch = FetchType.LAZY)
+    @CollectionTable(
+            name = "fishing_catch_photos",
+            joinColumns = @JoinColumn(name = "catch_id"))
+    @OrderColumn(name = "sort_order")
+    @Column(name = "photo_url", nullable = false)
+    @BatchSize(size = 50)
+    private List<String> photoUrls = new ArrayList<>();
 
-    /** 사용자가 자로 재서 직접 입력한 길이. DECIMAL 이라 BigDecimal 이다 ({@link Species} 와 같은 이유). */
-    @Column(name = "length_cm", nullable = false)
+    /**
+     * 사용자가 자로 재서 직접 입력한 길이. DECIMAL 이라 BigDecimal 이다 ({@link Species} 와 같은 이유).
+     *
+     * <p><b>선택이다</b> (V11). 놓아준 물고기나 사진만 남기고 싶은 기록이 있다 —
+     * 길이를 모른다고 등록을 막을 이유가 없다. 도감의 최고 기록은 길이가 있는 것 중에서만 고른다.
+     */
+    @Column(name = "length_cm")
     private BigDecimal lengthCm;
 
     @Column(name = "weight_g")
@@ -101,11 +124,24 @@ public class CatchRecord {
         this.memo = memo;
     }
 
-    public void attachPhoto(String photoUrl) {
-        this.photoUrl = photoUrl;
+    /**
+     * 사진을 갈아 끼운다. <b>기존 목록을 통째로 바꾼다</b> — 수정 화면이 남길 장과 새로 고른 장을
+     * 합쳐 최종 목록으로 보내므로, 여기서 부분 갱신을 흉내 낼 이유가 없다.
+     *
+     * <p>{@code orphanRemoval} 대신 {@code clear()} + {@code addAll()} 인 것은
+     * {@code @ElementCollection} 이라 컬렉션 자체가 소유 관계이기 때문이다.
+     */
+    public void replacePhotos(List<String> urls) {
+        this.photoUrls.clear();
+        this.photoUrls.addAll(urls);
     }
 
-    /** 수정에서 쓴다. 사진은 {@link #attachPhoto} 로 따로 간다 — 안 바꾸는 경우가 많아서다. */
+    /** 도감 칸의 표지. 사진이 없으면 null 이다. */
+    public String coverPhotoUrl() {
+        return photoUrls.isEmpty() ? null : photoUrls.get(0);
+    }
+
+    /** 수정에서 쓴다. 사진은 {@link #replacePhotos} 로 따로 간다 — 안 바꾸는 경우가 많아서다. */
     public void reviseMeasurement(BigDecimal lengthCm, LocalDateTime caughtAt) {
         this.lengthCm = lengthCm;
         this.caughtAt = caughtAt;

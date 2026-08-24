@@ -41,9 +41,23 @@ public record CollectionEntryResponse(
             return locked(species);
         }
 
-        CatchRecord best = mine.stream()
-                .max(Comparator.comparing(CatchRecord::getLengthCm))
-                .orElseThrow();
+        // ⚠️ 길이는 선택이라 null 이 섞인다 (V11). nullsFirst 로 감싸지 않으면
+        //    길이 없는 기록 하나에 도감 전체가 NPE 로 죽는다. 길이가 없는 기록은
+        //    "최고"가 될 수 없으므로 가장 작은 것으로 취급한다.
+        Comparator<CatchRecord> byLength = Comparator.comparing(
+                CatchRecord::getLengthCm, Comparator.nullsFirst(Comparator.naturalOrder()));
+
+        CatchRecord best = mine.stream().max(byLength).orElseThrow();
+
+        // 표지도 가장 큰 개체의 것이다. 다만 그 기록에 사진이 없을 수 있으므로
+        // **사진이 있는 기록 중** 가장 큰 것을 고른다 — 칸이 비는 것보다는 낫다.
+        String cover = mine.stream()
+                .filter(record -> record.coverPhotoUrl() != null
+                        && !record.coverPhotoUrl().isBlank())
+                .max(byLength)
+                .map(CatchRecord::coverPhotoUrl)
+                .orElse(null);
+
         LocalDateTime first = mine.stream()
                 .map(CatchRecord::getCaughtAt)
                 .min(Comparator.naturalOrder())
@@ -53,14 +67,10 @@ public record CollectionEntryResponse(
                 SpeciesResponse.from(species),
                 mine.size(),
                 CatchResponse.toDouble(best.getLengthCm()),
-                // 사진 없이 등록된 기록(피커 미연동 경로)은 표지가 될 수 없다.
-                // 빈 문자열을 내보내면 프론트가 그걸 URL 로 알고 깨진 이미지를 그린다.
-                blankToNull(best.getPhotoUrl()),
+                // 사진 없이 등록된 기록은 표지가 될 수 없다. 빈 문자열을 내보내면
+                // 프론트가 그걸 URL 로 알고 깨진 이미지를 그린다.
+                cover,
                 first
         );
-    }
-
-    private static String blankToNull(String value) {
-        return value == null || value.isBlank() ? null : value;
     }
 }

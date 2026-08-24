@@ -366,7 +366,7 @@ class _Body extends ConsumerWidget {
         content: Text(
           last
               ? '이 어종의 마지막 기록입니다. 삭제하면 도감 칸이 다시 미등록으로 돌아갑니다.'
-              : '${record.speciesName} ${record.lengthCm.toStringAsFixed(1)}cm 기록이 지워집니다.',
+              : '${record.speciesName} ${record.lengthLabel} 기록이 지워집니다.',
           style: AppText.body,
         ),
         actions: [
@@ -463,7 +463,7 @@ class _RecordRow extends StatelessWidget {
             child: ClipRRect(
               borderRadius: BorderRadius.circular(12),
               child: AuthedPhoto(
-                path: record.photoUrl,
+                path: record.coverPhotoUrl,
                 rare: rare,
                 stripe: 5,
                 thumb: true,
@@ -480,11 +480,14 @@ class _RecordRow extends StatelessWidget {
                   textBaseline: TextBaseline.alphabetic,
                   children: [
                     Text(
-                      record.lengthCm.toStringAsFixed(1),
+                      record.lengthCm?.toStringAsFixed(1) ?? '—',
                       style: AppText.numberMedium.copyWith(fontSize: 17),
                     ),
-                    const SizedBox(width: 2),
-                    Text('cm', style: AppText.unit),
+                    // 길이가 없으면 단위도 빼야 "— cm" 가 되지 않는다.
+                    if (record.lengthCm != null) ...[
+                      const SizedBox(width: 2),
+                      Text('cm', style: AppText.unit),
+                    ],
                   ],
                 ),
                 const SizedBox(height: 3),

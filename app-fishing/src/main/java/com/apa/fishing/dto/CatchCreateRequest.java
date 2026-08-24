@@ -34,7 +34,7 @@ public record CatchCreateRequest(
     /** DECIMAL(4,1) — 소수점 앞자리가 셋이다. */
     private static final BigDecimal MAX_LENGTH = new BigDecimal("999.9");
     private static final int SPOT_NAME_LIMIT = 50;    // VARCHAR(50)
-    private static final int MEMO_LIMIT = 300;        // VARCHAR(300)
+    private static final int MEMO_LIMIT = 500;        // VARCHAR(500) — V11 이 300 에서 늘렸다
 
     public static CatchCreateRequest of(Long speciesId, Double lengthCm, Integer weightG,
                                         String caughtAt, Long regionGroupId,
@@ -56,10 +56,17 @@ public record CatchCreateRequest(
     /**
      * 소수점 1자리로 맞춘다 (프론트도 1자리 입력이다). 반올림하지 않고 그대로 넣으면
      * 스케일 초과로 INSERT 가 터지는데, 그 500 을 보고 원인이 길이라는 걸 알아보기 어렵다.
+     *
+     * <p><b>길이는 선택이다</b> (V11, 시안의 {@code 길이 (선택)}). 안 보내면 null 로 둔다 —
+     * 놓아준 물고기나 사진만 남기고 싶은 기록이 있다. 0 이나 음수처럼 <b>보냈는데 말이 안 되는</b>
+     * 값은 여전히 거절한다. 빈 값과 틀린 값은 다르다.
      */
     private static BigDecimal normalizeLength(Double lengthCm) {
-        if (lengthCm == null || lengthCm.isNaN() || lengthCm <= 0) {
-            throw badRequest("길이를 입력해주세요");
+        if (lengthCm == null) {
+            return null;
+        }
+        if (lengthCm.isNaN() || lengthCm <= 0) {
+            throw badRequest("길이는 0보다 커야 합니다");
         }
         BigDecimal value = BigDecimal.valueOf(lengthCm).setScale(1, RoundingMode.HALF_UP);
         if (value.compareTo(MAX_LENGTH) > 0) {

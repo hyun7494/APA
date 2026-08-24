@@ -105,17 +105,22 @@ class RemoteFishingRepository implements FishingRepository {
 
   @override
   Future<CatchResult> registerCatch(CatchDraft draft) async {
-    final photo = draft.photo;
-
-    // 사진이 필수라 multipart로 보낸다 (기획서 4-3 이미지 저장 설계).
-    final form = FormData.fromMap({
-      'speciesId': draft.speciesId,
-      'lengthCm': draft.lengthCm,
-      'caughtAt': draft.caughtAt.toIso8601String(),
-      if (draft.spotName.isNotEmpty) 'spotName': draft.spotName,
-      if (draft.memo.isNotEmpty) 'memo': draft.memo,
-      if (photo != null)
-        'photo': MultipartFile.fromBytes(
+    // 사진은 여러 장이고 순서가 그대로 간다 — 첫 장이 도감 칸의 표지가 된다.
+    // 같은 이름(`photos`)의 파트를 여러 번 보내면 서버가 List 로 받는다.
+    final form = FormData();
+    form.fields.addAll([
+      MapEntry('speciesId', '${draft.speciesId}'),
+      MapEntry('caughtAt', draft.caughtAt.toIso8601String()),
+      // 길이는 선택이다 (V11). null 이면 필드를 아예 안 보낸다 —
+      // 빈 문자열을 보내면 서버가 숫자로 못 읽어 400 이 된다.
+      if (draft.lengthCm != null) MapEntry('lengthCm', '${draft.lengthCm}'),
+      if (draft.spotName.isNotEmpty) MapEntry('spotName', draft.spotName),
+      if (draft.memo.isNotEmpty) MapEntry('memo', draft.memo),
+    ]);
+    for (final photo in draft.photos) {
+      form.files.add(MapEntry(
+        'photos',
+        MultipartFile.fromBytes(
           photo.bytes,
           filename: photo.name,
           // 서버(PhotoStorageService)는 **선언된 Content-Type 으로만** 형식을
@@ -125,7 +130,9 @@ class RemoteFishingRepository implements FishingRepository {
           // 임시 파일명에는 확장자가 없을 수 있어 추측에 맡기지 않는다.
           contentType: DioMediaType.parse(photo.mimeType),
         ),
-    });
+      ));
+    }
+
     final res = await _dio.post<Map<String, dynamic>>(
       '/fishing/me/catches',
       data: form,

@@ -122,7 +122,7 @@ class _Body extends StatelessWidget {
                   fit: StackFit.expand,
                   children: [
                     _SaturationReveal(
-                      child: AuthedPhoto(path: record?.photoUrl, rare: rare),
+                      child: AuthedPhoto(path: record?.coverPhotoUrl, rare: rare),
                     ),
                     // 길이 배지는 채도 연출 밖에 둔다 — 글자가 같이
                     // 흑백으로 죽었다 살아나면 읽는 데 방해가 된다.
@@ -140,7 +140,7 @@ class _Body extends StatelessWidget {
                             borderRadius: BorderRadius.circular(AppRadius.pill),
                           ),
                           child: Text(
-                            '${record.lengthCm.toStringAsFixed(1)}cm',
+                            record.lengthLabel,
                             style: AppText.badgeSmall.copyWith(
                               color: AppColors.onAccent,
                             ),
@@ -182,7 +182,9 @@ class _Body extends StatelessWidget {
                   crossAxisAlignment: CrossAxisAlignment.end,
                   children: [
                     Text(
-                      record.lengthCm.toStringAsFixed(1),
+                      // 큰 숫자 자리다. 길이가 없으면 단위(cm)까지 함께 빠져야
+                      // "기록 안 함 cm" 가 되지 않는다.
+                      record.lengthCm?.toStringAsFixed(1) ?? '—',
                       style: AppText.numberLarge.copyWith(
                         color: rare ? AppColors.gold : AppColors.accentDark,
                       ),

@@ -185,8 +185,12 @@ Future<void> goToLogin(WidgetTester tester) async {
 }
 
 /// 사진 칸을 눌러 시트에서 [source] 를 고른다.
+///
+/// 조과 등록 스트립은 한 장이라도 고르고 나면 추가 칸 문구가 `더 넣기` 로 바뀐다 —
+/// 둘 다 같은 시트를 여는 같은 자리라 여기서 흡수한다.
 Future<void> pickPhoto(WidgetTester tester, PhotoSource source) async {
-  await tester.tap(find.text('사진 추가'));
+  final add = find.text('사진 추가');
+  await tester.tap(add.evaluate().isNotEmpty ? add : find.text('더 넣기'));
   await tester.pumpAndSettle();
   await tester.tap(find.text(source.label));
   await tester.pumpAndSettle();
@@ -485,10 +489,15 @@ void main() {
     await tester.pumpAndSettle();
 
     // ① 사진 — 시트에서 갤러리를 고르면 대역 선택기가 한 장 내준다
+    expect(find.text('PHOTOS · 0 / 5'), findsOneWidget);
     await pickPhoto(tester, PhotoSource.gallery);
     expect(picker.lastSource, PhotoSource.gallery);
-    expect(find.text('사진 추가'), findsNothing, reason: '미리보기로 바뀌어야 한다');
-    expect(find.text('다시 고르기'), findsOneWidget);
+    expect(find.text('PHOTOS · 1 / 5'), findsOneWidget);
+    // 추가 칸은 남아 있되 문구가 바뀐다 — 더 넣을 수 있다는 뜻이다.
+    expect(find.text('사진 추가'), findsNothing);
+    expect(find.text('더 넣기'), findsOneWidget);
+    // 첫 장이 도감 칸의 표지가 된다는 배지
+    expect(find.text('대표'), findsOneWidget);
 
     // ② 어종 — 아직 등록하지 않은 종을 고른다.
     // 부시리는 시드에 기록이 없고 그리드 첫 화면에 보여 스크롤이 필요 없다.
@@ -523,6 +532,71 @@ void main() {
     expect(find.textContaining('칸이'), findsOneWidget);
     // 16종 → 17종
     expect(find.text('17'), findsWidgets);
+  });
+
+  testWidgets('★ 사진을 여러 장 넣고 빼면 순서와 개수가 따라간다 (V11)', (tester) async {
+    await pumpApp(
+      tester,
+      photoPicker: FakePhotoPicker(),
+      auth: FakeAuthRepository(loggedIn: true),
+    );
+
+    await tester.tap(find.text('도감'));
+    await tester.pumpAndSettle();
+    await tester.tap(find.widgetWithText(HeaderButton, '등록'));
+    await tester.pumpAndSettle();
+
+    for (var i = 0; i < 3; i++) {
+      await pickPhoto(tester, PhotoSource.gallery);
+    }
+    expect(find.text('PHOTOS · 3 / 5'), findsOneWidget);
+    // 표지는 언제나 하나다 — 첫 장에만 붙는다.
+    expect(find.text('대표'), findsOneWidget);
+
+    // 한 장 빼면 개수가 줄고 남은 첫 장이 표지를 이어받는다.
+    // x 아이콘뿐이라 집을 글자가 없다 — 스크린 리더에 준 이름으로 찾는다.
+    // (`bySemanticsLabel` 은 합쳐진 노드 전체를 집어 탭이 빗나간다.)
+    final remove = find.byWidgetPredicate(
+      (w) => w is Semantics && w.properties.label == '사진 빼기',
+    );
+    expect(remove, findsNWidgets(3));
+    await tester.tap(remove.first);
+    await tester.pumpAndSettle();
+    expect(find.text('PHOTOS · 2 / 5'), findsOneWidget);
+    expect(find.text('대표'), findsOneWidget);
+  });
+
+  testWidgets('★ 길이를 비워도 저장된다 — 길이는 선택이다 (V11)', (tester) async {
+    await pumpApp(
+      tester,
+      photoPicker: FakePhotoPicker(),
+      auth: FakeAuthRepository(loggedIn: true),
+    );
+
+    await tester.tap(find.text('도감'));
+    await tester.pumpAndSettle();
+    await tester.tap(find.widgetWithText(HeaderButton, '등록'));
+    await tester.pumpAndSettle();
+
+    // 시안의 라벨 그대로. 놓아준 물고기나 사진만 남기고 싶은 기록이 있다.
+    expect(find.text('길이 (선택)'), findsOneWidget);
+
+    await pickPhoto(tester, PhotoSource.gallery);
+    await tester.tap(find.text('선택'));
+    await tester.pumpAndSettle();
+    await tester.tap(find.text('부시리'));
+    await tester.pumpAndSettle();
+
+    // ★ 길이를 한 글자도 안 적은 채로 저장한다.
+    await tester.tap(find.text('기록 저장'));
+    await tester.pump();
+    await tester.pump(const Duration(milliseconds: 400));
+    await tester.pumpAndSettle();
+
+    expect(find.byType(CatchSuccessScreen), findsOneWidget);
+    // 큰 숫자 자리는 0.0 이 아니라 비워 둔다 — 0cm 를 잰 것처럼 읽히면 안 된다.
+    expect(find.text('0.0'), findsNothing);
+    expect(find.text('—'), findsWidgets);
   });
 
   testWidgets('★ 비로그인으로 글쓰기를 누르면 로그인 화면으로 보낸다', (tester) async {

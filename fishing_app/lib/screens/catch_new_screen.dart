@@ -1,3 +1,5 @@
+import 'dart:math' as math;
+
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
@@ -27,11 +29,8 @@ import '../widgets/reveal.dart';
 /// **자동 채움값을 처음부터 보여주고 고칠 수만 있게** 둔다 — 접어 두면 기본값이
 /// 무엇인지 모른 채 저장하게 된다.
 ///
-/// 시안과 다른 두 곳은 **서버가 아직 못 받기 때문**이다. 백엔드가 열리면 함께 바꾼다:
-/// - 사진이 1장이다. 시안은 최대 5장(`PHOTOS · 1 / 5`)이지만
-///   `fishing_user_catches.photo_url` 이 단일 컬럼이다.
-/// - 길이가 필수다. 시안은 `길이 (선택)` 이지만 컬럼이 `NOT NULL` 이고
-///   `CatchCreateRequest.normalizeLength()` 가 null 이면 400 을 낸다.
+/// 시안과 어긋나 있던 셋(사진 1장 · 길이 필수 · 메모 300자)은 **서버가 못 받아서**였다.
+/// V11 이 표를 열어 줘서 지금은 시안 그대로다 — 사진 최대 5장, 길이는 선택, 메모 500자.
 class CatchNewScreen extends ConsumerStatefulWidget {
   const CatchNewScreen({super.key, this.initialSpeciesId});
 
@@ -47,14 +46,17 @@ class _CatchNewScreenState extends ConsumerState<CatchNewScreen> {
   final _spotController = TextEditingController();
   final _memoController = TextEditingController();
 
-  /// 서버 `fishing.photo.max-bytes` 와 같은 값.
-
   /// 서버 `CatchCreateRequest.MEMO_LIMIT` 과 같은 값.
-  /// 시안은 500 이지만 컬럼이 `VARCHAR(300)` 이라 넘기면 서버가 거절한다.
-  static const _memoLimit = 300;
+  /// V11 이 컬럼을 `VARCHAR(500)` 으로 늘려 시안의 한도를 그대로 쓴다.
+  static const _memoLimit = 500;
 
   Species? _species;
-  PickedPhoto? _photo;
+
+  /// 고른 사진들. 순서가 그대로 서버에 가고 첫 장이 도감 칸의 표지가 된다.
+  final List<PickedPhoto> _photos = [];
+
+  /// 시안의 `PHOTOS · 1 / 5`. 서버 `CatchService.MAX_PHOTOS` 와 같은 값이다.
+  static const _maxPhotos = 5;
   bool _submitting = false;
   DateTime _caughtAt = DateTime.now();
 
@@ -80,7 +82,9 @@ class _CatchNewScreenState extends ConsumerState<CatchNewScreen> {
 
   double? get _length => double.tryParse(_lengthController.text.trim());
 
-  bool get _ready => _photo != null && _species != null && (_length ?? 0) > 0;
+  /// **길이는 빠졌다** (V11) — 시안의 라벨이 `길이 (선택)` 이고 서버도 null 을 받는다.
+  /// 인증샷은 기획서 3-3 대로 여전히 필수다.
+  bool get _ready => _photos.isNotEmpty && _species != null;
 
   /// 선택한 어종의 금지체장보다 작으면 안내 배너를 띄운다.
   /// **등록을 막지는 않는다** — 차단하면 사용자가 길이를 거짓으로 넣게 되고
@@ -113,13 +117,23 @@ class _CatchNewScreenState extends ConsumerState<CatchNewScreen> {
                 Reveal(child: Text('기록 추가', style: AppText.screenTitle)),
                 const SizedBox(height: 22),
 
-                const Reveal(index: 1, child: _SectionLabel('PHOTOS')),
+                Reveal(
+                  index: 1,
+                  child: _SectionLabel(
+                    'PHOTOS · ${_photos.length} / $_maxPhotos',
+                  ),
+                ),
                 const SizedBox(height: 10),
-                Reveal(index: 1, child: _PhotoField(
-                  photo: _photo,
-                  rare: _species?.rarity.isRare ?? false,
-                  onPick: _pickPhoto,
-                )),
+                Reveal(
+                  index: 1,
+                  child: _PhotoStrip(
+                    photos: _photos,
+                    max: _maxPhotos,
+                    rare: _species?.rarity.isRare ?? false,
+                    onAdd: _pickPhoto,
+                    onRemove: (i) => setState(() => _photos.removeAt(i)),
+                  ),
+                ),
                 const SizedBox(height: AppSpacing.gap),
 
                 Reveal(index: 2, child: _detailCard()),
@@ -193,7 +207,9 @@ class _CatchNewScreenState extends ConsumerState<CatchNewScreen> {
           ),
           const CardDivider(),
           _inputRow(
-            label: '길이',
+            // 시안의 라벨 그대로. 안 적어도 저장된다 (V11) —
+            // 놓아준 물고기나 사진만 남기고 싶은 기록이 있다.
+            label: '길이 (선택)',
             controller: _lengthController,
             hint: '0.0',
             suffix: 'cm',
@@ -214,11 +230,7 @@ class _CatchNewScreenState extends ConsumerState<CatchNewScreen> {
             ),
           ),
           const CardDivider(),
-          _inputRow(
-            label: '포인트',
-            controller: _spotController,
-            hint: '기장 학리',
-          ),
+          _inputRow(label: '포인트', controller: _spotController, hint: '기장 학리'),
         ],
       ),
     );
@@ -342,16 +354,19 @@ class _CatchNewScreenState extends ConsumerState<CatchNewScreen> {
   // ── 동작 ────────────────────────────────────────────────────
 
   Future<void> _pickPhoto() async {
+    if (_photos.length >= _maxPhotos) {
+      _toast('사진은 최대 $_maxPhotos장까지 올릴 수 있어요');
+      return;
+    }
     // 시트·크기 한도·권한 안내는 글쓰기 화면과 공유한다 (`pickPhotoFromSheet`).
     final picked = await pickPhotoFromSheet(context, ref, onMessage: _toast);
     if (picked == null || !mounted) return;
-    setState(() => _photo = picked);
+    setState(() => _photos.add(picked));
   }
 
   void _toast(String message) => ScaffoldMessenger.of(
     context,
   ).showSnackBar(SnackBar(content: Text(message)));
-
 
   Future<void> _pickSpecies() async {
     final picked = await showModalBottomSheet<Species>(
@@ -393,23 +408,27 @@ class _CatchNewScreenState extends ConsumerState<CatchNewScreen> {
   Future<void> _submit() async {
     setState(() => _submitting = true);
 
-    final result = await ref.read(fishingRepositoryProvider).registerCatch(
-      CatchDraft(
-        speciesId: _species!.id,
-        lengthCm: _length!,
-        caughtAt: _caughtAt,
-        photo: _photo,
-        spotName: _spotController.text.trim(),
-        memo: _memoController.text.trim(),
-      ),
-    );
+    final result = await ref
+        .read(fishingRepositoryProvider)
+        .registerCatch(
+          CatchDraft(
+            speciesId: _species!.id,
+            lengthCm: _length,
+            caughtAt: _caughtAt,
+            photos: List.of(_photos),
+            spotName: _spotController.text.trim(),
+            memo: _memoController.text.trim(),
+          ),
+        );
 
     ref.read(collectionRevisionProvider.notifier).state++;
     if (!mounted) return;
 
     if (result.firstCatch) {
       // 도감 칸이 새로 채워졌으면 획득 연출로 넘어간다.
-      context.go('/catch/done/${result.record.speciesId}?catchId=${result.record.id}');
+      context.go(
+        '/catch/done/${result.record.speciesId}?catchId=${result.record.id}',
+      );
     } else {
       ScaffoldMessenger.of(
         context,
@@ -434,81 +453,138 @@ class _SectionLabel extends StatelessWidget {
   }
 }
 
-/// ① 사진 — 상단 큰 영역. 필수.
-class _PhotoField extends StatelessWidget {
-  const _PhotoField({
-    required this.photo,
+/// ① 사진 — 상단 스트립. 필수. 고른 순서대로 늘어놓고 끝에 추가 칸을 둔다.
+///
+/// 첫 장이 **도감 칸의 표지**가 되므로 순서가 보이는 편이 낫다 — 격자로 흩어 두면
+/// 어느 것이 대표인지 알 수 없다.
+class _PhotoStrip extends StatelessWidget {
+  const _PhotoStrip({
+    required this.photos,
+    required this.max,
     required this.rare,
-    required this.onPick,
+    required this.onAdd,
+    required this.onRemove,
   });
 
-  final PickedPhoto? photo;
+  final List<PickedPhoto> photos;
+  final int max;
   final bool rare;
-  final VoidCallback onPick;
+  final VoidCallback onAdd;
+  final void Function(int index) onRemove;
+
+  static const _tile = 96.0;
 
   @override
   Widget build(BuildContext context) {
-    final picked = photo;
+    return SizedBox(
+      height: _tile,
+      child: ListView.separated(
+        scrollDirection: Axis.horizontal,
+        physics: const BouncingScrollPhysics(),
+        // 다 채우면 추가 칸을 빼서, 눌러도 안 되는 자리를 남기지 않는다.
+        itemCount: photos.length + (photos.length < max ? 1 : 0),
+        separatorBuilder: (_, _) => const SizedBox(width: 8),
+        itemBuilder: (_, i) => i < photos.length ? _thumb(i) : _addTile(),
+      ),
+    );
+  }
 
-    return AppCard(
-      onTap: onPick,
-      padding: const EdgeInsets.all(10),
-      child: AspectRatio(
-        aspectRatio: 4 / 3,
-        child: ClipRRect(
-          borderRadius: BorderRadius.circular(AppRadius.tile),
-          child: picked != null
-              ? Stack(
-                  fit: StackFit.expand,
-                  children: [
-                    // 경로가 아니라 바이트로 그린다 — 웹에서도 같은 코드가 돈다.
-                    // 디코딩에 실패해도 화면이 깨지지 않게 줄무늬로 물러선다.
-                    Image.memory(
-                      picked.bytes,
-                      fit: BoxFit.cover,
-                      errorBuilder: (_, _, _) => PhotoPlaceholder(rare: rare),
+  Widget _thumb(int index) {
+    return SizedBox(
+      width: _tile,
+      child: Stack(
+        fit: StackFit.expand,
+        children: [
+          ClipRRect(
+            borderRadius: BorderRadius.circular(AppRadius.thumb),
+            // 경로가 아니라 바이트로 그린다 — 웹에서도 같은 코드가 돈다.
+            // 디코딩에 실패해도 화면이 깨지지 않게 줄무늬로 물러선다.
+            child: Image.memory(
+              photos[index].bytes,
+              fit: BoxFit.cover,
+              errorBuilder: (_, _, _) =>
+                  PhotoPlaceholder(rare: rare, stripe: 5),
+            ),
+          ),
+          if (index == 0)
+            Positioned(
+              left: 6,
+              bottom: 6,
+              child: Container(
+                padding: const EdgeInsets.symmetric(horizontal: 7, vertical: 3),
+                decoration: BoxDecoration(
+                  color: AppColors.scrim,
+                  borderRadius: BorderRadius.circular(AppRadius.pill),
+                ),
+                // 첫 장이 도감 표지가 된다는 걸 알려 준다.
+                child: Text(
+                  '대표',
+                  style: AppText.badgeSmall.copyWith(color: AppColors.onAccent),
+                ),
+              ),
+            ),
+          Positioned(
+            right: 4,
+            top: 4,
+            // x 아이콘뿐이라 읽어 줄 글자가 없다 — 스크린 리더에 이름을 준다.
+            child: Semantics(
+              label: '사진 빼기',
+              button: true,
+              child: PressScale(
+                onTap: () => onRemove(index),
+                scale: 0.86,
+                child: Container(
+                  width: 24,
+                  height: 24,
+                  alignment: Alignment.center,
+                  decoration: BoxDecoration(
+                    color: AppColors.scrim,
+                    shape: BoxShape.circle,
+                  ),
+                  // plus 를 45도 돌려 x 로 쓴다 — 전용 아이콘을 늘리지 않는다.
+                  child: Transform.rotate(
+                    angle: math.pi / 4,
+                    child: LineIcon(
+                      AppIcon.plus,
+                      size: 13,
+                      color: AppColors.onAccent,
+                      stroke: 2,
                     ),
-                    Positioned(
-                      right: 10,
-                      bottom: 10,
-                      child: Container(
-                        padding: const EdgeInsets.symmetric(
-                          horizontal: 10,
-                          vertical: 6,
-                        ),
-                        decoration: BoxDecoration(
-                          color: AppColors.scrim,
-                          borderRadius: BorderRadius.circular(AppRadius.pill),
-                        ),
-                        child: Text(
-                          '다시 고르기',
-                          style: AppText.badgeSmall.copyWith(
-                            color: AppColors.onAccent,
-                          ),
-                        ),
-                      ),
-                    ),
-                  ],
-                )
-              : ColoredBox(
-                  color: AppColors.fill,
-                  child: Column(
-                    mainAxisAlignment: MainAxisAlignment.center,
-                    children: [
-                      const LineIcon(
-                        AppIcon.camera,
-                        size: 30,
-                        color: AppColors.disabled,
-                        stroke: 1.4,
-                      ),
-                      const SizedBox(height: 12),
-                      // '인증샷'이 아니라 '사진'이다 — 도감은 판정하지 않는다.
-                      Text('사진 추가', style: AppText.sectionTitle),
-                      const SizedBox(height: 4),
-                      Text('촬영하거나 갤러리에서 고르세요', style: AppText.caption),
-                    ],
                   ),
                 ),
+              ),
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+
+  Widget _addTile() {
+    return PressScale(
+      onTap: onAdd,
+      scale: 0.96,
+      child: Container(
+        width: _tile,
+        decoration: BoxDecoration(
+          color: AppColors.fill,
+          borderRadius: BorderRadius.circular(AppRadius.thumb),
+        ),
+        child: Column(
+          mainAxisAlignment: MainAxisAlignment.center,
+          children: [
+            LineIcon(
+              AppIcon.camera,
+              size: 22,
+              color: AppColors.faint,
+              stroke: 1.5,
+            ),
+            const SizedBox(height: 6),
+            Text(
+              photos.isEmpty ? '사진 추가' : '더 넣기',
+              style: AppText.caption.copyWith(color: AppColors.label),
+            ),
+          ],
         ),
       ),
     );

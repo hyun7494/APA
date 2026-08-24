@@ -35,7 +35,7 @@ class _CapturingAdapter implements HttpClientAdapter {
           'id': 1,
           'speciesId': 6,
           'speciesName': '부시리',
-          'photoUrl': '/fishing/me/photos/x.jpg',
+          'photoUrls': ['/fishing/me/photos/x.jpg'],
           'lengthCm': 62.5,
           'caughtAt': '2026-08-19T10:00:00',
         },
@@ -77,16 +77,18 @@ void main() {
         speciesId: 6,
         lengthCm: 62.5,
         caughtAt: DateTime(2026, 8, 19, 10),
-        photo: PickedPhoto(
-          // ★ 확장자 없는 파일명이 이 검사의 핵심이다.
-          //   Dio 는 파일명 확장자를 보고 Content-Type 을 알아서 채우지만,
-          //   확장자가 없으면 application/octet-stream 으로 떨어진다. 그러면
-          //   서버는 선언된 타입만 보므로 멀쩡한 PNG 도 400 이 된다.
-          //   카메라가 만든 임시 파일명에 확장자가 없는 경우가 있다.
-          bytes: Uint8List.fromList([0x89, 0x50, 0x4E, 0x47]),
-          name: 'IMG_0421',
-          mimeType: 'image/png',
-        ),
+        photos: [
+          PickedPhoto(
+            // ★ 확장자 없는 파일명이 이 검사의 핵심이다.
+            //   Dio 는 파일명 확장자를 보고 Content-Type 을 알아서 채우지만,
+            //   확장자가 없으면 application/octet-stream 으로 떨어진다. 그러면
+            //   서버는 선언된 타입만 보므로 멀쩡한 PNG 도 400 이 된다.
+            //   카메라가 만든 임시 파일명에 확장자가 없는 경우가 있다.
+            bytes: Uint8List.fromList([0x89, 0x50, 0x4E, 0x47]),
+            name: 'IMG_0421',
+            mimeType: 'image/png',
+          ),
+        ],
         spotName: '기장 학리',
         memo: '들물에 입질',
       ),
@@ -113,7 +115,47 @@ void main() {
     expect(body, contains('62.5'));
   });
 
-  test('사진이 없으면 photo 파트를 아예 넣지 않는다', () async {
+  test('★ 여러 장을 같은 이름(photos)으로, 고른 순서대로 보낸다', () async {
+    final adapter = _CapturingAdapter();
+    final client = ApiClient();
+    client.dio.httpClientAdapter = adapter;
+
+    await RemoteFishingRepository(client).registerCatch(
+      CatchDraft(
+        speciesId: 6,
+        lengthCm: 62.5,
+        caughtAt: DateTime(2026, 8, 19, 10),
+        photos: [
+          PickedPhoto(
+            bytes: Uint8List.fromList([1]),
+            name: 'first.jpg',
+            mimeType: 'image/jpeg',
+          ),
+          PickedPhoto(
+            bytes: Uint8List.fromList([2]),
+            name: 'second.jpg',
+            mimeType: 'image/jpeg',
+          ),
+        ],
+      ),
+    );
+
+    final body = adapter.bodyText;
+
+    // 파트 이름이 `photos` 로 같아야 서버가 List<MultipartFile> 로 받는다.
+    // `photos[0]` 처럼 첨자를 붙이면 스프링이 목록으로 묶어 주지 않는다.
+    expect('photos'.allMatches(body).length, greaterThanOrEqualTo(2));
+    expect(body, isNot(contains('photos[0]')));
+
+    // ★ 순서가 곧 의미다 — 첫 장이 도감 칸의 표지가 된다.
+    expect(
+      body.indexOf('first.jpg'),
+      lessThan(body.indexOf('second.jpg')),
+      reason: '보낸 순서가 뒤집히면 사용자가 고른 대표 사진이 바뀐다',
+    );
+  });
+
+  test('사진이 없으면 photos 파트를 아예 넣지 않는다', () async {
     final adapter = _CapturingAdapter();
     final client = ApiClient();
     client.dio.httpClientAdapter = adapter;
@@ -124,6 +166,20 @@ void main() {
 
     // 빈 파트를 보내면 서버가 "사진 파일이 비어 있습니다" 로 400 을 낸다.
     // 보내지 않으면 사진 없는 기록으로 통과한다 — 둘은 다른 결과다.
-    expect(adapter.bodyText, isNot(contains('name="photo"')));
+    expect(adapter.bodyText, isNot(contains('name="photos"')));
+  });
+
+  test('★ 길이가 없으면 lengthCm 필드를 아예 빼고 보낸다 (V11)', () async {
+    final adapter = _CapturingAdapter();
+    final client = ApiClient();
+    client.dio.httpClientAdapter = adapter;
+
+    await RemoteFishingRepository(client).registerCatch(
+      CatchDraft(speciesId: 6, caughtAt: DateTime(2026, 8, 19)),
+    );
+
+    // 빈 문자열을 보내면 스프링이 Double 로 못 바꿔 400 이 난다.
+    // 안 보내야 `@RequestParam(required = false)` 가 null 로 받는다.
+    expect(adapter.bodyText, isNot(contains('name="lengthCm"')));
   });
 }

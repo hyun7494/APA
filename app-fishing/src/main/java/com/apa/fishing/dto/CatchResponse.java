@@ -4,6 +4,7 @@ import com.apa.fishing.domain.CatchRecord;
 
 import java.math.BigDecimal;
 import java.time.LocalDateTime;
+import java.util.List;
 
 /**
  * 조과 기록 응답. 필드 이름은 프론트 {@code CatchRecord.fromJson}
@@ -17,7 +18,8 @@ public record CatchResponse(
         Long id,
         Long speciesId,
         String speciesName,
-        String photoUrl,
+        /** 인증샷 여러 장. 순서가 있고 첫 장이 표지다. 없으면 빈 배열. */
+        List<String> photoUrls,
         Double lengthCm,
         Integer weightG,
         LocalDateTime caughtAt,
@@ -31,7 +33,7 @@ public record CatchResponse(
                 record.getId(),
                 record.getSpecies().getId(),
                 record.getSpecies().getName(),
-                record.getPhotoUrl(),
+                List.copyOf(record.getPhotoUrls()),
                 toDouble(record.getLengthCm()),
                 record.getWeightG(),
                 record.getCaughtAt(),

@@ -73,6 +73,47 @@ class CollectionEntryResponseTest {
     }
 
     @Test
+    @DisplayName("★ 길이 없는 기록이 섞여도 최고 기록을 고른다 (V11) — 도감이 NPE 로 죽지 않는다")
+    void missingLengthIsSmallest() {
+        // 길이는 선택이라 null 이 섞인다. 어종 36칸이 전부 이 조립을 타므로
+        // 여기서 터지면 도감 화면 전체가 안 뜬다.
+        var unknown = catchOf(null, "/fishing/me/photos/unknown.jpg", LocalDateTime.of(2026, 8, 1, 9, 0));
+        var measured = catchOf(BigDecimal.valueOf(31.5), "/fishing/me/photos/a.jpg", LocalDateTime.of(2026, 8, 2, 9, 0));
+
+        CollectionEntryResponse entry = CollectionEntryResponse.of(gamseongdom, List.of(unknown, measured));
+
+        assertThat(entry.bestLengthCm()).isEqualTo(31.5);
+        assertThat(entry.catchCount()).isEqualTo(2);
+    }
+
+    @Test
+    @DisplayName("★ 길이가 하나도 없으면 최고 기록은 null — 0.0 으로 떨어뜨리지 않는다")
+    void allMissingLengthLeavesBestNull() {
+        // 0.0 을 내보내면 화면이 "0.0cm 를 쟀다"로 읽는다. 안 잰 것과 0은 다르다.
+        var unknown = catchOf(null, "/fishing/me/photos/unknown.jpg", LocalDateTime.now());
+
+        CollectionEntryResponse entry = CollectionEntryResponse.of(gamseongdom, List.of(unknown));
+
+        assertThat(entry.bestLengthCm()).isNull();
+        assertThat(entry.coverPhotoUrl()).isEqualTo("/fishing/me/photos/unknown.jpg");
+    }
+
+    @Test
+    @DisplayName("★ 가장 큰 개체에 사진이 없으면 사진 있는 것 중 가장 큰 것이 표지다")
+    void coverFallsBackToLargestWithPhoto() {
+        // 최고 기록과 표지가 갈릴 수 있다 — 칸을 비워 두는 것보다 낫다.
+        var biggestNoPhoto = catchOf(45.0, null, LocalDateTime.of(2026, 8, 2, 9, 0));
+        var midWithPhoto = catchOf(38.0, "/fishing/me/photos/mid.jpg", LocalDateTime.of(2026, 8, 3, 9, 0));
+        var smallWithPhoto = catchOf(20.0, "/fishing/me/photos/small.jpg", LocalDateTime.of(2026, 8, 4, 9, 0));
+
+        CollectionEntryResponse entry = CollectionEntryResponse.of(
+                gamseongdom, List.of(biggestNoPhoto, midWithPhoto, smallWithPhoto));
+
+        assertThat(entry.bestLengthCm()).isEqualTo(45.0);
+        assertThat(entry.coverPhotoUrl()).isEqualTo("/fishing/me/photos/mid.jpg");
+    }
+
+    @Test
     @DisplayName("한 건만 있어도 획득이다 — catchCount 1")
     void singleCatchOwnsTheTile() {
         var one = catchOf(31.5, "/fishing/me/photos/a.jpg", LocalDateTime.now());
@@ -108,9 +149,13 @@ class CollectionEntryResponseTest {
     }
 
     private CatchRecord catchOf(double lengthCm, String photoUrl, LocalDateTime caughtAt) {
-        CatchRecord record = CatchRecord.create(
-                7L, gamseongdom, BigDecimal.valueOf(lengthCm), caughtAt);
-        record.attachPhoto(photoUrl);
+        return catchOf(BigDecimal.valueOf(lengthCm), photoUrl, caughtAt);
+    }
+
+    /** 길이는 선택이라 null 도 받는다 (V11). */
+    private CatchRecord catchOf(BigDecimal lengthCm, String photoUrl, LocalDateTime caughtAt) {
+        CatchRecord record = CatchRecord.create(7L, gamseongdom, lengthCm, caughtAt);
+        record.replacePhotos(photoUrl == null ? List.of() : List.of(photoUrl));
         return record;
     }
 }

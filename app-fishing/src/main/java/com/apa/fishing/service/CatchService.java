@@ -17,6 +17,7 @@ import org.springframework.transaction.annotation.Transactional;
 import org.springframework.web.multipart.MultipartFile;
 import org.springframework.web.server.ResponseStatusException;
 
+import java.util.ArrayList;
 import java.util.List;
 
 /**
@@ -31,6 +32,9 @@ import java.util.List;
 @RequiredArgsConstructor
 @Transactional(readOnly = true)
 public class CatchService {
+
+    /** 시안의 {@code PHOTOS · 1 / 5}. */
+    private static final int MAX_PHOTOS = 5;
 
     private final CatchRecordRepository catchRepository;
     private final SpeciesRepository speciesRepository;
@@ -52,17 +56,18 @@ public class CatchService {
      * 항상 false 가 되어 도감 획득 연출이 영영 안 뜬다.
      */
     @Transactional
-    public CatchResultResponse register(Long userId, CatchCreateRequest request, MultipartFile photo) {
+    public CatchResultResponse register(Long userId, CatchCreateRequest request,
+                                        List<MultipartFile> photos) {
         Species species = findSpecies(request.speciesId());
         boolean firstCatch = !catchRepository.existsByUserIdAndSpeciesId(userId, species.getId());
 
-        String photoUrl = storeIfPresent(photo);
+        List<String> photoUrls = storeAll(photos);
         try {
             CatchRecord record = CatchRecord.create(
                     userId, species, request.lengthCm(), request.caughtAt());
             record.describe(request.weightG(), findRegion(request.regionGroupId()),
                     request.spotName(), request.memo());
-            record.attachPhoto(photoUrl);
+            record.replacePhotos(photoUrls);
 
             CatchRecord saved = catchRepository.save(record);
             return CatchResultResponse.of(saved, firstCatch,
@@ -70,7 +75,7 @@ public class CatchService {
         } catch (RuntimeException e) {
             // 롤백은 DB 행만 되돌린다. 방금 쓴 파일은 아무도 참조하지 않는 채 디스크에 남으므로
             // 여기서 직접 치운다.
-            deleteIfPresent(photoUrl);
+            photoUrls.forEach(this::deleteIfPresent);
             throw e;
         }
     }
@@ -80,32 +85,39 @@ public class CatchService {
      * 인증샷을 다시 고르게 만들 이유가 없다.
      */
     @Transactional
-    public CatchResponse update(Long userId, Long id, CatchCreateRequest request, MultipartFile photo) {
+    public CatchResponse update(Long userId, Long id, CatchCreateRequest request,
+                                List<String> keepPhotoUrls, List<MultipartFile> photos) {
         CatchRecord record = findOwned(userId, id);
 
         // 어종 변경도 허용한다. 잘못 고른 어종을 고치는 건 삭제 다음으로 흔한 되돌리기다.
         Species species = findSpecies(request.speciesId());
-        String oldPhotoUrl = record.getPhotoUrl();
-        String newPhotoUrl = storeIfPresent(photo);
 
+        List<String> kept = keepPhotoUrls == null
+                ? List.copyOf(record.getPhotoUrls())
+                : requireOwnPhotos(record, keepPhotoUrls);
+
+        List<String> added = storeAll(photos);
         try {
+            List<String> merged = new ArrayList<>(kept);
+            merged.addAll(added);
+            requireWithinLimit(merged.size());
+
             record.reviseMeasurement(request.lengthCm(), request.caughtAt());
             record.describe(request.weightG(), findRegion(request.regionGroupId()),
                     request.spotName(), request.memo());
-            if (newPhotoUrl != null) {
-                record.attachPhoto(newPhotoUrl);
-            }
             record.changeSpecies(species);
 
-            CatchResponse response = CatchResponse.from(record);
-            // 커밋된 뒤에야 옛 사진이 정말 안 쓰이는 것이지만, 트랜잭션 동기화까지 걸 만한
-            // 무게는 아니다. 실패해도 delete 는 조용히 넘어가고 파일만 남는다.
-            if (newPhotoUrl != null) {
-                deleteIfPresent(oldPhotoUrl);
-            }
-            return response;
+            // 목록에서 빠진 장은 파일도 지운다. 커밋 전이지만 트랜잭션 동기화까지 걸 만한
+            // 무게는 아니다 — 실패해도 delete 는 조용히 넘어가고 파일만 남는다.
+            List<String> dropped = record.getPhotoUrls().stream()
+                    .filter(url -> !merged.contains(url))
+                    .toList();
+            record.replacePhotos(merged);
+            dropped.forEach(this::deleteIfPresent);
+
+            return CatchResponse.from(record);
         } catch (RuntimeException e) {
-            deleteIfPresent(newPhotoUrl);
+            added.forEach(this::deleteIfPresent);
             throw e;
         }
     }
@@ -114,14 +126,14 @@ public class CatchService {
     @Transactional
     public void delete(Long userId, Long id) {
         CatchRecord record = findOwned(userId, id);
-        String photoUrl = record.getPhotoUrl();
+        List<String> photoUrls = List.copyOf(record.getPhotoUrls());
         catchRepository.delete(record);
-        deleteIfPresent(photoUrl);
+        photoUrls.forEach(this::deleteIfPresent);
     }
 
     /** 사진 서빙의 소유자 확인. 인증샷은 기본적으로 본인만 열람이다 (기획서 7장). */
     public boolean ownsPhoto(Long userId, String photoUrl) {
-        return catchRepository.existsByUserIdAndPhotoUrl(userId, photoUrl);
+        return catchRepository.existsPhotoOwnedBy(userId, photoUrl);
     }
 
     /**
@@ -146,8 +158,54 @@ public class CatchService {
         return regionGroupId == null ? null : regionRepository.findById(regionGroupId).orElse(null);
     }
 
-    private String storeIfPresent(MultipartFile photo) {
-        return (photo == null || photo.isEmpty()) ? null : photoStorage.store(photo);
+    /**
+     * 받은 파트를 순서대로 저장한다. 중간에 실패하면 <b>먼저 쓴 것을 되돌린다</b> —
+     * 안 그러면 아무도 참조하지 않는 파일이 디스크에 남는다.
+     */
+    private List<String> storeAll(List<MultipartFile> photos) {
+        if (photos == null || photos.isEmpty()) return List.of();
+
+        List<MultipartFile> real = photos.stream().filter(f -> !f.isEmpty()).toList();
+        requireWithinLimit(real.size());
+
+        List<String> stored = new ArrayList<>();
+        try {
+            for (MultipartFile photo : real) {
+                stored.add(photoStorage.store(photo));
+            }
+        } catch (RuntimeException e) {
+            stored.forEach(this::deleteIfPresent);
+            throw e;
+        }
+        return stored;
+    }
+
+    /**
+     * 남길 장의 목록을 확인한다. <b>이 기록의 사진이 아닌 URL 이 하나라도 있으면 400</b> 이다.
+     *
+     * <p>조용히 걸러 내는 편이 관대해 보이지만 <b>결과가 삭제</b>다 — 클라이언트가 URL 을 잘못
+     * 만들거나 오래된 목록을 들고 있으면 남기려던 사진이 전부 지워진다. 실제로 검증 중에
+     * 두 번 그렇게 날렸다. 되돌릴 수 없는 쪽으로 조용히 기우는 기본값은 좋지 않다.
+     *
+     * <p>남의 사진 주소를 끼워 넣는 경우도 같은 문구로 막힌다 — 이 기록의 것이 아니라는 사실만
+     * 알려 주지, 그 URL 이 세상에 있는지는 말하지 않는다.
+     */
+    private List<String> requireOwnPhotos(CatchRecord record, List<String> keepPhotoUrls) {
+        List<String> mine = record.getPhotoUrls();
+        for (String url : keepPhotoUrls) {
+            if (!mine.contains(url)) {
+                throw new ResponseStatusException(
+                        HttpStatus.BAD_REQUEST, "남기려는 사진이 이 기록에 없습니다");
+            }
+        }
+        return List.copyOf(keepPhotoUrls);
+    }
+
+    private void requireWithinLimit(int count) {
+        if (count > MAX_PHOTOS) {
+            throw new ResponseStatusException(
+                    HttpStatus.BAD_REQUEST, "사진은 최대 " + MAX_PHOTOS + "장까지 올릴 수 있습니다");
+        }
     }
 
     private void deleteIfPresent(String photoUrl) {

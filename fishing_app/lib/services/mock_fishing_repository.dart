@@ -96,7 +96,6 @@ class MockFishingRepository implements FishingRepository {
       speciesName: species.name,
       // 목 모드에는 사진을 올릴 서버가 없다. 시드와 같은 규칙으로 비워 두고
       // 화면은 줄무늬 플레이스홀더를 그린다.
-      photoUrl: '',
       lengthCm: draft.lengthCm,
       caughtAt: draft.caughtAt,
       spotName: draft.spotName,
@@ -273,20 +272,29 @@ class MockFishingRepository implements FishingRepository {
       SpeciesSeed.all.map(_entryFor).toList();
 
   /// 한 어종의 내 기록을 모아 도감 칸 하나를 만든다.
-  /// 표지 사진과 최고 기록은 가장 큰 개체의 것을 쓴다.
+  ///
+  /// ⚠️ 규칙은 서버 `CollectionEntryResponse.of` 와 **같아야 한다** — 다르면
+  /// `USE_MOCK` 을 끄는 순간 표지와 최고 기록이 바뀐다.
   CollectionEntry _entryFor(Species species) {
     final mine = _catches.where((c) => c.speciesId == species.id).toList();
     if (mine.isEmpty) return CollectionEntry(species: species);
 
-    mine.sort((a, b) => b.lengthCm.compareTo(a.lengthCm));
+    // 길이는 선택이라 null 이 섞인다 — 없는 것은 가장 작은 것으로 본다 (서버와 같은 규칙).
+    mine.sort((a, b) => (b.lengthCm ?? -1).compareTo(a.lengthCm ?? -1));
     final best = mine.first;
     final first = mine.map((c) => c.caughtAt).reduce((a, b) => a.isBefore(b) ? a : b);
+
+    // 표지도 가장 큰 개체의 것이지만, 그 기록에 사진이 없을 수 있다 —
+    // **사진이 있는 것 중** 가장 큰 것을 고른다. 칸이 비는 것보다 낫다.
+    final cover = mine
+        .map((c) => c.coverPhotoUrl)
+        .firstWhere((url) => url != null && url.isNotEmpty, orElse: () => null);
 
     return CollectionEntry(
       species: species,
       catchCount: mine.length,
       bestLengthCm: best.lengthCm,
-      coverPhotoUrl: best.photoUrl.isEmpty ? null : best.photoUrl,
+      coverPhotoUrl: cover,
       firstCaughtAt: first,
     );
   }

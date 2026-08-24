@@ -24,9 +24,15 @@ class CatchCreateRequestTest {
     }
 
     @Test
-    @DisplayName("길이가 없거나 0 이하면 400")
-    void rejectsMissingLength() {
-        assertThatThrownBy(() -> request(null)).isInstanceOf(ResponseStatusException.class);
+    @DisplayName("★ 길이는 선택이다 (V11) — 안 보내면 null 로 둔다")
+    void allowsMissingLength() {
+        // 놓아준 물고기나 사진만 남기고 싶은 기록이 있다. 시안의 라벨도 `길이 (선택)` 이다.
+        assertThat(request(null).lengthCm()).isNull();
+    }
+
+    @Test
+    @DisplayName("★ 그래도 0 이하는 400 — 빈 값과 틀린 값은 다르다")
+    void rejectsNonPositiveLength() {
         assertThatThrownBy(() -> request(0.0)).isInstanceOf(ResponseStatusException.class);
         assertThatThrownBy(() -> request(-5.0)).isInstanceOf(ResponseStatusException.class);
     }
@@ -92,10 +98,14 @@ class CatchCreateRequestTest {
     @Test
     @DisplayName("컬럼 길이를 넘는 메모는 자르지 않고 400 — 사용자가 쓴 글이다")
     void rejectsOverlongText() {
-        String longMemo = "가".repeat(301);
+        // V11 이 컬럼을 VARCHAR(500) 으로 늘렸다 — 시안의 메모 한도가 500 이다.
+        assertThat(CatchCreateRequest.of(1L, 30.0, null, null, null, null, "가".repeat(500)).memo())
+                .hasSize(500);
+
+        String longMemo = "가".repeat(501);
         assertThatThrownBy(() -> CatchCreateRequest.of(1L, 30.0, null, null, null, null, longMemo))
                 .isInstanceOf(ResponseStatusException.class)
-                .hasMessageContaining("300");
+                .hasMessageContaining("500");
 
         String longSpot = "가".repeat(51);
         assertThatThrownBy(() -> CatchCreateRequest.of(1L, 30.0, null, null, null, longSpot, null))
