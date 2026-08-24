@@ -87,7 +87,7 @@ class SpotCard extends StatelessWidget {
           const SizedBox(height: 12),
           Row(
             children: [
-              const LineIcon(
+              LineIcon(
                 AppIcon.moon,
                 size: 15,
                 color: AppColors.chipBlueFg,
@@ -102,7 +102,7 @@ class SpotCard extends StatelessWidget {
                 ),
               ),
               const SizedBox(width: 8),
-              const LineIcon(
+              LineIcon(
                 AppIcon.chevronRight,
                 size: 15,
                 color: AppColors.faint,

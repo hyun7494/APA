@@ -65,7 +65,7 @@ class _RegionSearchScreenState extends ConsumerState<RegionSearchScreen> {
                     padding: const EdgeInsets.symmetric(horizontal: 16),
                     child: Row(
                       children: [
-                        const LineIcon(
+                        LineIcon(
                           AppIcon.search,
                           size: 17,
                           color: AppColors.faint,

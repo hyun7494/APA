@@ -53,6 +53,7 @@ enum AppIcon {
   calendar,
   image,
   headset,
+  settings,
   info,
 }
 
@@ -65,13 +66,16 @@ class LineIcon extends StatelessWidget {
     this.icon, {
     super.key,
     this.size = 20,
-    this.color = AppColors.body,
+    this.color,
     this.stroke = 1.5,
   });
 
   final AppIcon icon;
   final double size;
-  final Color color;
+
+  /// 생략하면 본문색. 팔레트가 바뀌면 값도 바뀌므로 기본 인자로는 못 준다.
+  final Color? color;
+
   final double stroke;
 
   @override
@@ -79,7 +83,11 @@ class LineIcon extends StatelessWidget {
     return SizedBox.square(
       dimension: size,
       child: CustomPaint(
-        painter: _IconPainter(icon: icon, color: color, stroke: stroke),
+        painter: _IconPainter(
+          icon: icon,
+          color: color ?? AppColors.body,
+          stroke: stroke,
+        ),
       ),
     );
   }
@@ -661,6 +669,23 @@ class _IconPainter extends CustomPainter {
               Rect.fromLTWH(x, 13.4, 4.0, 6.4),
               const Radius.circular(2.0),
             ),
+            line,
+          );
+        }
+
+      case AppIcon.settings:
+        // 톱니바퀴 — 바깥 링 위에 톱니 8개, 가운데 축. 해(sun)도 방사선 8개를
+        // 쓰지만 링이 없어서 작은 크기에서도 둘이 헷갈리지 않는다.
+        canvas.drawCircle(const Offset(12, 12), 7.2, line);
+        canvas.drawCircle(const Offset(12, 12), 3.0, line);
+        for (var i = 0; i < 8; i++) {
+          // 22.5도 비틀어 톱니가 축 십자와 겹치지 않게 한다.
+          final a = i * math.pi / 4 + math.pi / 8;
+          final dx = math.cos(a);
+          final dy = math.sin(a);
+          canvas.drawLine(
+            Offset(12 + dx * 6.4, 12 + dy * 6.4),
+            Offset(12 + dx * 9.6, 12 + dy * 9.6),
             line,
           );
         }

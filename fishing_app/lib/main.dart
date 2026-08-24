@@ -7,7 +7,9 @@ import 'package:kakao_flutter_sdk_user/kakao_flutter_sdk_user.dart';
 
 import 'router/app_router.dart';
 import 'services/social_sign_in.dart';
+import 'services/theme_controller.dart';
 import 'theme/app_theme.dart';
+import 'theme/theme_scope.dart';
 
 Future<void> main() async {
   WidgetsFlutterBinding.ensureInitialized();
@@ -20,6 +22,17 @@ Future<void> main() async {
   KakaoSdk.init(
     nativeAppKey: kakaoNativeAppKey,
     javaScriptAppKey: kakaoJavaScriptKey,
+  );
+
+  // 첫 프레임 전에 읽어야 라이트로 떴다가 다크로 바뀌는 깜빡임이 없다.
+  ThemeModeStore.initial = await ThemeModeStore.load();
+  // 팔레트도 여기서 미리 맞춰 둔다. 안 하면 첫 프레임을 라이트로 그린 뒤
+  // 트리 전체를 한 번 더 다시 그리게 된다.
+  AppColors.use(
+    ThemeScope.resolve(
+      ThemeModeStore.initial,
+      WidgetsBinding.instance.platformDispatcher.platformBrightness,
+    ),
   );
 
   runApp(const ProviderScope(child: FishingApp()));
@@ -39,18 +52,23 @@ class _FishingAppState extends State<FishingApp> {
 
   @override
   Widget build(BuildContext context) {
-    return MaterialApp.router(
-      title: '낚시출조',
-      debugShowCheckedModeBanner: false,
-      theme: AppTheme.build(),
-      routerConfig: _router,
-      locale: const Locale('ko', 'KR'),
-      supportedLocales: const [Locale('ko', 'KR')],
-      localizationsDelegates: const [
-        GlobalMaterialLocalizations.delegate,
-        GlobalWidgetsLocalizations.delegate,
-        GlobalCupertinoLocalizations.delegate,
-      ],
+    // 다크/라이트는 `darkTheme`+`themeMode` 가 아니라 여기서 한 벌만 골라
+    // 넘긴다 — 색 이름(`AppColors.ink`)이 전역이라, 두 벌을 동시에 짜면
+    // 둘 중 한쪽이 반대 팔레트로 만들어진다.
+    return ThemeScope(
+      builder: (context, theme) => MaterialApp.router(
+        title: '낚시출조',
+        debugShowCheckedModeBanner: false,
+        theme: theme,
+        routerConfig: _router,
+        locale: const Locale('ko', 'KR'),
+        supportedLocales: const [Locale('ko', 'KR')],
+        localizationsDelegates: const [
+          GlobalMaterialLocalizations.delegate,
+          GlobalWidgetsLocalizations.delegate,
+          GlobalCupertinoLocalizations.delegate,
+        ],
+      ),
     );
   }
 }

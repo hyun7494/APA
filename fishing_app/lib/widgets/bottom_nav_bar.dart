@@ -42,7 +42,7 @@ class BottomNavBar extends StatelessWidget {
         // 그쪽을 쓴다 — 둘을 더하면 바가 쓸데없이 두꺼워진다.
         bottom: bottomInset > 0 ? bottomInset : 22,
       ),
-      decoration: const BoxDecoration(
+      decoration: BoxDecoration(
         color: AppColors.surface,
         boxShadow: AppShadows.topLine,
       ),
@@ -71,7 +71,7 @@ class _Tab extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final color = active ? AppColors.ink : AppColors.faint;
+    final color = active ? AppColors.emphasis : AppColors.faint;
 
     return PressScale(
       onTap: onTap,

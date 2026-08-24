@@ -39,14 +39,17 @@ class CollectionProgressBar extends StatelessWidget {
         ),
         clipBehavior: Clip.antiAlias,
         child: Row(
+          // 없으면 기본값(center)이라 자식이 세로로 0px가 된다 — [ColoredBox]는
+          // 자식이 없으면 가장 작은 제약을 택하기 때문에 막대가 통째로 안 그려진다.
+          crossAxisAlignment: CrossAxisAlignment.stretch,
           children: [
             Expanded(
               flex: ((common * t) * 1000).round(),
-              child: const ColoredBox(color: AppColors.accent),
+              child: ColoredBox(color: AppColors.accent),
             ),
             Expanded(
               flex: ((rare * t) * 1000).round(),
-              child: const ColoredBox(color: AppColors.gold),
+              child: ColoredBox(color: AppColors.gold),
             ),
             // 남은 자리 — flex가 전부 0이 되면 Row가 깨지므로 최소 1을 준다
             Expanded(
@@ -74,11 +77,8 @@ class CollectionLegend extends StatelessWidget {
         const SizedBox(width: 14),
         _Dot(color: AppColors.gold, label: '희귀', value: summary.rareOwned),
         const SizedBox(width: 14),
-        _Dot(
-          color: const Color(0xFFD3DAD5),
-          label: '미등록',
-          value: summary.locked,
-        ),
+        // 빈 자리를 나타내는 회색. 팔레트를 타야 다크에서 흰 점이 되지 않는다.
+        _Dot(color: AppColors.disabled, label: '미등록', value: summary.locked),
       ],
     );
   }

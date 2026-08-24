@@ -102,14 +102,15 @@ abstract final class AppText {
     FontWeight weight,
     double height,
     double spacing, {
-    Color color = AppColors.ink,
+    Color? color,
     bool tabular = false,
   }) => GoogleFonts.gothicA1(
     fontSize: size,
     fontWeight: weight,
     height: height,
     letterSpacing: spacing,
-    color: color,
+    // 기본 인자로 못 쓴다 — 팔레트가 바뀌면 값도 바뀌므로 `const` 가 아니다.
+    color: color ?? AppColors.ink,
     fontFeatures: tabular ? const [FontFeature.tabularFigures()] : null,
   );
 }

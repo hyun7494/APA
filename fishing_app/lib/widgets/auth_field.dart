@@ -138,12 +138,12 @@ class AuthDivider extends StatelessWidget {
   Widget build(BuildContext context) {
     return Row(
       children: [
-        const Expanded(child: Divider(color: AppColors.disabled, height: 1)),
+        Expanded(child: Divider(color: AppColors.disabled, height: 1)),
         Padding(
           padding: const EdgeInsets.symmetric(horizontal: 12),
           child: Text(label, style: AppText.caption),
         ),
-        const Expanded(child: Divider(color: AppColors.disabled, height: 1)),
+        Expanded(child: Divider(color: AppColors.disabled, height: 1)),
       ],
     );
   }
@@ -178,7 +178,7 @@ class AuthErrorBox extends StatelessWidget {
         child: Row(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            const Padding(
+            Padding(
               padding: EdgeInsets.only(top: 1),
               child: LineIcon(
                 AppIcon.info,

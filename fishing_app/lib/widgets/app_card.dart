@@ -14,14 +14,17 @@ class AppCard extends StatelessWidget {
     required this.child,
     this.padding = const EdgeInsets.all(20),
     this.radius = AppRadius.card,
-    this.color = AppColors.surface,
+    this.color,
     this.onTap,
   });
 
   final Widget child;
   final EdgeInsetsGeometry padding;
   final double radius;
-  final Color color;
+
+  /// 생략하면 카드면. 팔레트가 바뀌면 값도 바뀌므로 기본 인자로는 못 준다.
+  final Color? color;
+
   final VoidCallback? onTap;
 
   @override
@@ -32,7 +35,7 @@ class AppCard extends StatelessWidget {
       child: Container(
         padding: padding,
         decoration: BoxDecoration(
-          color: color,
+          color: color ?? AppColors.surface,
           borderRadius: BorderRadius.circular(radius),
         ),
         child: child,
@@ -203,7 +206,7 @@ class InfoRow extends StatelessWidget {
         ),
         if (chevron) ...[
           const SizedBox(width: 8),
-          const LineIcon(
+          LineIcon(
             AppIcon.chevronRight,
             size: 17,
             color: AppColors.disabled,

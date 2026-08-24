@@ -281,7 +281,7 @@ class _PostNewScreenState extends ConsumerState<PostNewScreen> {
                   child: Column(
                     mainAxisSize: MainAxisSize.min,
                     children: [
-                      const LineIcon(
+                      LineIcon(
                         AppIcon.camera,
                         size: 26,
                         color: AppColors.faint,

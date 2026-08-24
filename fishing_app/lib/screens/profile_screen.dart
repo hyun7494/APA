@@ -25,6 +25,7 @@ class ProfileScreen extends ConsumerWidget {
     (icon: AppIcon.book, label: '내 조과 기록', route: '/collection'),
     (icon: AppIcon.pin, label: '즐겨찾는 지역', route: null),
     (icon: AppIcon.bell, label: '알림 설정', route: null),
+    (icon: AppIcon.settings, label: '설정', route: '/settings'),
     (icon: AppIcon.headset, label: '고객센터', route: null),
     // 로그인 상태에 따라 라벨이 바뀌는 유일한 행이다. 아래 [_authLabel] 로 갈아끼운다.
     (icon: AppIcon.logout, label: authLabel, route: null),
@@ -154,7 +155,7 @@ class _Body extends ConsumerWidget {
                       color: AppColors.onAccent.withValues(alpha: 0.24),
                     ),
                   ),
-                  child: const Center(
+                  child: Center(
                     child: LineIcon(
                       AppIcon.user,
                       size: 26,
@@ -206,7 +207,7 @@ class _Body extends ConsumerWidget {
               children: [
                 Row(
                   children: [
-                    const LineIcon(
+                    LineIcon(
                       AppIcon.book,
                       size: 15,
                       color: AppColors.accent,
@@ -375,7 +376,7 @@ class _MenuRow extends StatelessWidget {
             LineIcon(item.icon, size: 18, color: AppColors.muted, stroke: 1.4),
             const SizedBox(width: 14),
             Expanded(child: Text(item.label, style: AppText.sectionTitle)),
-            const LineIcon(
+            LineIcon(
               AppIcon.chevronRight,
               size: 14,
               color: AppColors.faint,
@@ -409,7 +410,7 @@ class _LoggedOut extends StatelessWidget {
                 color: AppColors.surface,
                 border: Border.all(color: AppColors.line),
               ),
-              child: const Center(
+              child: Center(
                 child: LineIcon(
                   AppIcon.user,
                   size: 30,

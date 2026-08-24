@@ -240,7 +240,7 @@ class _PostDetailScreenState extends ConsumerState<PostDetailScreen> {
         // 키보드가 올라오면 그만큼 밀어 올린다. 안 그러면 입력칸이 가려진다.
         inset > 0 ? inset + 10 : AppSpacing.navClearance - 60,
       ),
-      decoration: const BoxDecoration(
+      decoration: BoxDecoration(
         color: AppColors.surface,
         boxShadow: AppShadows.bottomBar,
       ),
@@ -283,11 +283,11 @@ class _PostDetailScreenState extends ConsumerState<PostDetailScreen> {
                 height: 44,
                 alignment: Alignment.center,
                 decoration: BoxDecoration(
-                  color: AppColors.ink,
+                  color: AppColors.emphasis,
                   borderRadius: BorderRadius.circular(12),
                 ),
                 child: _sending
-                    ? const SizedBox(
+                    ? SizedBox(
                         width: 16,
                         height: 16,
                         child: CircularProgressIndicator(

@@ -31,7 +31,7 @@ class SquareChip extends StatelessWidget {
         padding: const EdgeInsets.symmetric(horizontal: 14),
         alignment: Alignment.center,
         decoration: BoxDecoration(
-          color: selected ? AppColors.ink : AppColors.fill,
+          color: selected ? AppColors.emphasis : AppColors.fill,
           borderRadius: BorderRadius.circular(AppRadius.chip),
         ),
         child: AnimatedDefaultTextStyle(
@@ -75,23 +75,28 @@ class StaticPill extends StatelessWidget {
   const StaticPill({
     super.key,
     required this.label,
-    this.background = AppColors.fill,
-    this.foreground = AppColors.sub,
+    this.background,
+    this.foreground,
   });
 
   final String label;
-  final Color background;
-  final Color foreground;
+
+  /// 생략하면 눌린 회색 면 + 보조 본문색.
+  final Color? background;
+  final Color? foreground;
 
   @override
   Widget build(BuildContext context) {
     return Container(
       padding: const EdgeInsets.symmetric(horizontal: 11, vertical: 6),
       decoration: BoxDecoration(
-        color: background,
+        color: background ?? AppColors.fill,
         borderRadius: BorderRadius.circular(AppRadius.pill),
       ),
-      child: Text(label, style: AppText.badge.copyWith(color: foreground)),
+      child: Text(
+        label,
+        style: AppText.badge.copyWith(color: foreground ?? AppColors.sub),
+      ),
     );
   }
 }

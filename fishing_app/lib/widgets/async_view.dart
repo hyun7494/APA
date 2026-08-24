@@ -89,7 +89,7 @@ class ErrorView extends StatelessWidget {
         child: Column(
           mainAxisSize: MainAxisSize.min,
           children: [
-            const LineIcon(
+            LineIcon(
               AppIcon.info,
               size: 22,
               color: AppColors.faint,
@@ -209,7 +209,7 @@ class NoticeLine extends StatelessWidget {
     return Row(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
-        const Padding(
+        Padding(
           padding: EdgeInsets.only(top: 1),
           child: LineIcon(
             AppIcon.info,

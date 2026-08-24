@@ -247,7 +247,7 @@ class _FieldGuideTile extends StatelessWidget {
                   overflow: TextOverflow.ellipsis,
                 ),
               ),
-              const LineIcon(
+              LineIcon(
                 AppIcon.book,
                 size: 16,
                 color: AppColors.accent,
@@ -301,7 +301,7 @@ class _FieldGuideTile extends StatelessWidget {
             children: [
               Text('도감 열기', style: AppText.caption),
               const SizedBox(width: 4),
-              const LineIcon(
+              LineIcon(
                 AppIcon.chevronRight,
                 size: 11,
                 color: AppColors.faint,

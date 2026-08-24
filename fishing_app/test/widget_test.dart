@@ -11,7 +11,9 @@ import 'package:fishing_app/services/auth_controller.dart';
 import 'package:fishing_app/services/auth_repository.dart';
 import 'package:fishing_app/services/photo_picker.dart';
 import 'package:fishing_app/services/social_sign_in.dart';
+import 'package:fishing_app/theme/app_theme.dart';
 import 'package:fishing_app/widgets/app_buttons.dart';
+import 'package:fishing_app/widgets/bottom_nav_bar.dart';
 import 'package:fishing_app/widgets/pill_chip.dart';
 import 'package:fishing_app/widgets/press_scale.dart';
 import 'package:fishing_app/widgets/spot_card.dart';
@@ -809,5 +811,74 @@ void main() {
     expect(find.text('조과 기록'), findsOneWidget);
     // 띠 설정은 Rev 2에서 빠졌다
     expect(find.text('띠 설정'), findsNothing);
+  });
+
+  // ── 다크 모드 ─────────────────────────────────────────────────
+
+  /// 하단 탭 바의 면 색. 설정 화면 **밖**이라, 여기까지 색이 바뀌어야
+  /// "고른 테마가 앱 전체에 적용됐다"고 할 수 있다.
+  Color navBarSurface(WidgetTester tester) {
+    final box = tester.widget<Container>(
+      find
+          .descendant(of: find.byType(BottomNavBar), matching: find.byType(Container))
+          .first,
+    );
+    return (box.decoration! as BoxDecoration).color!;
+  }
+
+  Future<void> goToSettings(WidgetTester tester) async {
+    await tester.tap(find.text('마이'));
+    await tester.pumpAndSettle();
+    await tester.tap(find.text('설정'));
+    await tester.pumpAndSettle();
+  }
+
+  testWidgets('★ 마이 > 설정에서 다크를 고르면 다른 화면까지 어두워진다', (tester) async {
+    addTearDown(() => AppColors.use(AppPalette.light));
+    await pumpApp(tester);
+
+    expect(AppColors.isDark, isFalse);
+    expect(navBarSurface(tester), AppPalette.light.surface);
+
+    await goToSettings(tester);
+    await tester.tap(find.text('다크'));
+    await tester.pumpAndSettle();
+
+    expect(AppColors.isDark, isTrue);
+    // 설정 화면이 아니라 하단 탭 바다 — 트리 전체가 다시 그려졌다는 뜻.
+    expect(navBarSurface(tester), AppPalette.dark.surface);
+
+    // 되돌리기도 같은 자리에서 된다.
+    await tester.tap(find.text('라이트'));
+    await tester.pumpAndSettle();
+    expect(AppColors.isDark, isFalse);
+    expect(navBarSurface(tester), AppPalette.light.surface);
+  });
+
+  testWidgets('★ 시스템 설정을 따르면 기기가 밤 모드로 바뀔 때 같이 어두워진다', (tester) async {
+    addTearDown(() => AppColors.use(AppPalette.light));
+    addTearDown(tester.platformDispatcher.clearPlatformBrightnessTestValue);
+
+    await pumpApp(tester);
+    // 기본값이 '시스템 설정 따름' 이라 따로 고르지 않는다.
+    expect(AppColors.isDark, isFalse);
+
+    tester.platformDispatcher.platformBrightnessTestValue = Brightness.dark;
+    await tester.pumpAndSettle();
+
+    expect(AppColors.isDark, isTrue);
+    expect(navBarSurface(tester), AppPalette.dark.surface);
+  });
+
+  testWidgets('★ 다크로 바꿔도 보고 있던 화면에 그대로 남는다', (tester) async {
+    addTearDown(() => AppColors.use(AppPalette.light));
+    await pumpApp(tester);
+
+    await goToSettings(tester);
+    await tester.tap(find.text('다크'));
+    await tester.pumpAndSettle();
+
+    // 트리를 통째로 다시 만들면 여기서 홈으로 튕긴다.
+    expect(find.text('화면 테마'), findsOneWidget);
   });
 }

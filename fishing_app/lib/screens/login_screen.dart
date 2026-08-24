@@ -126,7 +126,7 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
             color: AppColors.accentSoft,
             borderRadius: BorderRadius.circular(AppRadius.cardSmall),
           ),
-          child: const Center(
+          child: Center(
             child: LineIcon(
               AppIcon.book,
               size: 26,
@@ -314,10 +314,10 @@ class _BusyButton extends StatelessWidget {
       height: 54,
       alignment: Alignment.center,
       decoration: BoxDecoration(
-        color: AppColors.ink,
+        color: AppColors.emphasis,
         borderRadius: BorderRadius.circular(14),
       ),
-      child: const SizedBox(
+      child: SizedBox(
         width: 20,
         height: 20,
         child: CircularProgressIndicator(

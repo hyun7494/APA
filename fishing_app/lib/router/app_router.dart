@@ -14,6 +14,7 @@ import '../screens/profile_screen.dart';
 import '../screens/region_search_screen.dart';
 import '../screens/score_detail_screen.dart';
 import '../screens/score_list_screen.dart';
+import '../screens/settings_screen.dart';
 import '../screens/signup_screen.dart';
 import '../screens/species_detail_screen.dart';
 import '../theme/app_theme.dart';
@@ -137,10 +138,14 @@ GoRouter createAppRouter() => GoRouter(
             ),
           ],
         ),
-        // 4 · 마이
+        // 4 · 마이 (설정이 같은 브랜치에 쌓인다)
         StatefulShellBranch(
           routes: [
             GoRoute(path: '/profile', builder: (_, _) => const ProfileScreen()),
+            GoRoute(
+              path: '/settings',
+              builder: (_, _) => const SettingsScreen(),
+            ),
           ],
         ),
       ],

@@ -195,7 +195,7 @@ class _CatchNewScreenState extends ConsumerState<CatchNewScreen> {
                 ),
                 if (species != null && species.rarity.isRare) ...[
                   const SizedBox(width: 7),
-                  const LineIcon(
+                  LineIcon(
                     AppIcon.trophy,
                     size: 13,
                     color: AppColors.gold,
@@ -252,7 +252,7 @@ class _CatchNewScreenState extends ConsumerState<CatchNewScreen> {
             Expanded(child: Text(label, style: AppText.rowLabel)),
             value,
             const SizedBox(width: 8),
-            const LineIcon(
+            LineIcon(
               AppIcon.chevronRight,
               size: 14,
               color: AppColors.faint,
@@ -609,7 +609,7 @@ class _LegalSizeNotice extends StatelessWidget {
       child: Row(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          const Padding(
+          Padding(
             padding: EdgeInsets.only(top: 1),
             child: LineIcon(
               AppIcon.info,
@@ -659,7 +659,7 @@ class _SpeciesPickerState extends State<_SpeciesPicker> {
       minChildSize: 0.5,
       maxChildSize: 0.95,
       builder: (context, controller) => Container(
-        decoration: const BoxDecoration(
+        decoration: BoxDecoration(
           color: AppColors.surface,
           borderRadius: BorderRadius.vertical(top: Radius.circular(28)),
         ),
@@ -697,7 +697,7 @@ class _SpeciesPickerState extends State<_SpeciesPicker> {
                     ),
                     child: Row(
                       children: [
-                        const LineIcon(
+                        LineIcon(
                           AppIcon.search,
                           size: 16,
                           color: AppColors.faint,

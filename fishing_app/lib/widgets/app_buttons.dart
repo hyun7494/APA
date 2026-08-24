@@ -14,7 +14,7 @@ class PrimaryButton extends StatelessWidget {
     required this.onPressed,
     this.icon,
     this.height = 54,
-    this.color = AppColors.ink,
+    this.color,
     this.radius = 14,
   });
 
@@ -25,13 +25,17 @@ class PrimaryButton extends StatelessWidget {
   final AppIcon? icon;
 
   final double height;
-  final Color color;
+
+  /// 생략하면 강조색 면.
+  final Color? color;
+
   final double radius;
 
   @override
   Widget build(BuildContext context) {
     final enabled = onPressed != null;
     final icon = this.icon;
+    final color = this.color ?? AppColors.emphasis;
 
     return PressScale(
       onTap: onPressed,
@@ -159,7 +163,7 @@ class HeaderButton extends StatelessWidget {
         height: 36,
         padding: const EdgeInsets.symmetric(horizontal: 14),
         decoration: BoxDecoration(
-          color: filled ? AppColors.ink : AppColors.fill,
+          color: filled ? AppColors.emphasis : AppColors.fill,
           borderRadius: BorderRadius.circular(AppRadius.chip),
         ),
         child: Row(
@@ -188,7 +192,7 @@ class IconTapButton extends StatelessWidget {
     super.key,
     required this.icon,
     required this.onPressed,
-    this.color = AppColors.ink2,
+    this.color,
     this.size = 21,
     this.badge = false,
     this.onPhoto = false,
@@ -196,7 +200,10 @@ class IconTapButton extends StatelessWidget {
 
   final AppIcon icon;
   final VoidCallback onPressed;
-  final Color color;
+
+  /// 생략하면 소제목색.
+  final Color? color;
+
   final double size;
 
   /// 오른쪽 위 알림 점
@@ -222,7 +229,12 @@ class IconTapButton extends StatelessWidget {
         child: Stack(
           alignment: Alignment.center,
           children: [
-            LineIcon(icon, size: size, color: color, stroke: 1.6),
+            LineIcon(
+              icon,
+              size: size,
+              color: color ?? AppColors.ink2,
+              stroke: 1.6,
+            ),
             if (badge)
               Positioned(
                 top: 8,
@@ -265,7 +277,7 @@ class BottomActionBar extends StatelessWidget {
         AppSpacing.screen,
         inset > 0 ? inset : 16,
       ),
-      decoration: const BoxDecoration(
+      decoration: BoxDecoration(
         color: AppColors.surface,
         boxShadow: AppShadows.bottomBar,
       ),

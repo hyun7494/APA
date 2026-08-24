@@ -80,11 +80,11 @@ class _RecordedFace extends StatelessWidget {
             child: Container(
               width: 20,
               height: 20,
-              decoration: const BoxDecoration(
+              decoration: BoxDecoration(
                 shape: BoxShape.circle,
                 color: AppColors.gold,
               ),
-              child: const Center(
+              child: Center(
                 child: LineIcon(
                   AppIcon.medal,
                   size: 13,

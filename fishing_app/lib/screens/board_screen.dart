@@ -172,7 +172,7 @@ class _PostCard extends StatelessWidget {
               // 시절의 대체물이라, 둘을 같이 두면 같은 말을 두 번 한다.
               if (post.hasImage && post.photoUrl == null) ...[
                 const SizedBox(width: 6),
-                const LineIcon(
+                LineIcon(
                   AppIcon.image,
                   size: 13,
                   color: AppColors.faint,

@@ -97,7 +97,7 @@ class _Body extends ConsumerWidget {
                   child: Row(
                     mainAxisSize: MainAxisSize.min,
                     children: [
-                      const LineIcon(
+                      LineIcon(
                         AppIcon.trophy,
                         size: 12,
                         color: AppColors.gold,
@@ -216,7 +216,7 @@ class _Body extends ConsumerWidget {
               padding: const EdgeInsets.symmetric(vertical: 26),
               child: Column(
                 children: [
-                  const LineIcon(
+                  LineIcon(
                     AppIcon.lock,
                     size: 24,
                     color: AppColors.disabled,
@@ -401,7 +401,7 @@ class _LockedFace extends StatelessWidget {
   Widget build(BuildContext context) {
     return ColoredBox(
       color: AppColors.fill,
-      child: const Center(
+      child: Center(
         child: LineIcon(
           AppIcon.lock,
           size: 40,
