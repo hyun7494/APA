@@ -975,6 +975,49 @@ void main() {
     expect(find.text('조과 기록'), findsOneWidget);
     // 띠 설정은 Rev 2에서 빠졌다
     expect(find.text('띠 설정'), findsNothing);
+    // 알림 설정도 뺐다 — 켜고 끌 알림이 하나도 없다 (FCM 미도입).
+    expect(find.text('알림 설정'), findsNothing);
+  });
+
+  // ── 고객센터 ──────────────────────────────────────────────────
+
+  testWidgets('★ 마이 > 고객센터에서 FAQ 를 펼쳐 읽는다', (tester) async {
+    await pumpApp(tester);
+
+    await tester.tap(find.text('마이'));
+    await tester.pumpAndSettle();
+    await tester.tap(find.text('고객센터'));
+    await tester.pumpAndSettle();
+
+    expect(find.text('자주 묻는 질문'), findsOneWidget);
+    expect(find.text('앱 정보'), findsOneWidget);
+
+    // 답은 접혀 있다 — 아홉 개를 다 펼쳐 두면 질문을 훑을 수가 없다.
+    const question = '도감은 어떻게 채워지나요?';
+    expect(find.text(question), findsOneWidget);
+    expect(find.textContaining('그 어종 칸이 열립니다'), findsNothing);
+
+    await tester.tap(find.text(question));
+    await tester.pumpAndSettle();
+    expect(find.textContaining('그 어종 칸이 열립니다'), findsOneWidget);
+
+    // 다시 누르면 접힌다.
+    await tester.tap(find.text(question));
+    await tester.pumpAndSettle();
+    expect(find.textContaining('그 어종 칸이 열립니다'), findsNothing);
+  });
+
+  testWidgets('★ 고객센터는 준비 중 스낵바가 아니라 진짜 화면이다', (tester) async {
+    await pumpApp(tester);
+
+    await tester.tap(find.text('마이'));
+    await tester.pumpAndSettle();
+    await tester.tap(find.text('고객센터'));
+    await tester.pumpAndSettle();
+
+    expect(find.textContaining('준비 중'), findsNothing);
+    // 마이페이지를 떠났다.
+    expect(find.text('도감 진행률'), findsNothing);
   });
 
   // ── 다크 모드 ─────────────────────────────────────────────────

@@ -15,6 +15,7 @@ import '../screens/region_search_screen.dart';
 import '../screens/score_detail_screen.dart';
 import '../screens/score_list_screen.dart';
 import '../screens/settings_screen.dart';
+import '../screens/support_screen.dart';
 import '../screens/signup_screen.dart';
 import '../screens/species_detail_screen.dart';
 import '../theme/app_theme.dart';
@@ -153,6 +154,10 @@ GoRouter createAppRouter() => GoRouter(
             GoRoute(
               path: '/settings',
               builder: (_, _) => const SettingsScreen(),
+            ),
+            GoRoute(
+              path: '/support',
+              builder: (_, _) => const SupportScreen(),
             ),
           ],
         ),

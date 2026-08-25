@@ -24,9 +24,12 @@ class ProfileScreen extends ConsumerWidget {
   static const _menu = <({AppIcon icon, String label, String? route})>[
     (icon: AppIcon.book, label: '내 조과 기록', route: '/collection'),
     (icon: AppIcon.pin, label: '즐겨찾는 지역', route: null),
-    (icon: AppIcon.bell, label: '알림 설정', route: null),
+    // ⚠️ `알림 설정` 을 뺐다 (2026-08-25). 켜고 끌 알림이 **하나도 없다** — FCM 이
+    //    앱에도 서버에도 없고, `auth.user_fcm_tokens` 는 V1 이 만들어 둔 빈 표다.
+    //    아무것도 안 하는 토글을 두면 사용자는 알림이 안 오는 것을 고장으로 받아들인다.
+    //    푸시를 붙일 때 이 줄을 되살릴 것.
     (icon: AppIcon.settings, label: '설정', route: '/settings'),
-    (icon: AppIcon.headset, label: '고객센터', route: null),
+    (icon: AppIcon.headset, label: '고객센터', route: '/support'),
     // 로그인 상태에 따라 라벨이 바뀌는 유일한 행이다. 아래 [_authLabel] 로 갈아끼운다.
     (icon: AppIcon.logout, label: authLabel, route: null),
   ];
