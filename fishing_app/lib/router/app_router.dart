@@ -97,6 +97,14 @@ GoRouter createAppRouter() => GoRouter(
                 ),
               ),
             ),
+            // ⚠️ `/catch/done/:speciesId` 보다 **뒤에** 두면 안 된다 — 라는 걱정은
+            //    여기서는 없다. `done` 과 `:id` 가 서로 다른 자리라 겹치지 않는다.
+            GoRoute(
+              path: '/catch/:id/edit',
+              builder: (_, state) => CatchNewScreen(
+                catchId: int.tryParse(state.pathParameters['id'] ?? ''),
+              ),
+            ),
             GoRoute(
               path: '/catch/done/:speciesId',
               builder: (_, state) => CatchSuccessScreen(

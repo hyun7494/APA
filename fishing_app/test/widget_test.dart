@@ -601,6 +601,72 @@ void main() {
     expect(find.text('—'), findsWidgets);
   });
 
+  // ── 기록 수정 (계약서 3-7-3) ──────────────────────────────────
+
+  /// 도감 → 감성돔 상세 → 첫 기록의 수정 버튼.
+  Future<void> openCatchEdit(WidgetTester tester) async {
+    await tester.tap(find.text('도감'));
+    await tester.pumpAndSettle();
+    await tester.tap(find.text('감성돔'));
+    await tester.pumpAndSettle();
+
+    final pencil = find.byWidgetPredicate(
+      (w) => w is IconTapButton && w.icon == AppIcon.pencil,
+    );
+    await tester.ensureVisible(pencil.first);
+    await tester.pumpAndSettle();
+    await tester.tap(pencil.first);
+    await tester.pumpAndSettle();
+  }
+
+  testWidgets('★ 기록 수정 화면은 기존 값으로 채워져 있다', (tester) async {
+    await pumpApp(tester, auth: FakeAuthRepository(loggedIn: true));
+    await openCatchEdit(tester);
+
+    expect(find.text('기록 수정'), findsOneWidget);
+    // 시드 첫 기록 — 42.5cm · 기장 학리 · 감성돔.
+    expect(find.text('42.5'), findsWidgets);
+    expect(find.text('기장 학리'), findsWidgets);
+    expect(find.text('감성돔'), findsWidgets);
+    // 어종이 채워졌으니 `선택` 자리 표시는 없어야 한다.
+    expect(find.text('선택'), findsNothing);
+  });
+
+  testWidgets('★ 길이를 고치면 목록에 반영된다', (tester) async {
+    await pumpApp(tester, auth: FakeAuthRepository(loggedIn: true));
+    await openCatchEdit(tester);
+
+    final lengthField = find.byWidgetPredicate(
+      (w) => w is TextField && w.decoration?.hintText == '0.0',
+    );
+    await tester.enterText(lengthField, '44.1');
+    await tester.pumpAndSettle();
+
+    await tester.tap(find.text('수정 저장'));
+    await tester.pump();
+    // 목 리포지토리의 지연을 넘긴다 (등록 테스트와 같은 이유).
+    await tester.pump(const Duration(milliseconds: 400));
+    await tester.pumpAndSettle();
+
+    expect(find.text('기록을 수정했습니다'), findsOneWidget);
+    // 고친 값이 어종 상세로 돌아와 보인다. 42.5 는 더 이상 최고 기록이 아니다.
+    expect(find.textContaining('44.1'), findsWidgets);
+  });
+
+  testWidgets('★ 사진 없는 기록도 고칠 수 있다 — 등록과 달리 사진을 요구하지 않는다', (tester) async {
+    // 시드 기록에는 인증샷이 없다. 여기서까지 사진을 요구하면 그 기록의 오타를
+    // 영영 못 고친다.
+    await pumpApp(tester, auth: FakeAuthRepository(loggedIn: true));
+    await openCatchEdit(tester);
+
+    expect(find.text('PHOTOS · 0 / 5'), findsOneWidget);
+    expect(
+      tester.widget<PrimaryButton>(find.widgetWithText(PrimaryButton, '수정 저장'))
+          .onPressed,
+      isNotNull,
+    );
+  });
+
   testWidgets('★ 비로그인으로 글쓰기를 누르면 로그인 화면으로 보낸다', (tester) async {
     await pumpApp(tester);
 

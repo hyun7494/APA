@@ -117,21 +117,7 @@ class RemoteFishingRepository implements FishingRepository {
       if (draft.spotName.isNotEmpty) MapEntry('spotName', draft.spotName),
       if (draft.memo.isNotEmpty) MapEntry('memo', draft.memo),
     ]);
-    for (final photo in draft.photos) {
-      form.files.add(MapEntry(
-        'photos',
-        MultipartFile.fromBytes(
-          photo.bytes,
-          filename: photo.name,
-          // 서버(PhotoStorageService)는 **선언된 Content-Type 으로만** 형식을
-          // 판정한다. Dio 는 보통 파일명 확장자를 보고 알아서 채워 주지만,
-          // 확장자가 없으면 application/octet-stream 으로 떨어지고 그러면
-          // 멀쩡한 JPEG 도 "JPEG 또는 PNG 사진만" 400 이 된다. 카메라가 만든
-          // 임시 파일명에는 확장자가 없을 수 있어 추측에 맡기지 않는다.
-          contentType: DioMediaType.parse(photo.mimeType),
-        ),
-      ));
-    }
+    form.files.addAll(_photoParts(draft.photos));
 
     final res = await _dio.post<Map<String, dynamic>>(
       '/fishing/me/catches',
@@ -139,6 +125,64 @@ class RemoteFishingRepository implements FishingRepository {
     );
     return CatchResult.fromJson(res.data!);
   }
+
+  @override
+  Future<CatchRecord> updateCatch(
+    int id,
+    CatchDraft draft, {
+    required List<String> keepPhotoUrls,
+  }) async {
+    final form = FormData();
+    form.fields.addAll([
+      MapEntry('speciesId', '${draft.speciesId}'),
+      MapEntry('caughtAt', draft.caughtAt.toIso8601String()),
+      if (draft.lengthCm != null) MapEntry('lengthCm', '${draft.lengthCm}'),
+      // 등록과 달리 **빈 값도 보낸다.** 여기서 생략하면 서버가 "지운 게 아니라
+      // 안 건드린 것" 으로 읽어서, 지운 메모·포인트가 되살아난다.
+      MapEntry('spotName', draft.spotName),
+      MapEntry('memo', draft.memo),
+      // 남길 장. 파트를 여러 번 보낸다 — 순서가 그대로 저장된다.
+      //
+      // ⚠️ 한 장도 안 남길 때도 **빈 값으로 한 번은 보내야 한다.** 아예 안 보내면
+      //    서버는 "사진을 건드리지 말라" 로 읽어서 뗀 사진이 그대로 남는다.
+      if (keepPhotoUrls.isEmpty)
+        const MapEntry('keepPhotoUrls', '')
+      else
+        for (final url in keepPhotoUrls) MapEntry('keepPhotoUrls', url),
+    ]);
+    form.files.addAll(_photoParts(draft.photos));
+
+    try {
+      final res = await _dio.put<Map<String, dynamic>>(
+        '/fishing/me/catches/$id',
+        data: form,
+      );
+      return CatchRecord.fromJson(res.data!);
+    } on DioException catch (e) {
+      throw PostSubmitException(_submitMessage(e, '기록을 고치지 못했어요'));
+    }
+  }
+
+  /// 조과 사진 파트. 같은 이름(`photos`)을 여러 번 보내면 서버가 List 로 받고,
+  /// **보낸 순서가 그대로 저장된다** — 첫 장이 도감 칸의 표지가 된다.
+  ///
+  /// 서버(`PhotoStorageService`)는 **선언된 Content-Type 으로만** 형식을 판정한다.
+  /// Dio 는 보통 파일명 확장자를 보고 채워 주지만, 확장자가 없으면
+  /// application/octet-stream 으로 떨어져서 멀쩡한 JPEG 도 "JPEG 또는 PNG 사진만"
+  /// 400 이 된다. 카메라가 만든 임시 파일명에는 확장자가 없을 수 있어 추측에 맡기지 않는다.
+  static List<MapEntry<String, MultipartFile>> _photoParts(
+    List<PickedPhoto> photos,
+  ) => [
+    for (final photo in photos)
+      MapEntry(
+        'photos',
+        MultipartFile.fromBytes(
+          photo.bytes,
+          filename: photo.name,
+          contentType: DioMediaType.parse(photo.mimeType),
+        ),
+      ),
+  ];
 
   @override
   Future<void> deleteCatch(int id) async {

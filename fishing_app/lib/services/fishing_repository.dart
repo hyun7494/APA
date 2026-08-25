@@ -41,6 +41,21 @@ abstract interface class FishingRepository {
   ///
   /// 기획서 3-3: 잘못 등록한 어종을 되돌릴 수 없으면 도감 전체의 신뢰가
   /// 무너지므로 삭제는 필수다. 마지막 기록이 지워지면 칸도 미등록으로 돌아간다.
+  /// 기록 수정 — `PUT /fishing/me/catches/{id}` (계약서 3-7-3).
+  ///
+  /// [keepPhotoUrls] 는 **남길 장의 URL 목록**이고 순서가 그대로 간다.
+  /// 새로 올리는 [CatchDraft.photos] 는 그 **뒤에** 붙는다 (서버 규칙).
+  ///
+  /// 빈 목록은 "사진을 다 뗀다" 는 뜻이라 **함부로 넘기면 안 된다.**
+  /// 등록과 마찬가지로 인증샷은 최소 한 장이어야 하므로, 화면이 그걸 먼저 막는다.
+  ///
+  /// @throws [PostSubmitException] 서버가 거절했을 때 (남의 기록은 404)
+  Future<CatchRecord> updateCatch(
+    int id,
+    CatchDraft draft, {
+    required List<String> keepPhotoUrls,
+  });
+
   Future<void> deleteCatch(int id);
 
   // ── 게시판 · 마이 ───────────────────────────────────────────

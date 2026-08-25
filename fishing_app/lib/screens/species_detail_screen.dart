@@ -320,6 +320,7 @@ class _Body extends ConsumerWidget {
                     child: _RecordRow(
                       record: list[i],
                       rare: species.rarity.isRare,
+                      onEdit: () => context.go('/catch/${list[i].id}/edit'),
                       onDelete: () => _confirmDelete(context, ref, list[i]),
                     ),
                   ),
@@ -444,11 +445,13 @@ class _RecordRow extends StatelessWidget {
   const _RecordRow({
     required this.record,
     required this.rare,
+    required this.onEdit,
     required this.onDelete,
   });
 
   final CatchRecord record;
   final bool rare;
+  final VoidCallback onEdit;
   final VoidCallback onDelete;
 
   @override
@@ -503,11 +506,10 @@ class _RecordRow extends StatelessWidget {
               ],
             ),
           ),
-          IconTapButton(
-            icon: AppIcon.trash,
-            onPressed: onDelete,
-            size: 34,
-          ),
+          // 고치기를 지우기 **왼쪽**에 둔다. 되돌릴 수 없는 쪽이 바깥 끝이라
+          // 손이 미끄러져도 삭제부터 눌리지 않는다.
+          IconTapButton(icon: AppIcon.pencil, onPressed: onEdit, size: 32),
+          IconTapButton(icon: AppIcon.trash, onPressed: onDelete, size: 32),
         ],
       ),
     );

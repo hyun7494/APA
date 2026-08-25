@@ -113,6 +113,34 @@ class MockFishingRepository implements FishingRepository {
   }
 
   @override
+  Future<CatchRecord> updateCatch(
+    int id,
+    CatchDraft draft, {
+    required List<String> keepPhotoUrls,
+  }) async {
+    await Future.delayed(_latency);
+
+    final i = _catches.indexWhere((c) => c.id == id);
+    if (i < 0) throw const PostSubmitException('기록을 찾을 수 없어요');
+
+    final species = SpeciesSeed.all.firstWhere((s) => s.id == draft.speciesId);
+    final updated = CatchRecord(
+      id: id,
+      speciesId: species.id,
+      speciesName: species.name,
+      // 서버와 같은 순서 규칙 — 남긴 장이 앞, 새로 올린 장이 뒤다.
+      // 목에는 사진을 올릴 서버가 없어서 새 장은 URL 이 생기지 않는다.
+      photoUrls: keepPhotoUrls,
+      lengthCm: draft.lengthCm,
+      caughtAt: draft.caughtAt,
+      spotName: draft.spotName,
+      memo: draft.memo,
+    );
+    _catches[i] = updated;
+    return updated;
+  }
+
+  @override
   Future<void> deleteCatch(int id) async {
     await Future.delayed(_latency);
     _catches.removeWhere((c) => c.id == id);

@@ -141,6 +141,20 @@ final catchesProvider =
           .fetchCatches(speciesId: speciesId);
     });
 
+/// 기록 하나 — 수정 화면이 쓴다.
+///
+/// 서버에 단건 조회가 없어서 내 기록 전체(`catchesProvider(null)`)에서 골라낸다.
+/// 화면이 `extra` 로 받아 오게 하면 새로고침·딥링크로 들어왔을 때 빈손이 된다.
+final catchProvider = FutureProvider.family<CatchRecord, int>((ref, id) async {
+  final all = await ref.watch(catchesProvider(null).future);
+  final found = all.where((c) => c.id == id).firstOrNull;
+  if (found == null) {
+    // 남의 기록이거나 방금 지운 기록이다. 서버도 이 둘을 404 로 합쳐서 낸다.
+    throw StateError('기록을 찾을 수 없습니다: $id');
+  }
+  return found;
+});
+
 /// 조과 등록 화면의 어종 선택기가 쓰는 마스터 목록.
 ///
 /// 도감과 달리 여기서는 미등록 어종도 전부 컬러로 보여준다 (기획서 5-4).

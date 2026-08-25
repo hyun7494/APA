@@ -191,14 +191,23 @@ public class CatchService {
      * 알려 주지, 그 URL 이 세상에 있는지는 말하지 않는다.
      */
     private List<String> requireOwnPhotos(CatchRecord record, List<String> keepPhotoUrls) {
+        // ⚠️ 빈 항목은 걸러 낸다. "사진을 다 뗀다" 를 폼으로 보낼 방법이 `keepPhotoUrls=`
+        //    (빈 값) 뿐인데, 스프링은 그걸 빈 리스트가 아니라 `[""]` 로 준다. 그대로
+        //    검사하면 "남기려는 사진이 이 기록에 없습니다" 400 이 나서, 계약서가 약속한
+        //    "빈 값이면 다 뗀다" 를 앱이 쓸 수 없다.
+        //    파트를 아예 안 보내는 것(=null, 사진 그대로)과는 여전히 구분된다.
+        List<String> requested = keepPhotoUrls.stream()
+                .filter(url -> url != null && !url.isBlank())
+                .toList();
+
         List<String> mine = record.getPhotoUrls();
-        for (String url : keepPhotoUrls) {
+        for (String url : requested) {
             if (!mine.contains(url)) {
                 throw new ResponseStatusException(
                         HttpStatus.BAD_REQUEST, "남기려는 사진이 이 기록에 없습니다");
             }
         }
-        return List.copyOf(keepPhotoUrls);
+        return requested;
     }
 
     private void requireWithinLimit(int count) {

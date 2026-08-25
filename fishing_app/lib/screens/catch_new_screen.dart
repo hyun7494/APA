@@ -8,12 +8,14 @@ import 'package:intl/intl.dart';
 
 import '../models/catch_record.dart';
 import '../models/species.dart';
+import '../services/fishing_repository.dart';
 import '../services/photo_picker.dart';
 import '../services/providers.dart';
 import '../theme/app_theme.dart';
 import '../widgets/app_buttons.dart';
 import '../widgets/app_card.dart';
 import '../widgets/async_view.dart';
+import '../widgets/authed_photo.dart';
 import '../widgets/photo_placeholder.dart';
 import '../widgets/photo_source_sheet.dart';
 import '../widgets/press_scale.dart';
@@ -31,11 +33,19 @@ import '../widgets/reveal.dart';
 ///
 /// 시안과 어긋나 있던 셋(사진 1장 · 길이 필수 · 메모 300자)은 **서버가 못 받아서**였다.
 /// V11 이 표를 열어 줘서 지금은 시안 그대로다 — 사진 최대 5장, 길이는 선택, 메모 500자.
+/// 고치기는 이 화면을 그대로 쓴다 ([catchId] 가 있으면 고치기 모드) — 글쓰기·글 고치기가
+/// `PostNewScreen` 하나를 쓰는 것과 같은 이유다. 따로 만들면 사진 한도·메모 글자수·
+/// 금지체장 안내가 두 곳에서 어긋난다.
 class CatchNewScreen extends ConsumerStatefulWidget {
-  const CatchNewScreen({super.key, this.initialSpeciesId});
+  const CatchNewScreen({super.key, this.initialSpeciesId, this.catchId});
 
   /// 어종 상세에서 들어오면 그 어종이 미리 선택된다.
   final int? initialSpeciesId;
+
+  /// 있으면 그 기록을 고친다. 없으면 새 기록이다.
+  final int? catchId;
+
+  bool get isEdit => catchId != null;
 
   @override
   ConsumerState<CatchNewScreen> createState() => _CatchNewScreenState();
@@ -52,8 +62,15 @@ class _CatchNewScreenState extends ConsumerState<CatchNewScreen> {
 
   Species? _species;
 
-  /// 고른 사진들. 순서가 그대로 서버에 가고 첫 장이 도감 칸의 표지가 된다.
-  final List<PickedPhoto> _photos = [];
+  /// 사진들. 순서가 그대로 서버에 가고 첫 장이 도감 칸의 표지가 된다.
+  ///
+  /// 고치기 모드에서는 **이미 서버에 있는 장([_Kept])과 방금 고른 장([_Added])이
+  /// 섞인다.** 서버가 "남긴 장 뒤에 새 장을 붙이는" 규칙이라 순서를 임의로 바꿀 수는
+  /// 없는데, 여기서는 뒤에 더하고 빼기만 하므로 그 규칙이 저절로 지켜진다.
+  final List<_Shot> _photos = [];
+
+  /// 고치기 모드에서 기존 기록을 한 번만 채우기 위한 표시.
+  bool _loaded = false;
 
   /// 시안의 `PHOTOS · 1 / 5`. 서버 `CatchService.MAX_PHOTOS` 와 같은 값이다.
   static const _maxPhotos = 5;
@@ -63,7 +80,8 @@ class _CatchNewScreenState extends ConsumerState<CatchNewScreen> {
   @override
   void initState() {
     super.initState();
-    final id = widget.initialSpeciesId;
+    // 고치기 모드의 어종은 기록에서 온다 ([_fillOnce]).
+    final id = widget.isEdit ? null : widget.initialSpeciesId;
     if (id != null) {
       _species = ref
           .read(speciesMasterProvider)
@@ -83,8 +101,12 @@ class _CatchNewScreenState extends ConsumerState<CatchNewScreen> {
   double? get _length => double.tryParse(_lengthController.text.trim());
 
   /// **길이는 빠졌다** (V11) — 시안의 라벨이 `길이 (선택)` 이고 서버도 null 을 받는다.
-  /// 인증샷은 기획서 3-3 대로 여전히 필수다.
-  bool get _ready => _photos.isNotEmpty && _species != null;
+  ///
+  /// 인증샷은 **새로 등록할 때만** 필수다 (기획서 3-3). 고치기에서까지 요구하면
+  /// 사진 없이 남은 기록(시드·서버가 허용하는 사진 없는 등록)의 오타를 영영 못 고친다 —
+  /// 사진을 붙이라고 강요하려고 저장을 막는 셈이 된다.
+  bool get _ready =>
+      _species != null && (widget.isEdit || _photos.isNotEmpty);
 
   /// 선택한 어종의 금지체장보다 작으면 안내 배너를 띄운다.
   /// **등록을 막지는 않는다** — 차단하면 사용자가 길이를 거짓으로 넣게 되고
@@ -95,15 +117,66 @@ class _CatchNewScreenState extends ConsumerState<CatchNewScreen> {
     return min != null && len != null && len > 0 && len < min;
   }
 
+  /// 고치기 화면은 기존 기록으로 시작한다. **한 번만** 채운다 —
+  /// 다시 채우면 사용자가 고치던 값을 서버 값이 덮어쓴다 (`PostNewScreen` 과 같은 규칙).
+  void _fillOnce(CatchRecord record) {
+    if (_loaded) return;
+    _loaded = true;
+    _species = ref
+        .read(speciesMasterProvider)
+        .where((s) => s.id == record.speciesId)
+        .firstOrNull;
+    // 길이는 선택이라 없을 수 있다. 그때 `0` 을 넣으면 "0cm 를 쟀다" 가 된다.
+    _lengthController.text = record.lengthCm?.toStringAsFixed(1) ?? '';
+    _spotController.text = record.spotName;
+    _memoController.text = record.memo;
+    _caughtAt = record.caughtAt;
+    _photos.addAll(record.photoUrls.map(_Kept.new));
+  }
+
+  /// 돌아갈 곳. 고치기는 왔던 어종 상세로, 새 기록은 도감으로.
+  String get _backTo => _species == null
+      ? '/collection'
+      : '/collection/${_species!.id}';
+
   @override
   Widget build(BuildContext context) {
+    if (widget.isEdit) {
+      final existing = ref.watch(catchProvider(widget.catchId!));
+      if (existing.hasError) {
+        return SafeArea(
+          bottom: false,
+          child: Column(
+            children: [
+              const SizedBox(height: 18),
+              BackRow(label: '도감으로', onTap: () => context.go('/collection')),
+              const Expanded(
+                child: ErrorView(message: '기록을 불러오지 못했어요', height: 260),
+              ),
+            ],
+          ),
+        );
+      }
+      final record = existing.valueOrNull;
+      if (record == null) {
+        return const Center(child: CircularProgressIndicator());
+      }
+      _fillOnce(record);
+    }
+
     return SafeArea(
       bottom: false,
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.stretch,
         children: [
           const SizedBox(height: 18),
-          BackRow(label: '도감으로', onTap: () => context.go('/collection')),
+          BackRow(
+            label: widget.isEdit ? '기록으로' : '도감으로',
+            onTap: () {
+              if (_submitting) return;
+              context.go(widget.isEdit ? _backTo : '/collection');
+            },
+          ),
           Expanded(
             child: ListView(
               physics: const BouncingScrollPhysics(),
@@ -114,7 +187,12 @@ class _CatchNewScreenState extends ConsumerState<CatchNewScreen> {
                 AppSpacing.navClearance,
               ),
               children: [
-                Reveal(child: Text('기록 추가', style: AppText.screenTitle)),
+                Reveal(
+                  child: Text(
+                    widget.isEdit ? '기록 수정' : '기록 추가',
+                    style: AppText.screenTitle,
+                  ),
+                ),
                 const SizedBox(height: 22),
 
                 Reveal(
@@ -150,16 +228,22 @@ class _CatchNewScreenState extends ConsumerState<CatchNewScreen> {
                 Reveal(
                   index: 4,
                   child: PrimaryButton(
-                    label: _submitting ? '저장 중…' : '기록 저장',
+                    label: _submitting
+                        ? '저장 중…'
+                        : (widget.isEdit ? '수정 저장' : '기록 저장'),
                     icon: AppIcon.check,
                     onPressed: _ready && !_submitting ? _submit : null,
                   ),
                 ),
                 const SizedBox(height: 14),
-                const Reveal(
+                Reveal(
                   index: 5,
                   child: NoticeLine(
-                    text: '기록은 내 도감에만 저장됩니다. 게시판 공개는 저장 후 따로 선택합니다.',
+                    text: widget.isEdit
+                        // 뺀 사진은 서버에서 파일까지 지운다 — 되돌릴 수 없다는 걸
+                        // 저장 전에 말해 준다.
+                        ? '뺀 사진은 저장할 때 완전히 지워집니다.'
+                        : '기록은 내 도감에만 저장됩니다. 게시판 공개는 저장 후 따로 선택합니다.',
                   ),
                 ),
               ],
@@ -361,7 +445,7 @@ class _CatchNewScreenState extends ConsumerState<CatchNewScreen> {
     // 시트·크기 한도·권한 안내는 글쓰기 화면과 공유한다 (`pickPhotoFromSheet`).
     final picked = await pickPhotoFromSheet(context, ref, onMessage: _toast);
     if (picked == null || !mounted) return;
-    setState(() => _photos.add(picked));
+    setState(() => _photos.add(_Added(picked)));
   }
 
   void _toast(String message) => ScaffoldMessenger.of(
@@ -405,21 +489,32 @@ class _CatchNewScreenState extends ConsumerState<CatchNewScreen> {
     });
   }
 
+  CatchDraft get _draft => CatchDraft(
+    speciesId: _species!.id,
+    lengthCm: _length,
+    caughtAt: _caughtAt,
+    // 새로 올릴 장만 파일로 간다. 이미 있는 장은 `keepPhotoUrls` 로 되돌려 보낸다.
+    photos: [
+      for (final shot in _photos)
+        if (shot is _Added) shot.photo,
+    ],
+    spotName: _spotController.text.trim(),
+    memo: _memoController.text.trim(),
+  );
+
   Future<void> _submit() async {
     setState(() => _submitting = true);
+    if (widget.isEdit) {
+      await _saveEdit();
+    } else {
+      await _saveNew();
+    }
+  }
 
+  Future<void> _saveNew() async {
     final result = await ref
         .read(fishingRepositoryProvider)
-        .registerCatch(
-          CatchDraft(
-            speciesId: _species!.id,
-            lengthCm: _length,
-            caughtAt: _caughtAt,
-            photos: List.of(_photos),
-            spotName: _spotController.text.trim(),
-            memo: _memoController.text.trim(),
-          ),
-        );
+        .registerCatch(_draft);
 
     ref.read(collectionRevisionProvider.notifier).state++;
     if (!mounted) return;
@@ -436,6 +531,65 @@ class _CatchNewScreenState extends ConsumerState<CatchNewScreen> {
       context.go('/collection/${result.record.speciesId}');
     }
   }
+
+  /// 고치기.
+  ///
+  /// ⚠️ **남길 장의 목록을 항상 보낸다.** 안 보내면 서버가 "사진을 건드리지 말라" 로
+  /// 읽어서 화면에서 뺀 사진이 그대로 남는다 (계약서 3-7-3).
+  ///
+  /// 어종을 바꾸면 도감 칸도 달라진다 — 원래 어종의 마지막 기록이었다면 그 칸이 다시
+  /// 잠기고 새 어종 칸이 열린다. 그래서 성공하면 **바뀐 어종의 상세**로 보낸다.
+  Future<void> _saveEdit() async {
+    final CatchRecord updated;
+    try {
+      updated = await ref
+          .read(fishingRepositoryProvider)
+          .updateCatch(
+            widget.catchId!,
+            _draft,
+            keepPhotoUrls: [
+              for (final shot in _photos)
+                if (shot is _Kept) shot.url,
+            ],
+          );
+    } on PostSubmitException catch (e) {
+      if (!mounted) return;
+      setState(() => _submitting = false);
+      _toast(e.message);
+      return;
+    }
+
+    ref.read(collectionRevisionProvider.notifier).state++;
+    if (!mounted) return;
+
+    ScaffoldMessenger.of(
+      context,
+    ).showSnackBar(const SnackBar(content: Text('기록을 수정했습니다')));
+    context.go('/collection/${updated.speciesId}');
+  }
+}
+
+/// 스트립의 한 칸. 이미 서버에 있는 장이거나, 방금 고른 장이다.
+///
+/// 등록에서는 [_Added] 만 나오고, 고치기에서는 둘이 섞인다. 서버가 "남긴 장 뒤에
+/// 새 장" 순서를 강제하므로 이 목록도 **[_Kept] 가 앞, [_Added] 가 뒤**로 유지된다 —
+/// 뒤에 더하고 빼기만 하면 저절로 지켜진다.
+sealed class _Shot {
+  const _Shot();
+}
+
+/// 서버에 이미 있는 장. 저장할 때 `keepPhotoUrls` 로 되돌려 보낸다.
+class _Kept extends _Shot {
+  const _Kept(this.url);
+
+  final String url;
+}
+
+/// 방금 고른 장. 저장할 때 파일로 올라간다.
+class _Added extends _Shot {
+  const _Added(this.photo);
+
+  final PickedPhoto photo;
 }
 
 /// 섹션을 여는 대문자 라벨 — 시안의 `PHOTOS` · `MEMO`.
@@ -466,7 +620,7 @@ class _PhotoStrip extends StatelessWidget {
     required this.onRemove,
   });
 
-  final List<PickedPhoto> photos;
+  final List<_Shot> photos;
   final int max;
   final bool rare;
   final VoidCallback onAdd;
@@ -497,14 +651,24 @@ class _PhotoStrip extends StatelessWidget {
         children: [
           ClipRRect(
             borderRadius: BorderRadius.circular(AppRadius.thumb),
-            // 경로가 아니라 바이트로 그린다 — 웹에서도 같은 코드가 돈다.
-            // 디코딩에 실패해도 화면이 깨지지 않게 줄무늬로 물러선다.
-            child: Image.memory(
-              photos[index].bytes,
-              fit: BoxFit.cover,
-              errorBuilder: (_, _, _) =>
-                  PhotoPlaceholder(rare: rare, stripe: 5),
-            ),
+            child: switch (photos[index]) {
+              // 방금 고른 장은 경로가 아니라 바이트로 그린다 — 웹에서도 같은 코드가
+              // 돈다. 디코딩에 실패해도 화면이 깨지지 않게 줄무늬로 물러선다.
+              _Added(:final photo) => Image.memory(
+                photo.bytes,
+                fit: BoxFit.cover,
+                errorBuilder: (_, _, _) =>
+                    PhotoPlaceholder(rare: rare, stripe: 5),
+              ),
+              // 이미 올라간 장은 인증이 필요한 주소라 [AuthedPhoto] 로 받아 온다
+              // (`Image.network` 는 토큰을 안 붙여서 전부 깨진다).
+              _Kept(:final url) => AuthedPhoto(
+                path: url,
+                rare: rare,
+                stripe: 5,
+                thumb: true,
+              ),
+            },
           ),
           if (index == 0)
             Positioned(
