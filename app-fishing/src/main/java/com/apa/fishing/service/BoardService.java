@@ -3,7 +3,6 @@ package com.apa.fishing.service;
 import com.apa.common.security.AuthenticatedUser;
 import com.apa.fishing.domain.FishingPost;
 import com.apa.fishing.domain.FishingPostComment;
-import com.apa.fishing.domain.FishingPostLike;
 import com.apa.fishing.domain.FishingRegion;
 import com.apa.fishing.domain.PostCategory;
 import com.apa.fishing.dto.CommentCreateRequest;
@@ -20,7 +19,6 @@ import com.apa.fishing.repository.FishingPostReportRepository;
 import com.apa.fishing.repository.FishingPostRepository;
 import com.apa.fishing.repository.FishingRegionRepository;
 import lombok.RequiredArgsConstructor;
-import org.springframework.dao.DataIntegrityViolationException;
 import org.springframework.http.HttpStatus;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
@@ -242,23 +240,23 @@ public class BoardService {
      * 좋아요 토글. 누른 뒤의 상태를 <b>수와 함께</b> 돌려준다.
      *
      * <p>프론트가 자기 쪽에서 +1 하면 그 사이 다른 사람이 누른 것이 빠져 화면과 서버가 어긋난다.
+     *
+     * <p><b>넣어 보는 것으로 직전 상태를 판정한다.</b> 들어갔으면 방금 누른 것이고, 안 들어갔으면
+     * 이미 눌러 둔 상태였으니 뗀다. "조회 → 없으면 저장" 으로 나누면 같은 순간 두 번 눌렸을 때
+     * 500 이 난다 ({@code insertIfAbsent} 주석 참고) — 이쪽은 한 번이 눌렀다, 한 번이 뗐다가
+     * 되어 두 번 누른 결과와도 맞는다.
      */
     @Transactional
     public LikeResponse toggleLike(AuthenticatedUser user, Long postId) {
-        FishingPost post = findPostOrThrow(postId);
-        boolean liked;
+        // ⚠️ 잠그고 읽는다. 안 그러면 동시에 두 번 눌렸을 때 캐시된 수가 실제와 어긋난 채
+        //    굳는다 (findByIdForUpdate 주석).
+        FishingPost post = postRepository.findByIdForUpdate(postId)
+                .orElseThrow(() -> new ResponseStatusException(
+                        HttpStatus.NOT_FOUND, "게시글을 찾을 수 없습니다: " + postId));
 
-        if (likeRepository.existsByPostIdAndUserId(postId, user.userId())) {
+        boolean liked = likeRepository.insertIfAbsent(postId, user.userId()) == 1;
+        if (!liked) {
             likeRepository.deleteByPostIdAndUserId(postId, user.userId());
-            liked = false;
-        } else {
-            try {
-                likeRepository.saveAndFlush(FishingPostLike.of(postId, user.userId()));
-            } catch (DataIntegrityViolationException e) {
-                // 같은 순간 두 번 눌렸다. PK 가 막아 줬고, 결과(좋아요 상태)는 같으므로
-                // 실패로 낼 이유가 없다.
-            }
-            liked = true;
         }
 
         likeRepository.flush();

@@ -12,6 +12,10 @@ import java.util.Objects;
 /**
  * 좋아요 한 번. 복합 기본키 {@code (post_id, user_id)} 가 <b>같은 사람의 중복 좋아요를 막는다</b> —
  * 토글이 연달아 눌려도 DB 가 걸러 준다.
+ *
+ * <p><b>이 엔티티로 저장하지 않는다.</b> 넣는 일은
+ * {@link com.apa.fishing.repository.FishingPostLikeRepository#insertIfAbsent} 가 네이티브
+ * upsert 로 하고 (이유는 그쪽 주석), 여기는 세거나 지울 때 쓰는 자리다.
  */
 @Entity
 @Table(name = "fishing_post_likes")
@@ -30,14 +34,6 @@ public class FishingPostLike {
 
     @Column(name = "created_at", nullable = false)
     private LocalDateTime createdAt;
-
-    public static FishingPostLike of(Long postId, Long userId) {
-        FishingPostLike like = new FishingPostLike();
-        like.postId = postId;
-        like.userId = userId;
-        like.createdAt = LocalDateTime.now();
-        return like;
-    }
 
     public record Key(Long postId, Long userId) implements Serializable {
 
