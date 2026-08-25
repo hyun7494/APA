@@ -242,6 +242,36 @@ void main() {
     expect(find.text('/36'), findsOneWidget);
   });
 
+  testWidgets('★ 홈에 최근 조황 글이 뜨고 누르면 상세로 간다', (tester) async {
+    await pumpApp(tester);
+
+    expect(find.text('최근 조황'), findsOneWidget);
+    // 시드의 조황 글 두 개. `자유`·`질문` 글은 여기 오면 안 된다.
+    expect(find.text('오늘 학리에서 감성돔 4짜 손맛!'), findsOneWidget);
+    expect(find.text('초보도 잡았네요 ㅎㅎ 볼락 조황 좋아요'), findsNothing);
+
+    await tester.tap(find.text('오늘 학리에서 감성돔 4짜 손맛!'));
+    await tester.pumpAndSettle();
+    expect(find.text('게시판으로'), findsOneWidget);
+  });
+
+  testWidgets('★ 게시판 탭을 바꿔도 홈의 최근 조황은 조황 그대로다', (tester) async {
+    await pumpApp(tester);
+
+    // 게시판에서 `질문` 만 보게 해 둔다.
+    await tester.tap(find.text('게시판'));
+    await tester.pumpAndSettle();
+    await tapChip(tester, '질문');
+    expect(find.text('영종도 우럭 포인트 추천 부탁드려요'), findsOneWidget);
+
+    await tester.tap(find.text('홈'));
+    await tester.pumpAndSettle();
+
+    // 홈이 게시판 탭 상태를 구독하면 여기에 질문 글이 뜬다.
+    expect(find.text('오늘 학리에서 감성돔 4짜 손맛!'), findsOneWidget);
+    expect(find.text('영종도 우럭 포인트 추천 부탁드려요'), findsNothing);
+  });
+
   testWidgets('지수 탭 → 포인트 카드 → 상세로 이동한다', (tester) async {
     await pumpApp(tester);
 

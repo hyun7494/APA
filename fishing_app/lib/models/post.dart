@@ -67,6 +67,20 @@ class Post {
 
   final bool likedByMe;
 
+  /// "2시간 전", "어제" 같은 상대 시간.
+  ///
+  /// 게시판 카드와 홈의 최근 조황이 같은 표기를 써야 한다 — 한쪽만 고치면
+  /// 같은 글이 화면에 따라 다른 시각으로 보인다.
+  String get relativeTime {
+    final diff = DateTime.now().difference(createdAt);
+    if (diff.inMinutes < 1) return '방금';
+    if (diff.inHours < 1) return '${diff.inMinutes}분 전';
+    if (diff.inHours < 24) return '${diff.inHours}시간 전';
+    if (diff.inDays == 1) return '어제';
+    if (diff.inDays < 7) return '${diff.inDays}일 전';
+    return '${createdAt.month}월 ${createdAt.day}일';
+  }
+
   factory Post.fromJson(Map<String, dynamic> json) => Post(
     id: (json['id'] as num).toInt(),
     category: PostCategory.fromCode(json['category'] as String?),

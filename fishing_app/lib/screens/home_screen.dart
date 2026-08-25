@@ -9,7 +9,9 @@ import '../theme/app_theme.dart';
 import '../widgets/app_buttons.dart';
 import '../widgets/app_card.dart';
 import '../widgets/async_view.dart';
+import '../widgets/authed_photo.dart';
 import '../widgets/collection_progress.dart';
+import '../widgets/press_scale.dart';
 import '../widgets/rating_badge.dart';
 import '../widgets/reveal.dart';
 
@@ -28,6 +30,7 @@ class HomeScreen extends ConsumerWidget {
   Widget build(BuildContext context, WidgetRef ref) {
     final featured = ref.watch(featuredSpotProvider);
     final summary = ref.watch(collectionSummaryProvider);
+    final recent = ref.watch(recentCatchPostsProvider);
     final now = DateTime.now();
 
     return SafeArea(
@@ -109,6 +112,109 @@ class HomeScreen extends ConsumerWidget {
             child: NoticeLine(
               text: '참고용 정보이며 실제 출조 여부는 현장 상황을 확인하세요.',
             ),
+          ),
+
+          // 최근 조황 — 남들이 오늘 뭘 잡았는지. 지수가 "나가도 되나"라면 이쪽은
+          // "나갔더니 어땠나"다. 둘이 붙어 있어야 홈이 하루를 다 설명한다.
+          //
+          // ⚠️ 글이 없을 수 있다. 그때는 섹션째 감춘다 — 빈 카드를 두면 홈이
+          //    더 허전해 보이고, 초대 문구를 띄우면 글쓰기를 강요하는 꼴이 된다.
+          ...switch (recent.valueOrNull) {
+            null || [] => const <Widget>[],
+            final posts => [
+              const SizedBox(height: AppSpacing.section),
+              Reveal(
+                index: 4,
+                child: SectionLabel(
+                  label: '최근 조황',
+                  padded: false,
+                  trailing: PressScale(
+                    onTap: () => context.go('/board'),
+                    scale: 0.94,
+                    child: Row(
+                      mainAxisSize: MainAxisSize.min,
+                      children: [
+                        Text('더보기', style: AppText.caption),
+                        const SizedBox(width: 2),
+                        LineIcon(
+                          AppIcon.chevronRight,
+                          size: 13,
+                          color: AppColors.faint,
+                          stroke: 1.5,
+                        ),
+                      ],
+                    ),
+                  ),
+                ),
+              ),
+              const SizedBox(height: 12),
+              for (var i = 0; i < posts.length; i++) ...[
+                if (i > 0) const SizedBox(height: AppSpacing.gap),
+                Reveal(index: 5 + i, child: _RecentPostRow(post: posts[i])),
+              ],
+            ],
+          },
+        ],
+      ),
+    );
+  }
+}
+
+/// 최근 조황 한 줄.
+///
+/// 게시판 카드보다 납작하다 — 홈에서는 본문 요약까지 읽히려는 게 아니라
+/// "뭐가 올라왔나"만 훑고 넘어가는 자리다.
+class _RecentPostRow extends StatelessWidget {
+  const _RecentPostRow({required this.post});
+
+  final Post post;
+
+  @override
+  Widget build(BuildContext context) {
+    return AppCard(
+      radius: AppRadius.cardTight,
+      padding: const EdgeInsets.all(10),
+      onTap: () => context.go('/board/${post.id}'),
+      child: Row(
+        children: [
+          SizedBox(
+            width: 48,
+            height: 48,
+            child: ClipRRect(
+              borderRadius: BorderRadius.circular(AppRadius.thumb),
+              // 게시글 사진은 공개 경로지만 받아오는 길은 같다. 사진이 없으면
+              // 줄무늬로 물러선다 — 조황 글에 사진이 없는 것도 정상이다.
+              child: AuthedPhoto(path: post.photoUrl, stripe: 5, thumb: true),
+            ),
+          ),
+          const SizedBox(width: 12),
+          Expanded(
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                Text(
+                  post.title,
+                  style: AppText.tileName,
+                  maxLines: 1,
+                  overflow: TextOverflow.ellipsis,
+                ),
+                const SizedBox(height: 4),
+                Text(
+                  '${post.regionName ?? '전체'} · ${post.relativeTime}',
+                  style: AppText.caption,
+                  maxLines: 1,
+                  overflow: TextOverflow.ellipsis,
+                ),
+              ],
+            ),
+          ),
+          const SizedBox(width: 8),
+          LineIcon(
+            AppIcon.chevronRight,
+            size: 14,
+            color: AppColors.faint,
+            stroke: 1.5,
           ),
         ],
       ),

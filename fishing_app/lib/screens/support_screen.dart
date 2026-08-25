@@ -1,6 +1,8 @@
+import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:go_router/go_router.dart';
 import 'package:package_info_plus/package_info_plus.dart';
+import 'package:url_launcher/url_launcher.dart';
 
 import '../theme/app_theme.dart';
 import '../widgets/app_card.dart';
@@ -8,16 +10,16 @@ import '../widgets/async_view.dart';
 import '../widgets/press_scale.dart';
 import '../widgets/reveal.dart';
 
-/// 고객센터 — 자주 묻는 질문과 앱 정보.
-///
-/// ⚠️ **문의 창구는 아직 없다.** 받을 주소가 정해지지 않아서다. 여기 답이 없으면
-/// 막다른 길이라는 뜻이므로, 주소가 정해지면 `문의하기` 를 이 화면에 붙일 것.
+/// 고객센터 — 자주 묻는 질문, 문의하기, 앱 정보.
 ///
 /// FAQ 문구는 **지금 앱이 실제로 하는 동작**만 적는다. "곧 지원 예정" 같은 말을 넣으면
 /// 그 자체가 지켜야 할 약속이 되고, 이 저장소는 그런 빈 약속(사진 없는 `has_image`,
 /// 댓글 없는 `comment_count`)을 이미 여러 번 걷어냈다.
 class SupportScreen extends StatelessWidget {
   const SupportScreen({super.key});
+
+  /// 문의를 받는 주소.
+  static const supportEmail = 'et009153@gmail.com';
 
   /// 근거를 함께 적어 둔다 — 답이 바뀌면 그 근거부터 확인하면 된다.
   static const _faq = <({String q, String a})>[
@@ -124,10 +126,18 @@ class SupportScreen extends StatelessWidget {
 
                 Reveal(
                   index: 4,
+                  child: SectionLabel(label: '문의하기', padded: false),
+                ),
+                const SizedBox(height: 12),
+                const Reveal(index: 5, child: _ContactCard()),
+                const SizedBox(height: AppSpacing.section),
+
+                Reveal(
+                  index: 6,
                   child: SectionLabel(label: '앱 정보', padded: false),
                 ),
                 const SizedBox(height: 12),
-                const Reveal(index: 5, child: _AppInfoCard()),
+                const Reveal(index: 7, child: _AppInfoCard()),
               ],
             ),
           ),
@@ -195,6 +205,126 @@ class _FaqRowState extends State<_FaqRow> {
                       child: Text(widget.item.a, style: AppText.body),
                     )
                   : const SizedBox(width: double.infinity),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+}
+
+/// 위 답들로 풀리지 않을 때. 메일 앱을 열고 **앱 버전과 플랫폼을 미리 채워** 둔다.
+///
+/// 이 두 줄이 없으면 "안 돼요" 한 줄만 오고, 어느 버전 어느 기기인지 되물어야 답을 시작할 수
+/// 있다. 사용자가 직접 찾아 적게 하면 대부분 빠뜨린다.
+class _ContactCard extends StatefulWidget {
+  const _ContactCard();
+
+  @override
+  State<_ContactCard> createState() => _ContactCardState();
+}
+
+class _ContactCardState extends State<_ContactCard> {
+  @override
+  Widget build(BuildContext context) {
+    return AppCard(
+      padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 4),
+      child: Column(
+        children: [
+          _ActionRow(
+            icon: AppIcon.chat,
+            label: '메일로 문의하기',
+            sub: SupportScreen.supportEmail,
+            onTap: _openMail,
+          ),
+        ],
+      ),
+    );
+  }
+
+  Future<void> _openMail() async {
+    final info = await PackageInfo.fromPlatform().catchError(
+      // 버전을 못 읽는다고 문의를 막을 이유는 없다. 그 줄만 비운다.
+      (_) => PackageInfo(
+        appName: '',
+        packageName: '',
+        version: '',
+        buildNumber: '',
+      ),
+    );
+    if (!mounted) return;
+
+    final body = [
+      '',
+      '',
+      '─────────────',
+      // 아래 두 줄은 지우지 말아 달라고 부탁하는 대신, 왜 필요한지 적어 둔다.
+      '아래 정보는 답변에 필요합니다.',
+      '앱 버전: ${info.version.isEmpty ? '알 수 없음' : '${info.version} (${info.buildNumber})'}',
+      '기기: ${defaultTargetPlatform.name}',
+    ].join('\n');
+
+    final uri = Uri(
+      scheme: 'mailto',
+      path: SupportScreen.supportEmail,
+      // Uri 가 인코딩까지 해 준다. 직접 문자열로 붙이면 한글 제목이 깨진다.
+      queryParameters: {'subject': '[낚시출조] 문의', 'body': body},
+    );
+
+    // 메일 앱이 없는 기기가 있다. 아무 반응 없이 끝나면 고장으로 보이므로 주소를 알려준다.
+    if (!await launchUrl(uri)) {
+      if (!mounted) return;
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(
+          content: Text('메일 앱을 열지 못했어요. ${SupportScreen.supportEmail} 로 보내주세요'),
+        ),
+      );
+    }
+  }
+}
+
+/// 아이콘 + 라벨 + 보조 설명 한 줄.
+class _ActionRow extends StatelessWidget {
+  const _ActionRow({
+    required this.icon,
+    required this.label,
+    required this.sub,
+    required this.onTap,
+  });
+
+  final AppIcon icon;
+  final String label;
+  final String sub;
+  final VoidCallback onTap;
+
+  @override
+  Widget build(BuildContext context) {
+    return PressScale(
+      onTap: onTap,
+      scale: 0.99,
+      child: Padding(
+        padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 14),
+        child: Row(
+          children: [
+            LineIcon(icon, size: 18, color: AppColors.muted, stroke: 1.4),
+            const SizedBox(width: 14),
+            Expanded(
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                mainAxisSize: MainAxisSize.min,
+                children: [
+                  Text(label, style: AppText.sectionTitle),
+                  const SizedBox(height: 3),
+                  Text(sub, style: AppText.caption),
+                ],
+              ),
+            ),
+            const SizedBox(width: 10),
+            LineIcon(
+              AppIcon.chevronRight,
+              size: 14,
+              color: AppColors.faint,
+              stroke: 1.5,
             ),
           ],
         ),

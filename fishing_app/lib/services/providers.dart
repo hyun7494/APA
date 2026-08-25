@@ -170,6 +170,22 @@ final postsProvider = FutureProvider<List<Post>>((ref) {
   return ref.watch(fishingRepositoryProvider).fetchPosts(category: category);
 });
 
+/// 홈이 보여주는 최근 조황 글.
+///
+/// ⚠️ [postsProvider] 를 그대로 쓰면 안 된다 — 그쪽은 게시판 탭([selectedBoardTabProvider])을
+/// 구독하므로, 사용자가 게시판에서 `질문` 탭을 골라 둔 채 홈에 오면 **홈에도 질문 글이 뜬다.**
+/// 홈은 언제나 조황이다.
+final recentCatchPostsProvider = FutureProvider<List<Post>>((ref) async {
+  ref.watch(postRevisionProvider);
+  ref.watch(loggedInProvider);
+
+  final posts = await ref
+      .watch(fishingRepositoryProvider)
+      .fetchPosts(category: PostCategory.catchReport);
+  // 서버도 목도 최신순으로 준다. 홈은 맨 앞 몇 개만 쓴다.
+  return posts.take(3).toList();
+});
+
 /// 글 상세를 바꾼 뒤(좋아요·댓글) 화면을 새로 받아오기 위한 신호.
 /// 조과 등록의 [collectionRevisionProvider] 와 같은 장치다.
 final postRevisionProvider = StateProvider<int>((ref) => 0);

@@ -163,7 +163,7 @@ class _PostCard extends StatelessWidget {
               const SizedBox(width: 9),
               Expanded(
                 child: Text(
-                  '${post.regionName ?? '전체'} · ${_relativeTime(post.createdAt)}',
+                  '${post.regionName ?? '전체'} · ${post.relativeTime}',
                   style: AppText.caption,
                   overflow: TextOverflow.ellipsis,
                 ),
@@ -222,16 +222,6 @@ class _PostCard extends StatelessWidget {
     );
   }
 
-  /// "2시간 전", "어제" 같은 상대 시간.
-  static String _relativeTime(DateTime time) {
-    final diff = DateTime.now().difference(time);
-    if (diff.inMinutes < 1) return '방금';
-    if (diff.inHours < 1) return '${diff.inMinutes}분 전';
-    if (diff.inHours < 24) return '${diff.inHours}시간 전';
-    if (diff.inDays == 1) return '어제';
-    if (diff.inDays < 7) return '${diff.inDays}일 전';
-    return '${time.month}월 ${time.day}일';
-  }
 }
 
 class _Stat extends StatelessWidget {
