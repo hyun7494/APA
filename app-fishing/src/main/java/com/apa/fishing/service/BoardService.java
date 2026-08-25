@@ -199,9 +199,16 @@ public class BoardService {
                 .toList();
     }
 
+    /**
+     * 댓글 쓰기.
+     *
+     * <p>⚠️ 글 행을 <b>잠그고</b> 읽는다 ({@code findByIdForUpdate}). 좋아요와 같은 이유다 —
+     * 두 사람이 같은 글에 동시에 댓글을 달면 캐시된 {@code comment_count} 가 실제 개수와
+     * 어긋난 채 굳는다 (6-X 에서 좋아요로 재현했다).
+     */
     @Transactional
     public CommentResponse addComment(AuthenticatedUser user, Long postId, CommentCreateRequest request) {
-        FishingPost post = findPostOrThrow(postId);
+        FishingPost post = lockPostOrThrow(postId);
         String content = required(request.content(), "댓글을 입력해 주세요", COMMENT_MAX, "댓글이 너무 깁니다");
 
         FishingPostComment saved = commentRepository.save(
@@ -227,11 +234,17 @@ public class BoardService {
                         HttpStatus.NOT_FOUND, "댓글을 찾을 수 없습니다: " + commentId));
 
         Long postId = comment.getPostId();
+
+        // ⚠️ 지우기 **전에** 글을 잠근다. addComment 와 같은 순서라야 두 경로가 서로를
+        //    기다리며 물리지 않는다. 글이 이미 없으면(동시에 글이 지워진 경우) 셀 것도 없다.
+        FishingPost post = postRepository.findByIdForUpdate(postId).orElse(null);
+
         commentRepository.delete(comment);
         commentRepository.flush();
 
-        postRepository.findById(postId)
-                .ifPresent(post -> post.syncCommentCount((int) commentRepository.countByPostId(postId)));
+        if (post != null) {
+            post.syncCommentCount((int) commentRepository.countByPostId(postId));
+        }
     }
 
     // ─────────────────────────────────────────────────────────────── 좋아요
@@ -248,11 +261,7 @@ public class BoardService {
      */
     @Transactional
     public LikeResponse toggleLike(AuthenticatedUser user, Long postId) {
-        // ⚠️ 잠그고 읽는다. 안 그러면 동시에 두 번 눌렸을 때 캐시된 수가 실제와 어긋난 채
-        //    굳는다 (findByIdForUpdate 주석).
-        FishingPost post = postRepository.findByIdForUpdate(postId)
-                .orElseThrow(() -> new ResponseStatusException(
-                        HttpStatus.NOT_FOUND, "게시글을 찾을 수 없습니다: " + postId));
+        FishingPost post = lockPostOrThrow(postId);
 
         boolean liked = likeRepository.insertIfAbsent(postId, user.userId()) == 1;
         if (!liked) {
@@ -303,6 +312,19 @@ public class BoardService {
 
     private FishingPost findPostOrThrow(Long id) {
         return postRepository.findById(id)
+                .orElseThrow(() -> new ResponseStatusException(
+                        HttpStatus.NOT_FOUND, "게시글을 찾을 수 없습니다: " + id));
+    }
+
+    /**
+     * 읽기만 할 때는 {@link #findPostOrThrow} 를, <b>세어서 다시 넣는 값</b>
+     * ({@code like_count}·{@code comment_count})을 고칠 때는 이쪽을 쓴다.
+     *
+     * <p>잠그지 않으면 동시에 두 번 들어왔을 때 캐시된 수가 실제와 어긋난 채 굳는다 —
+     * 이유는 {@code FishingPostRepository.findByIdForUpdate} 주석에 있다.
+     */
+    private FishingPost lockPostOrThrow(Long id) {
+        return postRepository.findByIdForUpdate(id)
                 .orElseThrow(() -> new ResponseStatusException(
                         HttpStatus.NOT_FOUND, "게시글을 찾을 수 없습니다: " + id));
     }
