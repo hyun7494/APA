@@ -36,9 +36,15 @@ class MockFishingRepository implements FishingRepository {
     await Future.delayed(_latency);
     final q = query.trim();
     if (q.isEmpty) return MockData.regions;
-    return MockData.regions
-        .where((r) => r.name.contains(q) || r.area.contains(q))
-        .toList();
+
+    // 지역명·시도명뿐 아니라 **그 지역의 포인트 이름**도 본다 (서버 `RegionRepository.search`
+    // 와 같은 규칙). 검색창 안내가 "지역 또는 포인트 검색" 인데 `학리` 가 안 걸렸었다 —
+    // 사람은 자기가 아는 포인트 이름으로 찾는다.
+    return MockData.regions.where((r) {
+      if (r.name.contains(q) || r.area.contains(q)) return true;
+      return MockData.spots
+          .any((s) => s.regionGroupId == r.id && s.name.contains(q));
+    }).toList();
   }
 
   @override

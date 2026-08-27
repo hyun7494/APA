@@ -31,10 +31,7 @@ public class RegionService {
         if (query == null || query.isBlank()) {
             return findAll();
         }
-        String keyword = query.trim();
-        return toResponses(
-                regionRepository.findByNameContainingIgnoreCaseOrAreaContainingIgnoreCaseOrderByIdAsc(
-                        keyword, keyword));
+        return toResponses(regionRepository.search(query.trim()));
     }
 
     /**

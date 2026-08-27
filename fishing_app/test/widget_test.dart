@@ -351,6 +351,36 @@ void main() {
     expect(find.textContaining('참고용 정보이며'), findsWidgets);
   });
 
+  testWidgets('★ 지역 검색은 포인트 이름으로도 걸린다', (tester) async {
+    await pumpApp(tester);
+
+    await tester.tap(find.text('지수'));
+    await tester.pumpAndSettle();
+    await tester.tap(find.widgetWithText(HeaderButton, '지역'));
+    await tester.pumpAndSettle();
+
+    final field = find.widgetWithText(TextField, '지역 또는 포인트 검색');
+    expect(field, findsOneWidget, reason: '안내 문구가 포인트 검색을 약속한다');
+
+    // 지역명으로.
+    await tester.enterText(field, '부산');
+    await tester.pumpAndSettle();
+    expect(find.text('부산 기장'), findsOneWidget);
+    expect(find.text('여수 돌산'), findsNothing);
+
+    // ⚠️ 포인트 이름으로도 걸려야 한다. `학리` 는 `기장 학리` 포인트의 이름이고
+    //    지역명(`부산 기장`)에는 없는 글자다 — 예전에는 여기서 결과가 비었다.
+    await tester.enterText(field, '학리');
+    await tester.pumpAndSettle();
+    expect(find.text('검색 결과가 없어요'), findsNothing);
+    expect(find.text('부산 기장'), findsOneWidget);
+
+    // 한 지역의 포인트 둘이 같이 걸려도 지역은 한 번만 나온다.
+    await tester.enterText(field, '기장');
+    await tester.pumpAndSettle();
+    expect(find.text('부산 기장'), findsOneWidget);
+  });
+
   testWidgets('지역 칩을 바꾸면 포인트 목록이 갱신된다', (tester) async {
     await pumpApp(tester);
 
