@@ -291,8 +291,12 @@ void main() {
 
     // ⚠️ 첫 칸은 지수 카드와 같은 등급이어야 한다. 어긋나면 같은 화면에서
     //    `아주 좋음` 카드 아래 빨간 막대가 뜬다.
-    //    (대표 포인트는 첫 지역의 첫 곳이다 — `featuredSpotProvider`)
-    expect(strip.days.first.rating, MockData.spots.first.rating);
+    //    대표 포인트는 **첫 지역의 첫 곳**이다 (`featuredSpotProvider`) — 목록의
+    //    맨 앞 포인트가 아니다.
+    final featured = MockData.spots.firstWhere(
+      (s) => s.regionGroupId == MockData.regions.first.id,
+    );
+    expect(strip.days.first.rating, featured.rating);
   });
 
   testWidgets('★ 주간 예보가 없는 포인트면 카드를 감춘다', (tester) async {
@@ -342,7 +346,15 @@ void main() {
     await tester.tap(find.text('지수'));
     await tester.pumpAndSettle();
     expect(find.text('낚시 지수'), findsOneWidget);
-    expect(find.byType(SpotCard), findsNWidgets(2));
+    // 아무것도 안 골랐으면 **첫 권역**이 눌린 것으로 보여야 한다 — 예전에는 초기값이
+    // 사라진 id(1) 라 목록이 비어 있었다.
+    final first = MockData.regions.first;
+    expect(
+      find.byType(SpotCard),
+      findsNWidgets(
+        MockData.spots.where((s) => s.regionGroupId == first.id).length,
+      ),
+    );
 
     await tester.tap(find.byType(SpotCard).first);
     await tester.pumpAndSettle();
@@ -362,23 +374,24 @@ void main() {
     final field = find.widgetWithText(TextField, '지역 또는 포인트 검색');
     expect(field, findsOneWidget, reason: '안내 문구가 포인트 검색을 약속한다');
 
-    // 지역명으로.
+    // ⚠️ 검색어가 권역 이름과 같으면 입력창 글자까지 `find.text` 에 걸린다.
+    //    그래서 결과에만 나오는 말로 친다 — `부산` 은 남해의 area 에 있다.
     await tester.enterText(field, '부산');
     await tester.pumpAndSettle();
-    expect(find.text('부산 기장'), findsOneWidget);
-    expect(find.text('여수 돌산'), findsNothing);
+    expect(find.text('남해'), findsOneWidget);
+    expect(find.text('제주'), findsNothing);
 
     // ⚠️ 포인트 이름으로도 걸려야 한다. `학리` 는 `기장 학리` 포인트의 이름이고
-    //    지역명(`부산 기장`)에는 없는 글자다 — 예전에는 여기서 결과가 비었다.
+    //    권역명(`남해`)에는 없는 글자다 — 예전에는 여기서 결과가 비었다.
     await tester.enterText(field, '학리');
     await tester.pumpAndSettle();
     expect(find.text('검색 결과가 없어요'), findsNothing);
-    expect(find.text('부산 기장'), findsOneWidget);
+    expect(find.text('남해'), findsOneWidget);
 
-    // 한 지역의 포인트 둘이 같이 걸려도 지역은 한 번만 나온다.
+    // 한 권역의 포인트 둘이 같이 걸려도 권역은 한 번만 나온다.
     await tester.enterText(field, '기장');
     await tester.pumpAndSettle();
-    expect(find.text('부산 기장'), findsOneWidget);
+    expect(find.text('남해'), findsOneWidget);
   });
 
   testWidgets('지역 칩을 바꾸면 포인트 목록이 갱신된다', (tester) async {
@@ -387,9 +400,12 @@ void main() {
     await tester.tap(find.text('지수'));
     await tester.pumpAndSettle();
 
-    await tapChip(tester, '통영 사량도');
+    // 첫 권역(동해)에서 남해로 옮긴다.
+    expect(find.text('구룡포 방파제'), findsOneWidget);
+
+    await tapChip(tester, '남해');
     expect(find.text('사량도 옥동'), findsOneWidget);
-    expect(find.text('기장 대변항 방파제'), findsNothing);
+    expect(find.text('구룡포 방파제'), findsNothing);
   });
 
   testWidgets('도감 그리드가 등록/미등록 칸을 함께 보여준다', (tester) async {

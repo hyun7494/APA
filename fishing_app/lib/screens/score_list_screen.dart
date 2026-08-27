@@ -18,7 +18,8 @@ class ScoreListScreen extends ConsumerWidget {
   Widget build(BuildContext context, WidgetRef ref) {
     final regions = ref.watch(regionsProvider);
     final spots = ref.watch(spotsProvider);
-    final selectedId = ref.watch(selectedRegionIdProvider);
+    // 아직 안 골랐으면 목록의 첫 그룹이 눌린 것으로 보여야 한다.
+    final selectedId = ref.watch(effectiveRegionIdProvider);
 
     return SafeArea(
       bottom: false,

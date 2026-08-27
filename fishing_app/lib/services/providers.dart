@@ -23,8 +23,28 @@ final fishingRepositoryProvider = Provider<FishingRepository>((ref) {
 
 // ── 화면이 구독하는 상태 ────────────────────────────────────────
 
-/// 지수 목록에서 선택된 지역 그룹 id. 초기값은 첫 그룹(부산 기장).
-final selectedRegionIdProvider = StateProvider<int>((ref) => 1);
+/// 지수 목록에서 사용자가 **직접 고른** 지역 그룹 id. 아직 안 골랐으면 null 이다.
+///
+/// ⚠️ 초기값을 특정 id 로 박으면 안 된다. 예전에는 `1`(부산 기장) 이었는데 V14 가 지역을
+/// 권역으로 갈아엎으면서 그 id 가 사라져, 앱을 켜면 **아무 칩도 안 눌린 채 목록이 비었다.**
+/// 어느 id 가 살아 있는지는 서버가 정한다 — 여기서 고르지 말고 [effectiveRegionIdProvider]
+/// 가 목록의 첫 그룹으로 떨어지게 한다.
+final selectedRegionIdProvider = StateProvider<int?>((ref) => null);
+
+/// 실제로 보여줄 지역 — 고른 것이 있으면 그것, 없으면 **목록의 첫 그룹**이다.
+///
+/// 지역 목록을 아직 못 받았으면 null 이고, 그때는 포인트를 부르지 않는다.
+final effectiveRegionIdProvider = Provider<int?>((ref) {
+  final picked = ref.watch(selectedRegionIdProvider);
+  final regions = ref.watch(regionsProvider).valueOrNull;
+
+  // 고른 지역이 목록에 없을 수도 있다 (서버가 지역을 갈아엎은 뒤 앱이 살아 있는 경우).
+  // 그때도 첫 그룹으로 물러선다 — 빈 화면보다 낫다.
+  if (picked != null && (regions == null || regions.any((r) => r.id == picked))) {
+    return picked;
+  }
+  return regions == null || regions.isEmpty ? null : regions.first.id;
+});
 
 /// 게시판 탭. null = 전체
 final selectedBoardTabProvider = StateProvider<PostCategory?>((ref) => null);
@@ -56,8 +76,10 @@ final regionSearchProvider = FutureProvider.family<List<RegionGroup>, String>(
 );
 
 /// 현재 선택된 지역의 포인트 목록.
-final spotsProvider = FutureProvider<List<Spot>>((ref) {
-  final regionId = ref.watch(selectedRegionIdProvider);
+final spotsProvider = FutureProvider<List<Spot>>((ref) async {
+  final regionId = ref.watch(effectiveRegionIdProvider);
+  // 지역 목록을 아직 못 받았다. 아무 id 나 넣어 부르면 엉뚱한 지역이 잠깐 뜬다.
+  if (regionId == null) return const [];
   return ref.watch(fishingRepositoryProvider).fetchSpots(regionId);
 });
 

@@ -7,45 +7,42 @@ import '../models/models.dart';
 ///
 /// app-fishing API가 붙으면 [RemoteFishingRepository]로 교체된다.
 abstract final class MockData {
+  /// 권역 넷. 서버 `V14` 와 **이름도 id 도 같아야 한다** — 다르면 USE_MOCK 을 끄는 순간
+  /// 지역 칩이 통째로 바뀐다.
+  ///
+  /// 해역명이 `부산동부`·`인천항 서측(24km)` 처럼 예보 구역 이름이라 시도로 묶으면 이름과
+  /// 그룹이 따로 논다. 권역은 좌표로 갈리므로 배정하다 틀릴 일도 없다.
   static const regions = <RegionGroup>[
     RegionGroup(
-      id: 1,
-      name: '부산 기장',
-      area: '부산광역시',
-      previewRating: Rating.veryGood,
-      previewWaterTemp: 18.4,
+      id: 101,
+      name: '동해',
+      area: '강원 · 경북 · 울산',
+      previewRating: Rating.bad,
+      previewWaterTemp: 16.8,
       spotCount: 2,
     ),
     RegionGroup(
-      id: 2,
-      name: '인천 영종도',
-      area: '인천광역시',
+      id: 102,
+      name: '서해',
+      area: '인천 · 충남 · 전북 · 전남 서부',
       previewRating: Rating.normal,
       previewWaterTemp: 16.2,
       spotCount: 1,
     ),
     RegionGroup(
-      id: 3,
-      name: '여수 돌산',
-      area: '전라남도',
-      previewRating: Rating.good,
-      previewWaterTemp: 19.1,
-      spotCount: 1,
-    ),
-    RegionGroup(
-      id: 4,
-      name: '통영 사량도',
-      area: '경상남도',
+      id: 103,
+      name: '남해',
+      area: '부산 · 경남 · 전남 동부',
       previewRating: Rating.veryGood,
-      previewWaterTemp: 18.8,
-      spotCount: 1,
+      previewWaterTemp: 18.4,
+      spotCount: 4,
     ),
     RegionGroup(
-      id: 5,
-      name: '포항 구룡포',
-      area: '경상북도',
-      previewRating: Rating.bad,
-      previewWaterTemp: 16.8,
+      id: 104,
+      name: '제주',
+      area: '제주특별자치도',
+      previewRating: Rating.good,
+      previewWaterTemp: 21.3,
       spotCount: 1,
     ),
   ];
@@ -54,8 +51,8 @@ abstract final class MockData {
     Spot(
       id: 1,
       name: '기장 학리',
-      regionGroupId: 1,
-      regionName: '부산 기장',
+      regionGroupId: 103,
+      regionName: '남해',
       rating: Rating.veryGood,
       waterTemp: 18.4,
       waveHeight: 0.4,
@@ -72,8 +69,8 @@ abstract final class MockData {
     Spot(
       id: 2,
       name: '기장 대변항 방파제',
-      regionGroupId: 1,
-      regionName: '부산 기장',
+      regionGroupId: 103,
+      regionName: '남해',
       rating: Rating.good,
       waterTemp: 17.9,
       waveHeight: 0.6,
@@ -90,8 +87,8 @@ abstract final class MockData {
     Spot(
       id: 3,
       name: '영종도 선착장',
-      regionGroupId: 2,
-      regionName: '인천 영종도',
+      regionGroupId: 102,
+      regionName: '서해',
       rating: Rating.normal,
       waterTemp: 16.2,
       waveHeight: 0.9,
@@ -108,8 +105,8 @@ abstract final class MockData {
     Spot(
       id: 4,
       name: '돌산 갯바위',
-      regionGroupId: 3,
-      regionName: '여수 돌산',
+      regionGroupId: 103,
+      regionName: '남해',
       rating: Rating.good,
       waterTemp: 19.1,
       waveHeight: 0.5,
@@ -126,8 +123,8 @@ abstract final class MockData {
     Spot(
       id: 5,
       name: '사량도 옥동',
-      regionGroupId: 4,
-      regionName: '통영 사량도',
+      regionGroupId: 103,
+      regionName: '남해',
       rating: Rating.veryGood,
       waterTemp: 18.8,
       waveHeight: 0.3,
@@ -144,8 +141,8 @@ abstract final class MockData {
     Spot(
       id: 6,
       name: '구룡포 방파제',
-      regionGroupId: 5,
-      regionName: '포항 구룡포',
+      regionGroupId: 101,
+      regionName: '동해',
       rating: Rating.bad,
       waterTemp: 16.8,
       waveHeight: 1.6,
@@ -158,6 +155,44 @@ abstract final class MockData {
       recommendedFish: const ['—'],
       updatedAt: _updatedAt,
       weeklyIndex: _week(6, Rating.bad),
+    ),
+    // 아래 둘은 KHOA 해역이 그대로 포인트가 된 예다 (서버 V14). 목에도 하나씩 둬야
+    // 제주·동해 권역이 빈 채로 보이지 않는다.
+    Spot(
+      id: 7,
+      name: '서귀포',
+      regionGroupId: 104,
+      regionName: '제주',
+      rating: Rating.good,
+      waterTemp: 21.3,
+      waveHeight: 0.8,
+      windSpeed: 4.2,
+      weather: '맑음',
+      tideInfo: '3물 · 만조 11:40',
+      sunriseSunset: '05:22 / 19:31',
+      comment: '파고 낮고 바람 잔잔해 갯바위 접근이 수월합니다.',
+      hourlyForecast: const [48, 60, 72, 70, 62, 55],
+      recommendedFish: const ['돌돔', '벵에돔', '참돔'],
+      updatedAt: _updatedAt,
+      weeklyIndex: _week(7, Rating.good),
+    ),
+    Spot(
+      id: 8,
+      name: '울릉도',
+      regionGroupId: 101,
+      regionName: '동해',
+      rating: Rating.veryGood,
+      waterTemp: 19.6,
+      waveHeight: 0.5,
+      windSpeed: 3.1,
+      weather: '맑음',
+      tideInfo: '4물 · 간조 15:05',
+      sunriseSunset: '05:01 / 19:26',
+      comment: '바람 약하고 파고 낮아 출조하기 아주 좋은 날입니다.',
+      hourlyForecast: const [52, 68, 80, 78, 70, 61],
+      recommendedFish: const ['돌돔', '벵에돔', '우럭'],
+      updatedAt: _updatedAt,
+      weeklyIndex: _week(8, Rating.veryGood),
     ),
   ];
 
@@ -173,8 +208,8 @@ abstract final class MockData {
       likeCount: 24,
       commentCount: 8,
       hasImage: true,
-      regionName: '부산 기장',
-      boardKey: '부산 기장',
+      regionName: '남해',
+      boardKey: '남해',
     ),
     Post(
       id: 2,
@@ -186,8 +221,8 @@ abstract final class MockData {
       likeCount: 41,
       commentCount: 15,
       hasImage: true,
-      regionName: '통영 사량도',
-      boardKey: '통영 사량도',
+      regionName: '남해',
+      boardKey: '남해',
     ),
     Post(
       id: 3,
@@ -199,8 +234,8 @@ abstract final class MockData {
       likeCount: 12,
       commentCount: 3,
       hasImage: false,
-      regionName: '여수 돌산',
-      boardKey: '여수 돌산',
+      regionName: '남해',
+      boardKey: '남해',
     ),
     Post(
       id: 4,
@@ -212,8 +247,8 @@ abstract final class MockData {
       likeCount: 5,
       commentCount: 9,
       hasImage: false,
-      regionName: '인천 영종도',
-      boardKey: '인천 영종도',
+      regionName: '서해',
+      boardKey: '서해',
     ),
   ];
 
@@ -226,7 +261,7 @@ abstract final class MockData {
     catchCount: 22,
     postCount: 18,
     favoriteCount: 3,
-    favoriteRegions: [regions[0], regions[3], regions[2]],
+    favoriteRegions: [regions[2], regions[0], regions[3]],
   );
 
   // ── 내부 ──────────────────────────────────────────────────────
