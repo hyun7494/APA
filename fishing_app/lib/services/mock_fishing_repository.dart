@@ -153,6 +153,14 @@ class MockFishingRepository implements FishingRepository {
   }
 
   @override
+  Future<List<Spot>> searchSpots(String query) async {
+    await Future.delayed(_latency);
+    final q = query.trim();
+    if (q.isEmpty) return const [];
+    return MockData.spots.where((s) => s.name.contains(q)).toList();
+  }
+
+  @override
   Future<List<Post>> fetchPosts({
     PostCategory? category,
     int? regionGroupId,

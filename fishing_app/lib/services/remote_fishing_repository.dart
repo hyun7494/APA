@@ -190,6 +190,16 @@ class RemoteFishingRepository implements FishingRepository {
   }
 
   @override
+  Future<List<Spot>> searchSpots(String query) async {
+    if (query.trim().isEmpty) return const [];
+    final res = await _dio.get<List<dynamic>>(
+      '/fishing/spots',
+      queryParameters: {'q': query.trim()},
+    );
+    return _mapList(res.data, Spot.fromJson);
+  }
+
+  @override
   Future<List<Post>> fetchPosts({
     PostCategory? category,
     int? regionGroupId,

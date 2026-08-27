@@ -22,4 +22,14 @@ public interface FishingSpotRepository extends JpaRepository<FishingSpot, Long> 
 
     @Query("select s from FishingSpot s join fetch s.region where s.id = :id")
     Optional<FishingSpot> findWithRegionById(@Param("id") Long id);
+
+    /**
+     * 이름으로 포인트를 찾는다. 검색 화면이 <b>포인트를 바로 고를 수 있게</b> 하려고 쓴다.
+     *
+     * <p>지역 검색({@code RegionRepository.search})만 있을 때는 `울릉` 을 쳐도 결과가
+     * `동해` 라, 사용자가 권역을 누른 뒤 14곳 중에서 울릉도를 다시 찾아야 했다.
+     */
+    @Query("select s from FishingSpot s join fetch s.region "
+            + "where lower(s.name) like lower(concat('%', :q, '%')) order by s.id")
+    List<FishingSpot> searchByName(@Param("q") String q);
 }

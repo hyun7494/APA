@@ -383,15 +383,43 @@ void main() {
 
     // ⚠️ 포인트 이름으로도 걸려야 한다. `학리` 는 `기장 학리` 포인트의 이름이고
     //    권역명(`남해`)에는 없는 글자다 — 예전에는 여기서 결과가 비었다.
+    //    이제 포인트 행과 그 포인트가 속한 권역이 함께 나오므로 `남해` 는 둘이다.
     await tester.enterText(field, '학리');
     await tester.pumpAndSettle();
     expect(find.text('검색 결과가 없어요'), findsNothing);
-    expect(find.text('남해'), findsOneWidget);
+    expect(find.text('기장 학리'), findsOneWidget);
+    expect(find.text('남해'), findsWidgets);
 
     // 한 권역의 포인트 둘이 같이 걸려도 권역은 한 번만 나온다.
     await tester.enterText(field, '기장');
     await tester.pumpAndSettle();
-    expect(find.text('남해'), findsOneWidget);
+    expect(find.text('남해'), findsWidgets);
+  });
+
+  testWidgets('★ 검색에 걸린 포인트를 눌러 바로 그 상세로 간다', (tester) async {
+    await pumpApp(tester);
+
+    await tester.tap(find.text('지수'));
+    await tester.pumpAndSettle();
+    await tester.tap(find.widgetWithText(HeaderButton, '지역'));
+    await tester.pumpAndSettle();
+
+    await tester.enterText(
+      find.widgetWithText(TextField, '지역 또는 포인트 검색'),
+      '울릉',
+    );
+    await tester.pumpAndSettle();
+
+    // 포인트 섹션이 지역보다 먼저 나온다 — `울릉` 을 친 사람이 원하는 건 권역이 아니다.
+    expect(find.text('포인트'), findsOneWidget);
+    expect(find.text('울릉도'), findsOneWidget);
+
+    await tester.tap(find.text('울릉도'));
+    await tester.pumpAndSettle();
+
+    // 권역을 거치지 않고 그 포인트 상세로 바로 간다.
+    expect(find.text('시간대별 조황 예상'), findsOneWidget);
+    expect(find.text('지역 선택'), findsNothing);
   });
 
   testWidgets('지역 칩을 바꾸면 포인트 목록이 갱신된다', (tester) async {

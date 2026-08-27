@@ -42,6 +42,23 @@ public class SpotService {
                 .toList();
     }
 
+    /**
+     * 이름으로 포인트 검색. 검색어가 비면 빈 목록이다 — 전체를 주면 검색 결과가 아니라
+     * 목록이 되고, 화면이 그걸 `포인트` 섹션에 그대로 쏟는다.
+     */
+    public List<SpotResponse> searchByName(String query) {
+        if (query == null || query.isBlank()) {
+            return List.of();
+        }
+        var spots = spotRepository.searchByName(query.trim());
+        Map<Long, List<DailyIndexResponse>> weeks = weeksOf(
+                spots.stream().map(FishingSpot::getId).toList());
+
+        return spots.stream()
+                .map(spot -> SpotResponse.from(spot, weeks.getOrDefault(spot.getId(), List.of())))
+                .toList();
+    }
+
     public SpotResponse findOne(Long id) {
         return spotRepository.findWithRegionById(id)
                 .map(spot -> SpotResponse.from(

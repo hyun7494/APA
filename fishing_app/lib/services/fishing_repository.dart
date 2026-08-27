@@ -21,6 +21,12 @@ abstract interface class FishingRepository {
   /// GET /fishing/spots/{id}
   Future<Spot> fetchSpot(int id);
 
+  /// 이름으로 포인트 검색 — `GET /fishing/spots?q=`.
+  ///
+  /// 지역 검색만으로는 `울릉` 을 쳐도 결과가 `동해` 라, 권역을 누른 뒤 14곳 중에서
+  /// 다시 찾아야 했다. 검색어가 비면 빈 목록이다.
+  Future<List<Spot>> searchSpots(String query);
+
   // ── 도감 ────────────────────────────────────────────────────
   /// GET /fishing/me/collection
   ///

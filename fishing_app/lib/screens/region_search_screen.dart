@@ -2,7 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 
-import '../models/region_group.dart';
+import '../models/models.dart';
 import '../services/providers.dart';
 import '../theme/app_theme.dart';
 import '../widgets/app_buttons.dart';
@@ -29,14 +29,28 @@ class _RegionSearchScreenState extends ConsumerState<RegionSearchScreen> {
     super.dispose();
   }
 
-  void _pick(RegionGroup region) {
+  /// 권역을 고르면 그 권역의 포인트 목록으로.
+  void _pickRegion(RegionGroup region) {
     ref.read(selectedRegionIdProvider.notifier).state = region.id;
     context.go('/score');
+  }
+
+  /// 포인트를 고르면 **그 포인트 상세로 바로** 간다. 권역을 거쳐 다시 찾게 하지 않는다.
+  ///
+  /// 상세에서 뒤로 가면 그 포인트가 속한 권역 목록이어야 자연스러우므로 선택도 옮겨 둔다.
+  void _pickSpot(Spot spot) {
+    ref.read(selectedRegionIdProvider.notifier).state = spot.regionGroupId;
+    context.go('/score/${spot.id}');
   }
 
   @override
   Widget build(BuildContext context) {
     final results = ref.watch(regionSearchProvider(_query));
+    // 검색어가 있을 때만 포인트를 찾는다. 빈 검색어에 전체를 쏟으면 `전체 지역` 위에
+    // 51곳이 통째로 깔린다.
+    final spots = _query.trim().isEmpty
+        ? const AsyncValue<List<Spot>>.data([])
+        : ref.watch(spotSearchProvider(_query));
 
     return SafeArea(
       bottom: false,
@@ -104,10 +118,33 @@ class _RegionSearchScreenState extends ConsumerState<RegionSearchScreen> {
                 ),
                 const SizedBox(height: AppSpacing.section),
 
+                // 포인트가 걸리면 **먼저** 보여준다. `울릉` 을 친 사람이 원하는 건
+                // 권역이 아니라 그 포인트다.
+                ...switch (spots.valueOrNull) {
+                  null || [] => const <Widget>[],
+                  final list => [
+                    Padding(
+                      padding: const EdgeInsets.only(bottom: 16),
+                      child: Text('포인트', style: AppText.sectionTitle),
+                    ),
+                    for (var i = 0; i < list.length; i++) ...[
+                      if (i > 0) const SizedBox(height: AppSpacing.gap),
+                      Reveal(
+                        index: i + 3,
+                        child: _SpotRow(
+                          spot: list[i],
+                          onTap: () => _pickSpot(list[i]),
+                        ),
+                      ),
+                    ],
+                    const SizedBox(height: AppSpacing.section),
+                  ],
+                },
+
                 Padding(
                   padding: const EdgeInsets.only(bottom: 16),
                   child: Text(
-                    _query.isEmpty ? '전체 지역' : '검색 결과',
+                    _query.isEmpty ? '전체 지역' : '지역',
                     style: AppText.sectionTitle,
                   ),
                 ),
@@ -118,6 +155,11 @@ class _RegionSearchScreenState extends ConsumerState<RegionSearchScreen> {
                       ErrorView(message: '지역을 불러오지 못했어요', error: e),
                   data: (list) {
                     if (list.isEmpty) {
+                      // 포인트가 걸렸다면 그쪽이 이미 답이다. 그때까지 `없어요` 를
+                      // 띄우면 눈앞에 결과를 두고 없다고 말하는 꼴이 된다.
+                      if (spots.valueOrNull?.isNotEmpty ?? false) {
+                        return const SizedBox.shrink();
+                      }
                       return const ErrorView(message: '검색 결과가 없어요', height: 120);
                     }
                     return Column(
@@ -128,7 +170,7 @@ class _RegionSearchScreenState extends ConsumerState<RegionSearchScreen> {
                             index: i + 3,
                             child: _RegionRow(
                               region: list[i],
-                              onTap: () => _pick(list[i]),
+                              onTap: () => _pickRegion(list[i]),
                             ),
                           ),
                         ],
@@ -139,6 +181,49 @@ class _RegionSearchScreenState extends ConsumerState<RegionSearchScreen> {
               ],
             ),
           ),
+        ],
+      ),
+    );
+  }
+}
+
+/// 검색에 걸린 포인트 한 줄. 지역 행과 모양을 맞추되 **어느 권역인지**를 함께 보인다 —
+/// `울릉도` 만 있으면 그게 동해인지 남해인지 알 수 없다.
+class _SpotRow extends StatelessWidget {
+  const _SpotRow({required this.spot, required this.onTap});
+
+  final Spot spot;
+  final VoidCallback onTap;
+
+  @override
+  Widget build(BuildContext context) {
+    return AppCard(
+      onTap: onTap,
+      padding: const EdgeInsets.symmetric(horizontal: 17, vertical: 16),
+      child: Row(
+        children: [
+          LineIcon(AppIcon.pin, size: 16, color: AppColors.muted, stroke: 1.4),
+          const SizedBox(width: 11),
+          Expanded(
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Text(
+                  spot.name,
+                  style: AppText.sectionTitle.copyWith(fontSize: 15),
+                  overflow: TextOverflow.ellipsis,
+                ),
+                const SizedBox(height: 3),
+                Text(spot.regionName, style: AppText.caption),
+              ],
+            ),
+          ),
+          Text(
+            '${spot.waterTemp.toStringAsFixed(1)}℃',
+            style: AppText.numberMedium.copyWith(color: AppColors.muted),
+          ),
+          const SizedBox(width: 10),
+          RatingBadge(rating: spot.rating, compact: true),
         ],
       ),
     );

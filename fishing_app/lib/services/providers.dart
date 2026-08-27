@@ -83,6 +83,11 @@ final spotsProvider = FutureProvider<List<Spot>>((ref) async {
   return ref.watch(fishingRepositoryProvider).fetchSpots(regionId);
 });
 
+/// 검색어에 이름이 걸리는 포인트. 검색 화면이 **포인트를 바로 고르게** 하려고 쓴다.
+final spotSearchProvider = FutureProvider.family<List<Spot>, String>(
+  (ref, query) => ref.watch(fishingRepositoryProvider).searchSpots(query),
+);
+
 final spotProvider = FutureProvider.family<Spot, int>(
   (ref, id) => ref.watch(fishingRepositoryProvider).fetchSpot(id),
 );
