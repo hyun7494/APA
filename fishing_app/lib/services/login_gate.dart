@@ -27,8 +27,12 @@ Future<void> requireLogin(
     context.go(destination);
     return;
   }
+  // ⚠️ `cameFrom` 을 함께 넘긴다. 로그인을 건너뛴 사람은 **왔던 자리로 돌아가야** 하는데,
+  //    `destination` 은 로그인이 필요해서 막힌 화면이라 그리로 보내면 관문을 통과시킨 셈이 된다
+  //    (`PostNewScreen` 주석: "여기까지 왔다는 것은 로그인이 끝났다는 뜻이다").
   context.go('/login', extra: <String, String?>{
     'reason': reason,
     'redirectTo': destination,
+    'cameFrom': GoRouterState.of(context).uri.toString(),
   });
 }

@@ -417,23 +417,26 @@ void main() {
     expect(find.text('Google로 시작하기'), findsOneWidget);
   });
 
-  testWidgets('★ 로그인을 건너뛰면 원래 가려던 화면으로 돌아간다', (tester) async {
+  testWidgets('★ 로그인을 건너뛰면 막힌 화면이 아니라 왔던 자리로 되돌아간다', (tester) async {
     await pumpApp(tester);
+    // 도감에서 `등록` 을 눌러 관문에 막힌 상황이다.
     await goToLogin(tester);
 
-    // `나중에 하기` 는 글자에서 X 아이콘으로 바뀌었다. 아이콘뿐이라 집을 글자가
-    // 없으므로 스크린 리더에 준 이름으로 찾는다.
-    final skip = find.byWidgetPredicate(
-      (w) => w is IconTapButton && w.icon == AppIcon.close,
+    // `나중에 하기` 는 글자에서 `<` 아이콘으로 바뀌었다. 집을 글자가 없으므로
+    // 아이콘으로 찾는다.
+    final back = find.byWidgetPredicate(
+      (w) => w is IconTapButton && w.icon == AppIcon.chevronLeft,
     );
-    expect(skip, findsOneWidget);
+    expect(back, findsOneWidget);
 
-    await tester.tap(skip);
+    await tester.tap(back);
     await tester.pumpAndSettle();
 
-    // 로그인 화면을 떠나 조과 등록(원래 가려던 곳)으로 간다.
     expect(find.textContaining('로그인이 필요해요'), findsNothing);
-    expect(find.text('기록 추가'), findsOneWidget);
+    // ⚠️ 왔던 자리(도감)로 돌아가야 한다. `기록 추가` 로 가면 로그인 관문을
+    //    그냥 통과시킨 셈이 된다 — 그 화면은 로그인이 끝났다고 가정하고 짜여 있다.
+    expect(find.text('기록 추가'), findsNothing);
+    expect(find.text('어류 도감'), findsOneWidget);
   });
 
   testWidgets('★ 이메일·비밀번호로도 로그인할 수 있다 (소셜만 있는 게 아니다)', (tester) async {

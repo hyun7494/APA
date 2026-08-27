@@ -21,13 +21,24 @@ import '../widgets/reveal.dart';
 /// 수단은 둘이고 **무게가 같다** — 이메일과 소셜. 소셜만 두면 계정을 제공자에 묶는
 /// 셈이고, 이메일만 두면 가입 자체가 부담이 된다.
 class LoginScreen extends ConsumerStatefulWidget {
-  const LoginScreen({super.key, this.reason, this.redirectTo});
+  const LoginScreen({
+    super.key,
+    this.reason,
+    this.redirectTo,
+    this.cameFrom,
+  });
 
   /// "조과를 등록하려면 로그인이 필요해요" 같은 한 줄.
   final String? reason;
 
-  /// 로그인 성공 후 돌아갈 경로. 없으면 홈으로 간다.
+  /// 로그인 **성공 후** 갈 경로. 없으면 홈으로 간다.
   final String? redirectTo;
+
+  /// 로그인을 **건너뛰었을 때** 돌아갈 자리 — 관문을 지나기 직전에 보던 화면이다.
+  ///
+  /// ⚠️ [redirectTo] 를 쓰면 안 된다. 그쪽은 로그인이 필요해서 막힌 화면이라,
+  /// 건너뛴 사람을 그리로 보내면 관문을 그냥 통과시킨 것이 된다.
+  final String? cameFrom;
 
   @override
   ConsumerState<LoginScreen> createState() => _LoginScreenState();
@@ -72,11 +83,8 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.stretch,
           children: [
-            // 로그인을 건너뛰고 원래 보던 화면으로 돌아간다. 뒤로가기가 아니라
-            // **닫기**라 X 다 — 화살표를 쓰면 앞 화면으로 되돌아갈 것처럼 읽힌다.
-            //
-            // 아이콘뿐이라 읽어 줄 글자가 없다. 스크린 리더에 이름을 준다
-            // (조과 등록의 `사진 빼기` 와 같은 처리).
+            // 왔던 자리로 되돌리므로 **뒤로가기**다 — 앱의 다른 화면들과 같은 `<` 를 쓴다
+            // ([BackRow]). 아이콘뿐이라 읽어 줄 글자가 없어서 스크린 리더에 이름을 준다.
             Align(
               alignment: Alignment.centerLeft,
               child: Padding(
@@ -85,10 +93,8 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
                   label: '나중에 하기',
                   button: true,
                   child: IconTapButton(
-                    icon: AppIcon.close,
-                    color: AppColors.label,
-                    size: 20,
-                    onPressed: auth.isBusy ? null : () => _leave(context),
+                    icon: AppIcon.chevronLeft,
+                    onPressed: auth.isBusy ? null : () => _skip(context),
                   ),
                 ),
               ),
@@ -304,7 +310,11 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
     extra: <String, String?>{'redirectTo': widget.redirectTo},
   );
 
+  /// 로그인이 끝났다. 원래 하려던 일로 보낸다.
   void _leave(BuildContext context) => context.go(widget.redirectTo ?? '/home');
+
+  /// 로그인을 건너뛴다. **왔던 자리로 되돌린다** — 하려던 일은 하지 않은 것이다.
+  void _skip(BuildContext context) => context.go(widget.cameFrom ?? '/home');
 }
 
 /// 눌린 동안 스피너로 바뀌는 주 버튼. 라벨만 두면 서버를 기다리는 몇 초 동안

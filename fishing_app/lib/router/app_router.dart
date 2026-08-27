@@ -44,6 +44,7 @@ GoRouter createAppRouter() => GoRouter(
         return LoginScreen(
           reason: extra['reason'],
           redirectTo: extra['redirectTo'],
+          cameFrom: extra['cameFrom'],
         );
       },
     ),
