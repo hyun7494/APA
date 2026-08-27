@@ -72,11 +72,25 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.stretch,
           children: [
+            // 로그인을 건너뛰고 원래 보던 화면으로 돌아간다. 뒤로가기가 아니라
+            // **닫기**라 X 다 — 화살표를 쓰면 앞 화면으로 되돌아갈 것처럼 읽힌다.
+            //
+            // 아이콘뿐이라 읽어 줄 글자가 없다. 스크린 리더에 이름을 준다
+            // (조과 등록의 `사진 빼기` 와 같은 처리).
             Align(
               alignment: Alignment.centerLeft,
-              child: TextButton(
-                onPressed: auth.isBusy ? null : () => _leave(context),
-                child: Text('나중에 하기', style: AppText.rowLabel),
+              child: Padding(
+                padding: const EdgeInsets.only(left: 8, top: 4),
+                child: Semantics(
+                  label: '나중에 하기',
+                  button: true,
+                  child: IconTapButton(
+                    icon: AppIcon.close,
+                    color: AppColors.label,
+                    size: 20,
+                    onPressed: auth.isBusy ? null : () => _leave(context),
+                  ),
+                ),
               ),
             ),
             // 입력 칸이 생긴 뒤로는 스크롤이 필수다. 키보드가 올라오면 화면의

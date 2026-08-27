@@ -173,10 +173,7 @@ class HeaderButton extends StatelessWidget {
               LineIcon(icon, size: 16, color: fg, stroke: 1.7),
               const SizedBox(width: 6),
             ],
-            Text(
-              label,
-              style: AppText.tileName.copyWith(color: fg),
-            ),
+            Text(label, style: AppText.tileName.copyWith(color: fg)),
           ],
         ),
       ),
@@ -199,7 +196,10 @@ class IconTapButton extends StatelessWidget {
   });
 
   final AppIcon icon;
-  final VoidCallback onPressed;
+
+  /// null 이면 눌리지 않고 흐리게 보인다 — 다른 버튼들과 같은 규칙이다.
+  /// 빈 콜백을 넘기면 눌리는 것처럼 보이면서 아무 일도 안 한다.
+  final VoidCallback? onPressed;
 
   /// 생략하면 소제목색.
   final Color? color;
@@ -217,39 +217,42 @@ class IconTapButton extends StatelessWidget {
     return PressScale(
       onTap: onPressed,
       scale: 0.88,
-      child: Container(
-        width: 38,
-        height: 38,
-        decoration: onPhoto
-            ? BoxDecoration(
-                shape: BoxShape.circle,
-                color: AppColors.surface.withValues(alpha: 0.9),
-              )
-            : null,
-        child: Stack(
-          alignment: Alignment.center,
-          children: [
-            LineIcon(
-              icon,
-              size: size,
-              color: color ?? AppColors.ink2,
-              stroke: 1.6,
-            ),
-            if (badge)
-              Positioned(
-                top: 8,
-                right: 9,
-                child: Container(
-                  width: 6,
-                  height: 6,
-                  decoration: BoxDecoration(
-                    shape: BoxShape.circle,
-                    color: AppColors.alert,
-                    border: Border.all(color: AppColors.bg, width: 2),
+      child: Opacity(
+        opacity: onPressed == null ? 0.35 : 1,
+        child: Container(
+          width: 38,
+          height: 38,
+          decoration: onPhoto
+              ? BoxDecoration(
+                  shape: BoxShape.circle,
+                  color: AppColors.surface.withValues(alpha: 0.9),
+                )
+              : null,
+          child: Stack(
+            alignment: Alignment.center,
+            children: [
+              LineIcon(
+                icon,
+                size: size,
+                color: color ?? AppColors.ink2,
+                stroke: 1.6,
+              ),
+              if (badge)
+                Positioned(
+                  top: 8,
+                  right: 9,
+                  child: Container(
+                    width: 6,
+                    height: 6,
+                    decoration: BoxDecoration(
+                      shape: BoxShape.circle,
+                      color: AppColors.alert,
+                      border: Border.all(color: AppColors.bg, width: 2),
+                    ),
                   ),
                 ),
-              ),
-          ],
+            ],
+          ),
         ),
       ),
     );

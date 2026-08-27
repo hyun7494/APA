@@ -1,5 +1,3 @@
-import 'dart:math' as math;
-
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
@@ -705,15 +703,11 @@ class _PhotoStrip extends StatelessWidget {
                     color: AppColors.scrim,
                     shape: BoxShape.circle,
                   ),
-                  // plus 를 45도 돌려 x 로 쓴다 — 전용 아이콘을 늘리지 않는다.
-                  child: Transform.rotate(
-                    angle: math.pi / 4,
-                    child: LineIcon(
-                      AppIcon.plus,
-                      size: 13,
-                      color: AppColors.onAccent,
-                      stroke: 2,
-                    ),
+                  child: LineIcon(
+                    AppIcon.close,
+                    size: 13,
+                    color: AppColors.onAccent,
+                    stroke: 2,
                   ),
                 ),
               ),

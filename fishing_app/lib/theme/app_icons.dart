@@ -34,6 +34,7 @@ enum AppIcon {
   chevronLeft,
   arrowUpRight,
   plus,
+  close,
   pencil,
   camera,
   check,
@@ -672,6 +673,18 @@ class _IconPainter extends CustomPainter {
             line,
           );
         }
+
+      case AppIcon.close:
+        // 두 획을 그대로 긋는다. `plus` 를 45도 돌려 쓰던 자리가 있었는데,
+        // 같은 X 를 두 가지 방법으로 그리면 굵기·크기가 조금씩 어긋난다.
+        canvas.drawPath(
+          Path()
+            ..moveTo(6.4, 6.4)
+            ..lineTo(17.6, 17.6)
+            ..moveTo(17.6, 6.4)
+            ..lineTo(6.4, 17.6),
+          line,
+        );
 
       case AppIcon.settings:
         // 톱니바퀴 — 바깥 링 위에 톱니 8개, 가운데 축. 해(sun)도 방사선 8개를
