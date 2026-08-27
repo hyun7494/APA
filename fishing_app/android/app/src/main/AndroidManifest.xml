@@ -3,6 +3,10 @@
          여기에 없으면 릴리스 빌드에서만 모든 API 호출이 죽는다 — 개발 중에는
          절대 재현되지 않는 종류의 버그다. 이 앱은 화면 전부가 서버 데이터다. -->
     <uses-permission android:name="android.permission.INTERNET"/>
+    <!-- 지역 선택의 `현재 위치로 찾기`. 낚시 포인트를 가까운 순으로 줄 세우는 용도라
+         COARSE 면 충분하다 — FINE 은 미터 단위 정확도를 요구하면서 사용자에게는
+         더 무겁게 보이는 권한이다. -->
+    <uses-permission android:name="android.permission.ACCESS_COARSE_LOCATION"/>
 
     <!-- 카메라 권한은 일부러 선언하지 않는다. image_picker 는 촬영을
          ACTION_IMAGE_CAPTURE 인텐트로 넘겨 기본 카메라 앱이 대신 찍는데,

@@ -83,6 +83,13 @@ final spotsProvider = FutureProvider<List<Spot>>((ref) async {
   return ref.watch(fishingRepositoryProvider).fetchSpots(regionId);
 });
 
+/// 내 위치에서 가까운 포인트. 좌표가 정해진 뒤에만 부른다.
+final nearbySpotsProvider =
+    FutureProvider.family<List<Spot>, ({double lat, double lon})>(
+  (ref, at) =>
+      ref.watch(fishingRepositoryProvider).fetchNearbySpots(at.lat, at.lon),
+);
+
 /// 검색어에 이름이 걸리는 포인트. 검색 화면이 **포인트를 바로 고르게** 하려고 쓴다.
 final spotSearchProvider = FutureProvider.family<List<Spot>, String>(
   (ref, query) => ref.watch(fishingRepositoryProvider).searchSpots(query),

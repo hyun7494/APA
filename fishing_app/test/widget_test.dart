@@ -13,6 +13,7 @@ import 'package:fishing_app/services/auth_controller.dart';
 import 'package:fishing_app/services/auth_repository.dart';
 import 'package:fishing_app/services/photo_picker.dart';
 import 'package:fishing_app/services/fishing_repository.dart';
+import 'package:fishing_app/services/location_service.dart';
 import 'package:fishing_app/services/mock_fishing_repository.dart';
 import 'package:fishing_app/services/providers.dart';
 import 'package:fishing_app/services/social_sign_in.dart';
@@ -157,6 +158,29 @@ class FailingAuthRepository implements AuthRepository {
   Future<bool> get isLoggedIn async => false;
 }
 
+/// 늘 같은 자리를 내주는 위치 대역.
+///
+/// 진짜 [GeolocatorLocationService] 는 플랫폼 채널을 타서 위젯 테스트에서 응답이 없다
+/// (사진 선택기와 같은 사정).
+class FakeLocationService implements LocationService {
+  FakeLocationService(this.result);
+
+  /// 허용한 경우 — 기장 학리 근처.
+  factory FakeLocationService.allowed() =>
+      FakeLocationService(const LocationFound(35.24, 129.22));
+
+  factory FakeLocationService.denied({bool forever = false}) =>
+      FakeLocationService(LocationDenied(
+        forever ? '위치 권한이 꺼져 있어요. 설정에서 켜주세요' : '위치 권한이 필요해요',
+        openSettings: forever,
+      ));
+
+  final LocationResult result;
+
+  @override
+  Future<LocationResult> current() async => result;
+}
+
 /// 주간 예보가 비어 있는 저장소. 영종도처럼 KHOA 해역이 안 붙은 포인트를 흉내낸다.
 class _NoWeeklyRepository extends MockFishingRepository {
   // 홈의 대표 포인트는 `featuredSpotProvider` 가 이 목록의 첫 곳으로 고른다.
@@ -190,6 +214,7 @@ Future<void> pumpApp(
   PhotoPicker? photoPicker,
   AuthRepository? auth,
   FishingRepository? repository,
+  LocationService? location,
 }) async {
   tester.view.physicalSize = const Size(1080, 4500);
   tester.view.devicePixelRatio = 3.0;
@@ -203,6 +228,8 @@ Future<void> pumpApp(
         authRepositoryProvider.overrideWithValue(auth ?? FakeAuthRepository()),
         if (repository != null)
           fishingRepositoryProvider.overrideWithValue(repository),
+        if (location != null)
+          locationServiceProvider.overrideWithValue(location),
       ],
       child: const FishingApp(),
     ),
@@ -394,6 +421,57 @@ void main() {
     await tester.enterText(field, '기장');
     await tester.pumpAndSettle();
     expect(find.text('남해'), findsWidgets);
+  });
+
+  /// 지수 → 지역 선택 화면.
+  Future<void> openRegionSearch(WidgetTester tester) async {
+    await tester.tap(find.text('지수'));
+    await tester.pumpAndSettle();
+    await tester.tap(find.widgetWithText(HeaderButton, '지역'));
+    await tester.pumpAndSettle();
+  }
+
+  testWidgets('★ 현재 위치로 찾으면 가까운 순으로 거리와 함께 뜬다', (tester) async {
+    await pumpApp(tester, location: FakeLocationService.allowed());
+    await openRegionSearch(tester);
+
+    // 예전에는 `위치 기반 검색은 API 연동 후 지원됩니다` 스낵바만 떴다.
+    await tester.tap(find.widgetWithText(PrimaryButton, '현재 위치로 찾기'));
+    await tester.pump();
+    await tester.pump(const Duration(milliseconds: 400));
+    await tester.pumpAndSettle();
+
+    expect(find.text('가까운 포인트'), findsOneWidget);
+    expect(find.textContaining('준비 중'), findsNothing);
+    // 거리가 포인트 행에 붙는다 — 가까운 순이라는 걸 숫자로 보여줘야 한다.
+    expect(find.textContaining('km'), findsWidgets);
+  });
+
+  testWidgets('★ 위치를 거부하면 오류 화면이 아니라 안내 한 줄이다', (tester) async {
+    await pumpApp(tester, location: FakeLocationService.denied());
+    await openRegionSearch(tester);
+
+    await tester.tap(find.widgetWithText(PrimaryButton, '현재 위치로 찾기'));
+    await tester.pump();
+    await tester.pump(const Duration(milliseconds: 400));
+
+    // 거부는 오류가 아니라 사용자의 선택이다. 화면은 그대로 쓸 수 있어야 한다.
+    expect(find.text('위치 권한이 필요해요'), findsOneWidget);
+    expect(find.text('가까운 포인트'), findsNothing);
+    expect(find.text('전체 지역'), findsOneWidget);
+  });
+
+  testWidgets('★ 영구 거부면 설정으로 보내는 버튼을 함께 준다', (tester) async {
+    await pumpApp(tester, location: FakeLocationService.denied(forever: true));
+    await openRegionSearch(tester);
+
+    await tester.tap(find.widgetWithText(PrimaryButton, '현재 위치로 찾기'));
+    await tester.pump();
+    await tester.pump(const Duration(milliseconds: 400));
+
+    // 앱 안에서는 풀 방법이 없다 — 설정으로 가는 길을 줘야 막다른 길이 아니다.
+    expect(find.textContaining('설정에서 켜주세요'), findsOneWidget);
+    expect(find.widgetWithText(SnackBarAction, '설정'), findsOneWidget);
   });
 
   testWidgets('★ 검색에 걸린 포인트를 눌러 바로 그 상세로 간다', (tester) async {

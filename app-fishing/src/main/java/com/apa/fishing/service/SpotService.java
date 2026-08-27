@@ -2,6 +2,7 @@ package com.apa.fishing.service;
 
 import com.apa.fishing.dto.SpotResponse;
 import com.apa.fishing.batch.FortuneGenerator;
+import com.apa.fishing.batch.Haversine;
 import com.apa.fishing.domain.FishingSpot;
 import com.apa.fishing.domain.SpotDailyIndex;
 import com.apa.fishing.dto.DailyIndexResponse;
@@ -56,6 +57,36 @@ public class SpotService {
 
         return spots.stream()
                 .map(spot -> SpotResponse.from(spot, weeks.getOrDefault(spot.getId(), List.of())))
+                .toList();
+    }
+
+    /**
+     * 내 위치에서 가까운 순.
+     *
+     * <p>거리 계산을 <b>서버가 한다</b> — 좌표는 여기 있고, 앱이 쓰지도 않을 위경도를
+     * 51곳치 받아 갈 이유가 없다. 포인트가 수백 곳이 되면 PostGIS 로 옮길 것이고
+     * 그때도 이 메서드 안만 바뀐다.
+     *
+     * <p>좌표가 없는 포인트는 뺀다 — 거리를 0 으로 두면 목록 맨 앞에 붙는다.
+     */
+    public List<SpotResponse> findNearby(double latitude, double longitude, int limit) {
+        var spots = spotRepository.findAllWithRegion().stream()
+                .filter(s -> s.getLatitude() != null && s.getLongitude() != null)
+                .map(s -> Map.entry(s, Haversine.km(
+                        latitude, longitude,
+                        s.getLatitude().doubleValue(), s.getLongitude().doubleValue())))
+                .sorted(Map.Entry.comparingByValue())
+                .limit(limit)
+                .toList();
+
+        Map<Long, List<DailyIndexResponse>> weeks = weeksOf(
+                spots.stream().map(e -> e.getKey().getId()).toList());
+
+        return spots.stream()
+                .map(e -> SpotResponse
+                        .from(e.getKey(), weeks.getOrDefault(e.getKey().getId(), List.of()))
+                        // 소수점 한 자리면 충분하다. `12.34km` 는 읽는 사람에게 의미가 없다.
+                        .withDistance(Math.round(e.getValue() * 10) / 10.0))
                 .toList();
     }
 

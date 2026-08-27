@@ -2,6 +2,10 @@
 <!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
 <plist version="1.0">
 <dict>
+	<!-- 지역 선택의 `현재 위치로 찾기`. 이 문구가 권한 대화상자에 그대로 뜬다 —
+	     "왜 필요한지" 를 적지 않으면 사용자는 그냥 거부한다. -->
+	<key>NSLocationWhenInUseUsageDescription</key>
+	<string>가까운 낚시 포인트를 찾는 데에만 사용합니다.</string>
 	<key>CADisableMinimumFrameDurationOnPhone</key>
 	<true/>
 	<key>CFBundleDevelopmentRegion</key>

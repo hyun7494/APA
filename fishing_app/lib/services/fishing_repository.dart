@@ -21,6 +21,12 @@ abstract interface class FishingRepository {
   /// GET /fishing/spots/{id}
   Future<Spot> fetchSpot(int id);
 
+  /// 내 위치에서 가까운 포인트 — `GET /fishing/spots?lat=&lon=`.
+  ///
+  /// 거리 계산은 **서버가 한다.** 좌표는 서버에 있고, 앱이 쓰지도 않을 위경도를
+  /// 포인트 수만큼 받아 갈 이유가 없다. 각 [Spot.distanceKm] 가 채워져 온다.
+  Future<List<Spot>> fetchNearbySpots(double latitude, double longitude);
+
   /// 이름으로 포인트 검색 — `GET /fishing/spots?q=`.
   ///
   /// 지역 검색만으로는 `울릉` 을 쳐도 결과가 `동해` 라, 권역을 누른 뒤 14곳 중에서

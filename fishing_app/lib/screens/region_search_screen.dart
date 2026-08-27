@@ -1,13 +1,16 @@
 import 'package:flutter/material.dart';
+import 'package:geolocator/geolocator.dart' show Geolocator;
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 
 import '../models/models.dart';
+import '../services/location_service.dart';
 import '../services/providers.dart';
 import '../theme/app_theme.dart';
 import '../widgets/app_buttons.dart';
 import '../widgets/app_card.dart';
 import '../widgets/async_view.dart';
+import '../widgets/press_scale.dart';
 import '../widgets/rating_badge.dart';
 import '../widgets/reveal.dart';
 
@@ -22,6 +25,10 @@ class RegionSearchScreen extends ConsumerStatefulWidget {
 class _RegionSearchScreenState extends ConsumerState<RegionSearchScreen> {
   final _controller = TextEditingController();
   String _query = '';
+
+  /// 위치를 받아 왔으면 그 좌표. 아직 안 눌렀거나 거부당했으면 null 이다.
+  ({double lat, double lon})? _at;
+  bool _locating = false;
 
   @override
   void dispose() {
@@ -41,6 +48,42 @@ class _RegionSearchScreenState extends ConsumerState<RegionSearchScreen> {
   void _pickSpot(Spot spot) {
     ref.read(selectedRegionIdProvider.notifier).state = spot.regionGroupId;
     context.go('/score/${spot.id}');
+  }
+
+  /// 기기 위치를 받아 가까운 포인트를 띄운다.
+  ///
+  /// 거부는 오류가 아니라 사용자의 선택이라, 오류 상자 대신 스낵바 한 줄로 알린다
+  /// ([LocationService] 주석 참고).
+  Future<void> _findNearby() async {
+    setState(() => _locating = true);
+    final result = await ref.read(locationServiceProvider).current();
+    if (!mounted) return;
+    setState(() => _locating = false);
+
+    switch (result) {
+      case LocationFound(:final latitude, :final longitude):
+        // 검색어가 남아 있으면 두 목록이 겹쳐 보인다. 위치로 찾을 때는 비운다.
+        _controller.clear();
+        setState(() {
+          _query = '';
+          _at = (lat: latitude, lon: longitude);
+        });
+      case LocationDenied(:final message, :final openSettings):
+        ScaffoldMessenger.of(context)
+          ..hideCurrentSnackBar()
+          ..showSnackBar(
+            SnackBar(
+              content: Text(message),
+              // 영구 거부는 앱 안에서 풀 방법이 없다. 설정으로 보내 준다.
+              action: openSettings
+                  ? SnackBarAction(
+                      label: '설정',
+                      onPressed: Geolocator.openAppSettings,
+                    )
+                  : null,
+            ),
+          );
+    }
   }
 
   @override
@@ -106,17 +149,63 @@ class _RegionSearchScreenState extends ConsumerState<RegionSearchScreen> {
                 Reveal(
                   index: 2,
                   child: PrimaryButton(
-                    label: '현재 위치로 찾기',
+                    label: _locating ? '위치 확인 중…' : '현재 위치로 찾기',
                     icon: AppIcon.pin,
-                    // 위치 권한·지오코딩은 백엔드 연동 단계에서 붙인다.
-                    onPressed: () => ScaffoldMessenger.of(context).showSnackBar(
-                      const SnackBar(
-                        content: Text('위치 기반 검색은 API 연동 후 지원됩니다'),
-                      ),
-                    ),
+                    onPressed: _locating ? null : _findNearby,
                   ),
                 ),
                 const SizedBox(height: AppSpacing.section),
+
+                // 위치로 찾았으면 그 결과가 화면의 주인이다. 검색어와 섞으면
+                // 무엇에 대한 목록인지 알 수 없다.
+                ...switch (_at) {
+                  null => const <Widget>[],
+                  final at => [
+                    Padding(
+                      padding: const EdgeInsets.only(bottom: 16),
+                      child: Row(
+                        children: [
+                          Expanded(
+                            child: Text('가까운 포인트', style: AppText.sectionTitle),
+                          ),
+                          PressScale(
+                            onTap: () => setState(() => _at = null),
+                            scale: 0.94,
+                            child: Padding(
+                              padding: const EdgeInsets.symmetric(
+                                horizontal: 4,
+                                vertical: 4,
+                              ),
+                              child: Text('지우기', style: AppText.caption),
+                            ),
+                          ),
+                        ],
+                      ),
+                    ),
+                    ref
+                        .watch(nearbySpotsProvider(at))
+                        .when(
+                          loading: () =>
+                              const LoadingView(height: 160, lines: 4),
+                          error: (e, _) => ErrorView(
+                            message: '가까운 포인트를 불러오지 못했어요',
+                            error: e,
+                          ),
+                          data: (list) => Column(
+                            children: [
+                              for (var i = 0; i < list.length; i++) ...[
+                                if (i > 0) const SizedBox(height: AppSpacing.gap),
+                                _SpotRow(
+                                  spot: list[i],
+                                  onTap: () => _pickSpot(list[i]),
+                                ),
+                              ],
+                            ],
+                          ),
+                        ),
+                    const SizedBox(height: AppSpacing.section),
+                  ],
+                },
 
                 // 포인트가 걸리면 **먼저** 보여준다. `울릉` 을 친 사람이 원하는 건
                 // 권역이 아니라 그 포인트다.
@@ -214,7 +303,12 @@ class _SpotRow extends StatelessWidget {
                   overflow: TextOverflow.ellipsis,
                 ),
                 const SizedBox(height: 3),
-                Text(spot.regionName, style: AppText.caption),
+                Text(
+                  spot.distanceKm == null
+                      ? spot.regionName
+                      : '${spot.regionName} · ${spot.distanceKm!.toStringAsFixed(1)}km',
+                  style: AppText.caption,
+                ),
               ],
             ),
           ),

@@ -153,6 +153,17 @@ class MockFishingRepository implements FishingRepository {
   }
 
   @override
+  Future<List<Spot>> fetchNearbySpots(double latitude, double longitude) async {
+    await Future.delayed(_latency);
+    // 목에는 좌표가 없다. 실제 거리 대신 **그럴듯한 값**을 붙여 순서만 만든다 —
+    // 화면이 거리를 어떻게 그리는지 확인하는 데는 이걸로 충분하다.
+    return [
+      for (var i = 0; i < MockData.spots.length; i++)
+        MockData.spots[i].withDistance(4.2 + i * 11.5),
+    ];
+  }
+
+  @override
   Future<List<Spot>> searchSpots(String query) async {
     await Future.delayed(_latency);
     final q = query.trim();

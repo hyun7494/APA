@@ -27,6 +27,7 @@ public record SpotResponse(
         List<Integer> hourlyForecast,
         List<String> recommendedFish,
         List<DailyIndexResponse> weeklyIndex,
+        Double distanceKm,
         LocalDateTime updatedAt
 ) {
 
@@ -35,6 +36,13 @@ public record SpotResponse(
 
     public static SpotResponse from(FishingSpot spot) {
         return from(spot, List.of());
+    }
+
+    /** 내 위치에서 몇 km 인지 붙여서 준다 (`GET /fishing/spots?lat=&lon=`). */
+    public SpotResponse withDistance(double km) {
+        return new SpotResponse(id, name, regionGroupId, regionName, rating, waterTemp,
+                waveHeight, windSpeed, weather, tideInfo, sunriseSunset, comment,
+                hourlyForecast, recommendedFish, weeklyIndex, km, updatedAt);
     }
 
     /**
@@ -58,6 +66,7 @@ public record SpotResponse(
                 padForecast(spot.getHourlyForecast()),
                 spot.getRecommendedFish() == null ? List.of() : spot.getRecommendedFish(),
                 week,
+                null,                 // 거리는 위치 검색일 때만 채운다
                 spot.getUpdatedAt()
         );
     }

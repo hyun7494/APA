@@ -21,6 +21,7 @@ class Spot {
     required this.recommendedFish,
     required this.updatedAt,
     this.weeklyIndex = const [],
+    this.distanceKm,
   });
 
   final int id;
@@ -64,11 +65,35 @@ class Spot {
   /// 배치 갱신 시각
   final DateTime updatedAt;
 
+  /// 내 위치에서 몇 km 인지. **위치 검색일 때만** 채워지고 평소에는 null 이다.
+  final double? distanceKm;
+
   /// 오늘부터의 예보. 서버가 KHOA 해역을 못 붙인 포인트(영종도)는 **빈 목록**이다.
   final List<DailyIndex> weeklyIndex;
 
   /// 막대그래프 x축 라벨 — hourlyForecast와 인덱스가 대응한다.
   static const hourLabels = ['06시', '09시', '12시', '15시', '18시', '21시'];
+
+  /// 거리만 갈아 끼운 사본. 목이 순서를 만들 때 쓴다 — 실서버는 서버가 채워 준다.
+  Spot withDistance(double km) => Spot(
+    id: id,
+    name: name,
+    regionGroupId: regionGroupId,
+    regionName: regionName,
+    rating: rating,
+    waterTemp: waterTemp,
+    waveHeight: waveHeight,
+    windSpeed: windSpeed,
+    weather: weather,
+    tideInfo: tideInfo,
+    sunriseSunset: sunriseSunset,
+    comment: comment,
+    hourlyForecast: hourlyForecast,
+    recommendedFish: recommendedFish,
+    updatedAt: updatedAt,
+    weeklyIndex: weeklyIndex,
+    distanceKm: km,
+  );
 
   factory Spot.fromJson(Map<String, dynamic> json) => Spot(
     id: (json['id'] as num).toInt(),
@@ -90,6 +115,7 @@ class Spot {
         const [],
     recommendedFish:
         (json['recommendedFish'] as List?)?.cast<String>().toList() ?? const [],
+    distanceKm: (json['distanceKm'] as num?)?.toDouble(),
     weeklyIndex:
         (json['weeklyIndex'] as List?)
             ?.map((e) => DailyIndex.fromJson(e as Map<String, dynamic>))
@@ -115,6 +141,7 @@ class Spot {
     'hourlyForecast': hourlyForecast,
     'recommendedFish': recommendedFish,
     'weeklyIndex': [for (final day in weeklyIndex) day.toJson()],
+    'distanceKm': distanceKm,
     'updatedAt': updatedAt.toIso8601String(),
   };
 }
