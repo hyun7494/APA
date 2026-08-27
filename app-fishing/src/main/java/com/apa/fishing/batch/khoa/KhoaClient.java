@@ -10,6 +10,7 @@ import java.net.URI;
 import java.time.Duration;
 import java.time.LocalDate;
 import java.time.format.DateTimeFormatter;
+import java.util.List;
 
 /**
  * 국립해양조사원 바다낚시지수 조회. 수온·파고·풍속·유속·물때와 <b>어종별 지수</b>를 한 번에 준다.
@@ -57,13 +58,16 @@ public class KhoaClient {
     }
 
     /**
-     * 장소 한 곳의 {@code targetDate} 요약을 가져온다.
+     * 장소 한 곳의 예보를 가져온다 — <b>오늘 요약과 주간을 한 번에</b>.
+     *
+     * <p>{@code reqDate} 를 오늘로 주면 응답에 <b>오늘 + 6일</b>이 들어온다
+     * (2026-08-27 실측: 60행 / 7일). 예전에는 그중 오늘만 파싱하고 나머지를 버렸다.
      *
      * @param placeName KHOA 의 {@code seafsPstnNm}. <b>낚시 포인트명이 아니라 해역명</b>이다
      *                  (전국 49곳). 우리 포인트에는 좌표 거리로 붙였다 — V6 마이그레이션 주석 참고
      * @throws KhoaApiException 키 미설정·호출 실패·응답 오류. 배치는 포인트별로 이걸 잡고 넘어간다
      */
-    public KhoaFishingIndex fetch(String placeName, LocalDate targetDate) {
+    public KhoaFishingResult fetch(String placeName, LocalDate targetDate) {
         if (!properties.hasKhoaKey()) {
             throw new KhoaApiException("KHOA_SERVICE_KEY 가 비어 있다");
         }
@@ -91,6 +95,16 @@ public class KhoaClient {
                     + PublicApiResponse.describe(e), e);
         }
 
-        return FishingIndexParser.parse(body, targetDate);
+        List<KhoaDailyIndex> week = FishingIndexParser.parseDaily(body);
+
+        KhoaFishingIndex today;
+        try {
+            today = FishingIndexParser.parse(body, targetDate);
+        } catch (KhoaApiException e) {
+            // 오늘치가 없어도 주간은 쓸 수 있다. 예보 창은 발표 시각에 따라 앞으로 밀리므로
+            // 여기서 통째로 던지면 있는 엿새까지 같이 버리게 된다.
+            today = null;
+        }
+        return new KhoaFishingResult(today, week);
     }
 }

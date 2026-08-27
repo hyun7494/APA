@@ -20,6 +20,7 @@ class Spot {
     required this.hourlyForecast,
     required this.recommendedFish,
     required this.updatedAt,
+    this.weeklyIndex = const [],
   });
 
   final int id;
@@ -63,6 +64,9 @@ class Spot {
   /// 배치 갱신 시각
   final DateTime updatedAt;
 
+  /// 오늘부터의 예보. 서버가 KHOA 해역을 못 붙인 포인트(영종도)는 **빈 목록**이다.
+  final List<DailyIndex> weeklyIndex;
+
   /// 막대그래프 x축 라벨 — hourlyForecast와 인덱스가 대응한다.
   static const hourLabels = ['06시', '09시', '12시', '15시', '18시', '21시'];
 
@@ -86,6 +90,11 @@ class Spot {
         const [],
     recommendedFish:
         (json['recommendedFish'] as List?)?.cast<String>().toList() ?? const [],
+    weeklyIndex:
+        (json['weeklyIndex'] as List?)
+            ?.map((e) => DailyIndex.fromJson(e as Map<String, dynamic>))
+            .toList() ??
+        const [],
     updatedAt:
         DateTime.tryParse(json['updatedAt'] as String? ?? '') ?? DateTime.now(),
   );
@@ -105,6 +114,45 @@ class Spot {
     'comment': comment,
     'hourlyForecast': hourlyForecast,
     'recommendedFish': recommendedFish,
+    'weeklyIndex': [for (final day in weeklyIndex) day.toJson()],
     'updatedAt': updatedAt.toIso8601String(),
+  };
+}
+
+/// 주간 예보의 하루 (계약서 3-3, V13).
+///
+/// 새 데이터 소스가 아니다 — 오늘 지수를 받아 오던 **같은 응답에 들어 있던 나머지 날짜**다.
+/// 서버가 버리지 않고 저장하기 시작했을 뿐이다.
+class DailyIndex {
+  const DailyIndex({
+    required this.date,
+    required this.rating,
+    this.waveHeight,
+    this.windSpeed,
+  });
+
+  final DateTime date;
+  final Rating rating;
+
+  /// 그날 최대 파고. **null 이 정상**이고 0 이 아니다 — 안전 수치라 결측을
+  /// 0 으로 그리면 "잔잔한 날"로 위장된다.
+  final double? waveHeight;
+  final double? windSpeed;
+
+  factory DailyIndex.fromJson(Map<String, dynamic> json) => DailyIndex(
+    date: DateTime.tryParse(json['date'] as String? ?? '') ?? DateTime.now(),
+    rating: Rating.fromCode(json['rating'] as String?),
+    waveHeight: (json['waveHeight'] as num?)?.toDouble(),
+    windSpeed: (json['windSpeed'] as num?)?.toDouble(),
+  );
+
+  Map<String, dynamic> toJson() => {
+    // 서버가 주는 형식과 같게 — 날짜만이고 시각은 없다.
+    'date': '${date.year.toString().padLeft(4, '0')}-'
+        '${date.month.toString().padLeft(2, '0')}-'
+        '${date.day.toString().padLeft(2, '0')}',
+    'rating': rating.code,
+    'waveHeight': waveHeight,
+    'windSpeed': windSpeed,
   };
 }

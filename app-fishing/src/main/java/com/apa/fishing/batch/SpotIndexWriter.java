@@ -1,12 +1,16 @@
 package com.apa.fishing.batch;
 
 import com.apa.fishing.domain.FishingSpot;
+import com.apa.fishing.batch.khoa.KhoaDailyIndex;
 import com.apa.fishing.repository.FishingSpotRepository;
+import com.apa.fishing.repository.SpotDailyIndexRepository;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Component;
 import org.springframework.transaction.annotation.Transactional;
 
+import java.time.LocalDate;
 import java.time.LocalDateTime;
+import java.util.List;
 
 /**
  * 포인트 한 곳의 갱신을 커밋한다. {@link SpotIndexBatch} 와 <b>클래스를 나눈 이유</b>가 두 가지다.
@@ -26,6 +30,7 @@ import java.time.LocalDateTime;
 public class SpotIndexWriter {
 
     private final FishingSpotRepository spotRepository;
+    private final SpotDailyIndexRepository dailyIndexRepository;
 
     @Transactional
     public void write(Long spotId, SpotIndexUpdate update, LocalDateTime updatedAt) {
@@ -42,5 +47,31 @@ public class SpotIndexWriter {
                 update.tideInfo(),
                 update.comment(),
                 updatedAt);
+    }
+
+    /**
+     * 주간 예보를 하루 한 행으로 넣는다 (V13).
+     *
+     * <p>예보 창이 매일 겹쳐 오므로(어제 받은 D+1 이 오늘의 D+0 이다) 덮어쓰기다.
+     * 등급을 못 읽은 날은 {@code FishingIndexParser.parseDaily} 가 이미 빼고 준다.
+     */
+    @Transactional
+    public void writeWeek(Long spotId, List<KhoaDailyIndex> week, LocalDateTime updatedAt) {
+        for (KhoaDailyIndex day : week) {
+            dailyIndexRepository.upsert(
+                    spotId,
+                    day.date(),
+                    day.rating().name(),
+                    day.waveHeight(),
+                    day.windSpeed(),
+                    day.waterTemp(),
+                    updatedAt);
+        }
+    }
+
+    /** 지나간 예보를 치운다. 놔두면 포인트마다 하루 한 행씩 영원히 쌓인다. */
+    @Transactional
+    public void purgeBefore(LocalDate from) {
+        dailyIndexRepository.deleteByForecastDateLessThan(from);
     }
 }

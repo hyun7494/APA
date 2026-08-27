@@ -1,7 +1,7 @@
 package com.apa.fishing.batch;
 
 import com.apa.fishing.batch.khoa.KhoaClient;
-import com.apa.fishing.batch.khoa.KhoaFishingIndex;
+import com.apa.fishing.batch.khoa.KhoaFishingResult;
 import com.apa.fishing.batch.kma.KmaClient;
 import com.apa.fishing.batch.kma.KmaForecast;
 import com.apa.fishing.batch.publicapi.PublicApiException;
@@ -82,14 +82,25 @@ public class SpotIndexBatch {
             }
         }
 
+        // 지나간 예보는 화면에 쓸 일이 없다.
+        spotIndexWriter.purgeBefore(targetDate);
+
         log.info("지수 배치: {} 기준 {}/{} 포인트 갱신", targetDate, updated, spots.size());
         return updated;
     }
 
     private boolean refreshOne(FishingSpot spot, LocalDate targetDate, LocalDateTime updatedAt) {
         try {
+            KhoaFishingResult khoa = fetchKhoa(spot, targetDate);
+
+            // ★ 주간은 오늘 요약과 **같은 응답**에서 나온다 (호출을 더 하지 않는다).
+            //    오늘치가 비어 있어도 주간은 쓸 수 있으므로 먼저 저장한다.
+            if (khoa != null) {
+                spotIndexWriter.writeWeek(spot.getId(), khoa.week(), updatedAt);
+            }
+
             SpotIndexUpdate update = SpotIndexUpdate.combine(
-                    fetchKhoa(spot, targetDate),
+                    khoa == null ? null : khoa.today(),
                     fetchKma(spot, targetDate));
 
             if (update == null) {
@@ -107,7 +118,7 @@ public class SpotIndexBatch {
     }
 
     /** {@code khoa_place_name} 이 NULL 인 포인트(영종도)는 애초에 호출하지 않는다. */
-    private KhoaFishingIndex fetchKhoa(FishingSpot spot, LocalDate targetDate) {
+    private KhoaFishingResult fetchKhoa(FishingSpot spot, LocalDate targetDate) {
         if (spot.getKhoaPlaceName() == null) {
             return null;
         }

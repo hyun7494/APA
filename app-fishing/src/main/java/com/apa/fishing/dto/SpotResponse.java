@@ -26,6 +26,7 @@ public record SpotResponse(
         String comment,
         List<Integer> hourlyForecast,
         List<String> recommendedFish,
+        List<DailyIndexResponse> weeklyIndex,
         LocalDateTime updatedAt
 ) {
 
@@ -33,6 +34,14 @@ public record SpotResponse(
     private static final int FORECAST_SLOTS = 6;
 
     public static SpotResponse from(FishingSpot spot) {
+        return from(spot, List.of());
+    }
+
+    /**
+     * @param week 주간 예보 (V13). 없으면 빈 목록이다 — KHOA 해역이 안 붙은 포인트(영종도)와
+     *             예보가 아직 안 들어온 포인트가 그렇다. 앱은 그때 스트립을 통째로 감춘다
+     */
+    public static SpotResponse from(FishingSpot spot, List<DailyIndexResponse> week) {
         return new SpotResponse(
                 spot.getId(),
                 spot.getName(),
@@ -48,6 +57,7 @@ public record SpotResponse(
                 spot.getComment() == null ? "" : spot.getComment(),
                 padForecast(spot.getHourlyForecast()),
                 spot.getRecommendedFish() == null ? List.of() : spot.getRecommendedFish(),
+                week,
                 spot.getUpdatedAt()
         );
     }

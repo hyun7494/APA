@@ -1,14 +1,22 @@
 package com.apa.fishing.service;
 
 import com.apa.fishing.dto.SpotResponse;
+import com.apa.fishing.batch.FortuneGenerator;
+import com.apa.fishing.domain.FishingSpot;
+import com.apa.fishing.domain.SpotDailyIndex;
+import com.apa.fishing.dto.DailyIndexResponse;
 import com.apa.fishing.repository.FishingSpotRepository;
+import com.apa.fishing.repository.SpotDailyIndexRepository;
 import lombok.RequiredArgsConstructor;
 import org.springframework.http.HttpStatus;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 import org.springframework.web.server.ResponseStatusException;
 
+import java.time.LocalDate;
 import java.util.List;
+import java.util.Map;
+import java.util.stream.Collectors;
 
 @Service
 @RequiredArgsConstructor
@@ -16,19 +24,47 @@ import java.util.List;
 public class SpotService {
 
     private final FishingSpotRepository spotRepository;
+    private final SpotDailyIndexRepository dailyIndexRepository;
 
     /** regionGroupId 가 없으면 전체를 준다 (지역 필터 없는 화면·수동 확인용). */
     public List<SpotResponse> findByRegion(Long regionGroupId) {
         var spots = regionGroupId == null
                 ? spotRepository.findAllWithRegion()
                 : spotRepository.findByRegionId(regionGroupId);
-        return spots.stream().map(SpotResponse::from).toList();
+
+        // ⚠️ 포인트마다 물으면 목록 하나에 질의가 포인트 수만큼 나간다. 한 번에 읽고 나눈다
+        //    (도감의 @BatchSize 를 붙인 것과 같은 이유).
+        Map<Long, List<DailyIndexResponse>> weeks = weeksOf(
+                spots.stream().map(FishingSpot::getId).toList());
+
+        return spots.stream()
+                .map(spot -> SpotResponse.from(spot, weeks.getOrDefault(spot.getId(), List.of())))
+                .toList();
     }
 
     public SpotResponse findOne(Long id) {
         return spotRepository.findWithRegionById(id)
-                .map(SpotResponse::from)
+                .map(spot -> SpotResponse.from(
+                        spot, weeksOf(List.of(id)).getOrDefault(id, List.of())))
                 .orElseThrow(() -> new ResponseStatusException(
                         HttpStatus.NOT_FOUND, "포인트를 찾을 수 없습니다: " + id));
+    }
+
+    /**
+     * 오늘 이후의 예보만 준다. 지난 날짜는 화면에 쓸 일이 없고, 배치가 지우기 전이라도
+     * 여기서 걸러야 어제 것이 스트립 맨 앞에 남지 않는다.
+     */
+    private Map<Long, List<DailyIndexResponse>> weeksOf(List<Long> spotIds) {
+        if (spotIds.isEmpty()) {
+            return Map.of();
+        }
+        LocalDate today = LocalDate.now(FortuneGenerator.KST);
+
+        return dailyIndexRepository
+                .findBySpotIdInAndForecastDateGreaterThanEqualOrderByForecastDate(spotIds, today)
+                .stream()
+                .collect(Collectors.groupingBy(
+                        SpotDailyIndex::getSpotId,
+                        Collectors.mapping(DailyIndexResponse::from, Collectors.toList())));
     }
 }

@@ -14,6 +14,7 @@ import '../widgets/collection_progress.dart';
 import '../widgets/press_scale.dart';
 import '../widgets/rating_badge.dart';
 import '../widgets/reveal.dart';
+import '../widgets/weekly_index_strip.dart';
 
 /// 홈 — 비대칭 벤토 구성.
 ///
@@ -63,9 +64,24 @@ class HomeScreen extends ConsumerWidget {
           Reveal(index: 1, child: _IndexHero(spot: featured)),
           const SizedBox(height: AppSpacing.gap),
 
+          // 주간 지수 — 지수 카드가 "오늘 나가도 되나"라면 이쪽은 "이번 주 언제 갈까"다.
+          //
+          // ⚠️ 새 호출이 아니다. 오늘 지수를 받아 오던 **같은 KHOA 응답에 들어 있던**
+          //    나머지 엿새를 서버가 버리지 않고 저장하기 시작한 것뿐이다 (V13).
+          //
+          // KHOA 해역이 안 붙은 포인트(영종도)는 주간이 빈 목록으로 온다. 그때는
+          // 섹션째 감춘다 — 빈 막대 일곱 칸은 "나쁜 한 주"로 읽힌다.
+          ...switch (featured.valueOrNull?.weeklyIndex) {
+            null || [] => const <Widget>[],
+            final week => [
+              Reveal(index: 2, child: _WeeklyCard(week: week)),
+              const SizedBox(height: AppSpacing.gap),
+            ],
+          },
+
           // 벤토 — 왼쪽 도감 진행도(5) : 오른쪽 물때·일출(4)
           Reveal(
-            index: 2,
+            index: 3,
             child: SizedBox(
               // "5물 · 만조 13:20"은 좁은 타일에서 두 줄로 감긴다.
               // 두 줄이 들어갈 높이를 확보해야 폰트가 바뀌어도 안 넘친다.
@@ -108,7 +124,7 @@ class HomeScreen extends ConsumerWidget {
           const SizedBox(height: 14),
 
           const Reveal(
-            index: 3,
+            index: 4,
             child: NoticeLine(
               text: '참고용 정보이며 실제 출조 여부는 현장 상황을 확인하세요.',
             ),
@@ -124,7 +140,7 @@ class HomeScreen extends ConsumerWidget {
             final posts => [
               const SizedBox(height: AppSpacing.section),
               Reveal(
-                index: 4,
+                index: 5,
                 child: SectionLabel(
                   label: '최근 조황',
                   padded: false,
@@ -150,10 +166,41 @@ class HomeScreen extends ConsumerWidget {
               const SizedBox(height: 12),
               for (var i = 0; i < posts.length; i++) ...[
                 if (i > 0) const SizedBox(height: AppSpacing.gap),
-                Reveal(index: 5 + i, child: _RecentPostRow(post: posts[i])),
+                Reveal(index: 6 + i, child: _RecentPostRow(post: posts[i])),
               ],
             ],
           },
+        ],
+      ),
+    );
+  }
+}
+
+/// 주간 지수 카드 — 라벨 한 줄 + 일곱 칸.
+class _WeeklyCard extends StatelessWidget {
+  const _WeeklyCard({required this.week});
+
+  final List<DailyIndex> week;
+
+  @override
+  Widget build(BuildContext context) {
+    return AppCard(
+      radius: AppRadius.cardSmall,
+      padding: const EdgeInsets.fromLTRB(18, 16, 18, 14),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Row(
+            children: [
+              Expanded(child: Text('이번 주 지수', style: AppText.cardLabel)),
+              Text(
+                '${week.first.date.month}월',
+                style: AppText.caption,
+              ),
+            ],
+          ),
+          const SizedBox(height: 14),
+          WeeklyIndexStrip(days: week),
         ],
       ),
     );

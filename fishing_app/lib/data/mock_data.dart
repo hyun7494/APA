@@ -67,6 +67,7 @@ abstract final class MockData {
       hourlyForecast: const [55, 70, 82, 76, 68, 60],
       recommendedFish: const ['감성돔', '벵에돔', '농어'],
       updatedAt: _updatedAt,
+      weeklyIndex: _week(1, Rating.veryGood),
     ),
     Spot(
       id: 2,
@@ -84,6 +85,7 @@ abstract final class MockData {
       hourlyForecast: const [40, 52, 60, 72, 80, 66],
       recommendedFish: const ['고등어', '전갱이', '학공치'],
       updatedAt: _updatedAt,
+      weeklyIndex: _week(2, Rating.good),
     ),
     Spot(
       id: 3,
@@ -101,6 +103,7 @@ abstract final class MockData {
       hourlyForecast: const [45, 55, 50, 48, 42, 38],
       recommendedFish: const ['우럭', '광어', '놀래미'],
       updatedAt: _updatedAt,
+      weeklyIndex: _week(3, Rating.normal),
     ),
     Spot(
       id: 4,
@@ -118,6 +121,7 @@ abstract final class MockData {
       hourlyForecast: const [50, 62, 70, 68, 64, 58],
       recommendedFish: const ['감성돔', '볼락', '농어'],
       updatedAt: _updatedAt,
+      weeklyIndex: _week(4, Rating.good),
     ),
     Spot(
       id: 5,
@@ -135,6 +139,7 @@ abstract final class MockData {
       hourlyForecast: const [60, 75, 85, 80, 72, 64],
       recommendedFish: const ['참돔', '감성돔', '볼락'],
       updatedAt: _updatedAt,
+      weeklyIndex: _week(5, Rating.veryGood),
     ),
     Spot(
       id: 6,
@@ -152,6 +157,7 @@ abstract final class MockData {
       hourlyForecast: const [30, 28, 25, 22, 20, 18],
       recommendedFish: const ['—'],
       updatedAt: _updatedAt,
+      weeklyIndex: _week(6, Rating.bad),
     ),
   ];
 
@@ -227,5 +233,30 @@ abstract final class MockData {
 
   static final _now = DateTime.now();
   static final _updatedAt = _now.subtract(const Duration(minutes: 40));
+
+  /// 목 모드의 주간 예보 — 오늘부터 7일.
+  ///
+  /// 실서버는 KHOA 응답을 그대로 저장하지만 목에는 그럴 것이 없다. 포인트 id 로 흐름을
+  /// 어긋나게 해서 **화면이 다 같은 모양으로 보이지 않게** 한다. 값은 꾸며 낸 것이고,
+  /// 목의 다른 값들과 성격이 같다.
+  static List<DailyIndex> _week(int spotId, Rating today) {
+    // 좋았다 나빠졌다 하는 한 주. 시작 지점만 포인트마다 민다.
+    const flow = [Rating.normal, Rating.bad, Rating.bad, Rating.good,
+                  Rating.veryGood, Rating.normal, Rating.bad];
+    final from = DateTime(_now.year, _now.month, _now.day);
+
+    return [
+      for (var i = 0; i < 7; i++)
+        DailyIndex(
+          date: from.add(Duration(days: i)),
+          // ⚠️ 첫 칸은 **그 포인트의 오늘 등급 그대로**여야 한다. 실서버는 둘이 같은
+          //    KHOA 응답에서 나오므로 저절로 맞지만, 목에서 어긋나게 두면 지수 카드가
+          //    `아주 좋음` 인데 주간 첫 칸은 빨강인 화면이 나온다.
+          rating: i == 0 ? today : flow[(i + spotId) % flow.length],
+          waveHeight: 0.4 + ((i + spotId) % 4) * 0.3,
+          windSpeed: 3.0 + ((i + spotId * 2) % 5) * 1.6,
+        ),
+    ];
+  }
 
 }

@@ -5,11 +5,13 @@ import com.apa.fishing.domain.Rating;
 import com.fasterxml.jackson.databind.JsonNode;
 
 import java.time.LocalDate;
+import java.time.format.DateTimeParseException;
 import java.util.ArrayList;
 import java.util.LinkedHashSet;
 import java.util.List;
 import java.util.Map;
 import java.util.Set;
+import java.util.TreeMap;
 
 /**
  * {@code GetFcstFishingApiServicev2} 응답 → {@link KhoaFishingIndex}. 순수 함수라 키 없이 검증한다.
@@ -118,6 +120,69 @@ public final class FishingIndexParser {
                 maxWaveHeight,
                 maxWindSpeed,
                 tideInfo);
+    }
+
+    /**
+     * 응답에 담긴 <b>모든 날짜</b>를 하루 한 줄로 접는다 (주간 스트립).
+     *
+     * <p>{@link #parse} 는 오늘 하루만 남기고 나머지를 버린다. 같은 응답에 오늘 + 6일이
+     * 들어 있으므로(2026-08-27 실측: 60행 / 7일) 여기서 그걸 살려 쓴다 —
+     * <b>호출을 더 하지 않는다.</b>
+     *
+     * <p>원본은 (날짜 × 오전/오후 × 어종)인데 오전/오후는 앞 사흘까지만 있고 그 뒤로는
+     * {@code predcNoonSeCd = '일'} 이다. 그래서 시간대는 접고 날짜로만 묶는다.
+     *
+     * @return 날짜 오름차순. 등급을 하나도 못 읽은 날은 빠진다
+     */
+    public static List<KhoaDailyIndex> parseDaily(String body) {
+        Map<LocalDate, DayAccumulator> byDate = new TreeMap<>();
+
+        for (JsonNode item : readItems(body)) {
+            LocalDate date = parseDate(text(item, "predcYmd"));
+            Rating rating = toRating(text(item, "totalIndex"));
+            if (date == null || rating == null) {
+                continue;
+            }
+            byDate.computeIfAbsent(date, key -> new DayAccumulator()).add(item, rating);
+        }
+
+        List<KhoaDailyIndex> days = new ArrayList<>();
+        byDate.forEach((date, acc) -> days.add(acc.toDaily(date)));
+        return List.copyOf(days);
+    }
+
+    /** {@code predcYmd} 는 yyyy-MM-dd 다 (요청의 {@code reqDate} 와 형식이 다르다). */
+    private static LocalDate parseDate(String value) {
+        if (value == null || value.isBlank()) {
+            return null;
+        }
+        try {
+            return LocalDate.parse(value.trim());
+        } catch (DateTimeParseException e) {
+            return null;
+        }
+    }
+
+    /** 한 날짜에 속한 (오전/오후 × 어종) 행들을 하나로 접는다. */
+    private static final class DayAccumulator {
+        private Rating best;
+        private Double minWaterTemp;
+        private Double maxWaterTemp;
+        private Double maxWaveHeight;
+        private Double maxWindSpeed;
+
+        void add(JsonNode item, Rating rating) {
+            best = better(best, rating);
+            minWaterTemp = minOf(minWaterTemp, number(item, "minWtem"));
+            maxWaterTemp = maxOf(maxWaterTemp, number(item, "maxWtem"));
+            maxWaveHeight = maxOf(maxWaveHeight, number(item, "maxWvhgt"));
+            maxWindSpeed = maxOf(maxWindSpeed, number(item, "maxWspd"));
+        }
+
+        KhoaDailyIndex toDaily(LocalDate date) {
+            return new KhoaDailyIndex(date, best, maxWaveHeight, maxWindSpeed,
+                    midpoint(minWaterTemp, maxWaterTemp));
+        }
     }
 
     private record FishRating(String name, Rating rating) {

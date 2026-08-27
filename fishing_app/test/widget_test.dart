@@ -6,14 +6,20 @@ import 'package:flutter_test/flutter_test.dart';
 import 'package:intl/date_symbol_data_local.dart';
 
 import 'package:fishing_app/main.dart';
+import 'package:fishing_app/data/mock_data.dart';
+import 'package:fishing_app/models/models.dart';
 import 'package:fishing_app/screens/catch_success_screen.dart';
 import 'package:fishing_app/services/auth_controller.dart';
 import 'package:fishing_app/services/auth_repository.dart';
 import 'package:fishing_app/services/photo_picker.dart';
+import 'package:fishing_app/services/fishing_repository.dart';
+import 'package:fishing_app/services/mock_fishing_repository.dart';
+import 'package:fishing_app/services/providers.dart';
 import 'package:fishing_app/services/social_sign_in.dart';
 import 'package:fishing_app/theme/app_theme.dart';
 import 'package:fishing_app/widgets/app_buttons.dart';
 import 'package:fishing_app/widgets/bottom_nav_bar.dart';
+import 'package:fishing_app/widgets/weekly_index_strip.dart';
 import 'package:fishing_app/widgets/pill_chip.dart';
 import 'package:fishing_app/widgets/press_scale.dart';
 import 'package:fishing_app/widgets/spot_card.dart';
@@ -151,12 +157,39 @@ class FailingAuthRepository implements AuthRepository {
   Future<bool> get isLoggedIn async => false;
 }
 
+/// 주간 예보가 비어 있는 저장소. 영종도처럼 KHOA 해역이 안 붙은 포인트를 흉내낸다.
+class _NoWeeklyRepository extends MockFishingRepository {
+  // 홈의 대표 포인트는 `featuredSpotProvider` 가 이 목록의 첫 곳으로 고른다.
+  @override
+  Future<List<Spot>> fetchSpots(int regionGroupId) async =>
+      (await super.fetchSpots(regionGroupId)).map(_stripWeek).toList();
+}
+
+Spot _stripWeek(Spot s) => Spot(
+  id: s.id,
+  name: s.name,
+  regionGroupId: s.regionGroupId,
+  regionName: s.regionName,
+  rating: s.rating,
+  waterTemp: s.waterTemp,
+  waveHeight: s.waveHeight,
+  windSpeed: s.windSpeed,
+  weather: s.weather,
+  tideInfo: s.tideInfo,
+  sunriseSunset: s.sunriseSunset,
+  comment: s.comment,
+  hourlyForecast: s.hourlyForecast,
+  recommendedFish: s.recommendedFish,
+  updatedAt: s.updatedAt,
+);
+
 /// 세로로 긴 화면에서 띄운다 — 상세 화면이 한 번에 다 렌더되도록.
 /// (1080x4500 @3.0 = 360x1500 논리 픽셀)
 Future<void> pumpApp(
   WidgetTester tester, {
   PhotoPicker? photoPicker,
   AuthRepository? auth,
+  FishingRepository? repository,
 }) async {
   tester.view.physicalSize = const Size(1080, 4500);
   tester.view.devicePixelRatio = 3.0;
@@ -168,6 +201,8 @@ Future<void> pumpApp(
           photoPickerProvider.overrideWithValue(photoPicker),
         // 기본값도 대역이다. 진짜 구현은 생성되는 순간 보안 저장소 채널을 두드린다.
         authRepositoryProvider.overrideWithValue(auth ?? FakeAuthRepository()),
+        if (repository != null)
+          fishingRepositoryProvider.overrideWithValue(repository),
       ],
       child: const FishingApp(),
     ),
@@ -240,6 +275,35 @@ void main() {
     // 시드: 어종 36종 중 고유 16종 등록 (CatchSeed의 distinct speciesId)
     expect(find.text('16'), findsOneWidget);
     expect(find.text('/36'), findsOneWidget);
+  });
+
+  testWidgets('★ 홈 주간 지수는 오늘부터 7칸이고 오늘 칸이 표시된다', (tester) async {
+    await pumpApp(tester);
+
+    expect(find.text('이번 주 지수'), findsOneWidget);
+    final strip = tester.widget<WeeklyIndexStrip>(find.byType(WeeklyIndexStrip));
+    expect(strip.days, hasLength(7));
+
+    final today = DateTime.now();
+    expect(strip.days.first.date.day, today.day, reason: '첫 칸이 오늘이어야 한다');
+    // 오늘 칸만 요일 대신 `오늘` 이라고 쓴다.
+    expect(find.text('오늘'), findsOneWidget);
+
+    // ⚠️ 첫 칸은 지수 카드와 같은 등급이어야 한다. 어긋나면 같은 화면에서
+    //    `아주 좋음` 카드 아래 빨간 막대가 뜬다.
+    //    (대표 포인트는 첫 지역의 첫 곳이다 — `featuredSpotProvider`)
+    expect(strip.days.first.rating, MockData.spots.first.rating);
+  });
+
+  testWidgets('★ 주간 예보가 없는 포인트면 카드를 감춘다', (tester) async {
+    // KHOA 해역이 안 붙은 포인트(영종도)는 주간이 빈 목록으로 온다.
+    // 빈 막대 일곱 칸은 "나쁜 한 주"로 읽히므로 섹션째 사라져야 한다.
+    await pumpApp(tester, repository: _NoWeeklyRepository());
+
+    expect(find.text('이번 주 지수'), findsNothing);
+    expect(find.byType(WeeklyIndexStrip), findsNothing);
+    // 나머지 홈은 그대로다.
+    expect(find.text('오늘의 낚시지수'), findsOneWidget);
   });
 
   testWidgets('★ 홈에 최근 조황 글이 뜨고 누르면 상세로 간다', (tester) async {
