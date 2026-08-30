@@ -399,10 +399,16 @@ class _LoggedOut extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return Center(
-      child: Padding(
-        padding: const EdgeInsets.all(AppSpacing.screen),
-        child: Column(
+    return ListView(
+      physics: const BouncingScrollPhysics(),
+      padding: const EdgeInsets.fromLTRB(
+        AppSpacing.screen,
+        40,
+        AppSpacing.screen,
+        AppSpacing.navClearance,
+      ),
+      children: [
+        Column(
           mainAxisSize: MainAxisSize.min,
           children: [
             Container(
@@ -438,7 +444,31 @@ class _LoggedOut extends StatelessWidget {
             ),
           ],
         ),
-      ),
+        const SizedBox(height: 32),
+
+        // ⚠️ 설정·고객센터는 **계정과 상관없는 기능**이다. 예전엔 이 화면이 마이 탭을
+        //    통째로 덮어서 비로그인이면 다크모드도 못 바꾸고 문의도 못 했다.
+        //    특히 문의는 **로그인이 안 되는 사람**이 가장 하고 싶은 일이다.
+        AppCard(
+          padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 4),
+          child: Column(
+            children: [
+              _MenuRow(
+                item: (icon: AppIcon.settings, label: '설정', route: '/settings'),
+                onTap: () => context.go('/settings'),
+              ),
+              const Padding(
+                padding: EdgeInsets.symmetric(horizontal: 12),
+                child: Divider(),
+              ),
+              _MenuRow(
+                item: (icon: AppIcon.headset, label: '고객센터', route: '/support'),
+                onTap: () => context.go('/support'),
+              ),
+            ],
+          ),
+        ),
+      ],
     );
   }
 }

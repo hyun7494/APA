@@ -245,9 +245,12 @@ class _Body extends StatelessWidget {
           child: SecondaryButton(
             label: '게시판에 조황 올리기',
             icon: AppIcon.chat,
-            onPressed: () => ScaffoldMessenger.of(context).showSnackBar(
-              const SnackBar(content: Text('글쓰기는 로그인 연동 후 지원됩니다')),
-            ),
+            // 글쓰기 화면의 기본 분류가 `조황` 이라 그대로 열면 된다.
+            //
+            // 예전엔 "글쓰기는 로그인 연동 후 지원됩니다" 스낵바를 띄웠다. 로그인이
+            // 붙은 지 한참 됐고, **여기까지 온 사람은 방금 조과를 저장했으니 이미
+            // 로그인 상태다** — 조건이 사라진 채로 안내만 남아 죽은 버튼이었다.
+            onPressed: () => context.go('/board/new'),
           ),
         ),
       ],

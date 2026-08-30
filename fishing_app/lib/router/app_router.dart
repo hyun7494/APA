@@ -19,6 +19,7 @@ import '../screens/support_screen.dart';
 import '../screens/signup_screen.dart';
 import '../screens/species_detail_screen.dart';
 import '../theme/app_theme.dart';
+import '../widgets/app_buttons.dart';
 import '../widgets/bottom_nav_bar.dart';
 
 /// 하단 탭 5개를 브랜치로 두고 각 탭이 자기 네비게이션 스택을 유지한다.
@@ -32,6 +33,10 @@ import '../widgets/bottom_nav_bar.dart';
 /// 재사용될 때 깨진다 (위젯 테스트가 두 번째부터 전부 실패하던 원인).
 GoRouter createAppRouter() => GoRouter(
   initialLocation: '/home',
+  // 없는 주소로 들어왔을 때. 기본값은 영어 제목에 `GoException: no routes for
+  // location: ...` 을 그대로 띄운다 — 앱 안에서 유일하게 한국어가 아닌 화면이었고,
+  // 사용자가 읽고 할 수 있는 일이 하나도 없었다.
+  errorBuilder: (_, state) => _NotFound(location: _readable(state.uri)),
   routes: [
     // 셸 **밖**이다 — 로그인 화면에는 하단 탭이 뜨면 안 된다. 탭이 보이면 로그인을
     // 건너뛸 수 있는 것처럼 보이고, 실제로 눌렀을 때 어디로 가야 할지도 모호해진다.
@@ -185,6 +190,74 @@ class _Shell extends StatelessWidget {
           // 같은 탭을 다시 누르면 그 브랜치의 첫 화면으로 되돌린다.
           onSelect: (i) =>
               shell.goBranch(i, initialLocation: i == shell.currentIndex),
+        ),
+      ),
+    );
+  }
+}
+
+/// 퍼센트 인코딩을 푼다. 한글 경로가 `/%EC%97%86...` 로 나오면 어디로 가려다
+/// 실패했는지 알 수 없어서, 경로를 보여주는 의미가 사라진다.
+///
+/// 잘못된 인코딩이면 원본을 그대로 쓴다 — 안내 화면이 예외로 죽으면 안 된다.
+String _readable(Uri uri) {
+  final raw = uri.toString();
+  try {
+    return Uri.decodeFull(raw);
+  } on ArgumentError {
+    return raw;
+  }
+}
+
+/// 없는 주소. 딥링크가 낡았거나 웹에서 주소를 잘못 쳤을 때 온다.
+///
+/// **경로를 그대로 보여준다** — 어디로 가려다 실패했는지 알아야 링크를 고칠 수 있다.
+/// 다만 예외 메시지나 스택은 안 보여준다. 사용자가 할 수 있는 일이 없는 정보다.
+class _NotFound extends StatelessWidget {
+  const _NotFound({required this.location});
+
+  final String location;
+
+  @override
+  Widget build(BuildContext context) {
+    return AnnotatedRegion<SystemUiOverlayStyle>(
+      value: AppTheme.systemOverlay,
+      child: Scaffold(
+        backgroundColor: AppColors.bg,
+        body: SafeArea(
+          child: Center(
+            child: Padding(
+              padding: const EdgeInsets.all(AppSpacing.screen),
+              child: Column(
+                mainAxisSize: MainAxisSize.min,
+                children: [
+                  LineIcon(
+                    AppIcon.compass,
+                    size: 34,
+                    color: AppColors.faint,
+                    stroke: 1.4,
+                  ),
+                  const SizedBox(height: 18),
+                  Text(
+                    '없는 화면이에요',
+                    style: AppText.screenTitle,
+                    textAlign: TextAlign.center,
+                  ),
+                  const SizedBox(height: 10),
+                  Text(
+                    location,
+                    style: AppText.caption,
+                    textAlign: TextAlign.center,
+                  ),
+                  const SizedBox(height: 26),
+                  PrimaryButton(
+                    label: '홈으로',
+                    onPressed: () => context.go('/home'),
+                  ),
+                ],
+              ),
+            ),
+          ),
         ),
       ),
     );

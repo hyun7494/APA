@@ -3,6 +3,7 @@ import 'dart:typed_data';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
+import 'package:go_router/go_router.dart';
 import 'package:intl/date_symbol_data_local.dart';
 
 import 'package:fishing_app/main.dart';
@@ -506,6 +507,74 @@ void main() {
 
     expect(find.text('고친 뒤'), findsOneWidget);
     expect(find.text('고치기 전'), findsNothing, reason: '고쳤으면 옛 제목은 없어야 한다');
+  });
+
+  testWidgets('★ 비로그인이어도 설정·고객센터에는 들어갈 수 있다', (tester) async {
+    // 둘 다 계정과 상관없는 기능이다. 특히 문의는 **로그인이 안 되는 사람**이
+    // 가장 하고 싶은 일인데, 마이 탭이 로그인 화면으로 덮여 통로가 막혀 있었다.
+    await pumpApp(tester);
+
+    await tester.tap(find.text('마이'));
+    await tester.pumpAndSettle();
+    expect(find.text('로그인'), findsWidgets, reason: '비로그인 화면이 맞다');
+
+    await tester.tap(find.text('고객센터'));
+    await tester.pumpAndSettle();
+    expect(find.text('자주 묻는 질문'), findsOneWidget);
+
+    await tester.tap(find.text('마이'));
+    await tester.pumpAndSettle();
+    await tester.tap(find.text('설정'));
+    await tester.pumpAndSettle();
+    expect(find.text('화면 테마'), findsOneWidget);
+  });
+
+  testWidgets('★ 조과를 저장한 뒤 게시판 글쓰기로 바로 갈 수 있다', (tester) async {
+    // 예전엔 "글쓰기는 로그인 연동 후 지원됩니다" 스낵바를 띄우는 죽은 버튼이었다.
+    // 여기까지 온 사람은 방금 조과를 저장했으니 이미 로그인 상태다.
+    await pumpApp(
+      tester,
+      photoPicker: FakePhotoPicker(),
+      auth: FakeAuthRepository(loggedIn: true),
+    );
+
+    await tester.tap(find.text('도감'));
+    await tester.pumpAndSettle();
+    await tester.tap(find.widgetWithText(HeaderButton, '등록'));
+    await tester.pumpAndSettle();
+    // 새 기록은 사진이 있어야 저장된다 (`_ready`).
+    await pickPhoto(tester, PhotoSource.gallery);
+    await tester.tap(find.text('선택'));
+    await tester.pumpAndSettle();
+    await tester.tap(find.text('부시리'));
+    await tester.pumpAndSettle();
+    await tester.tap(find.text('기록 저장'));
+    await tester.pump();
+    await tester.pump(const Duration(milliseconds: 400));
+    await tester.pumpAndSettle();
+    expect(find.byType(CatchSuccessScreen), findsOneWidget);
+
+    await tester.tap(find.text('게시판에 조황 올리기'));
+    await tester.pumpAndSettle();
+
+    expect(find.text('글쓰기'), findsOneWidget);
+    expect(find.textContaining('로그인 연동 후'), findsNothing);
+  });
+
+  testWidgets('★ 없는 주소는 한국어 안내로 받는다', (tester) async {
+    await pumpApp(tester);
+
+    // 라우터는 FishingApp 이 들고 있다. 화면에서 갈 수 없는 주소라 여기서 직접 민다.
+    GoRouter.of(tester.element(find.text('홈').last)).go('/이런건없다');
+    await tester.pumpAndSettle();
+
+    expect(find.text('없는 화면이에요'), findsOneWidget);
+    expect(find.textContaining('GoException'), findsNothing);
+    expect(find.text('Page Not Found'), findsNothing);
+
+    await tester.tap(find.widgetWithText(PrimaryButton, '홈으로'));
+    await tester.pumpAndSettle();
+    expect(find.textContaining('오늘 출조'), findsOneWidget);
   });
 
   testWidgets('★ 홈에 최근 조황 글이 뜨고 누르면 상세로 간다', (tester) async {
