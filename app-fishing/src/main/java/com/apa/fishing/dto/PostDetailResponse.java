@@ -23,6 +23,11 @@ public record PostDetailResponse(
         /** 붙인 사진. 없으면 null 이고 프론트는 자리를 만들지 않는다. */
         String photoUrl,
         String regionName,
+        /**
+         * 고치기 화면이 지역 칩을 되살리는 데 쓴다. 이름만으로는 못 고른다 —
+         * 이름이 겹치거나 바뀌면 엉뚱한 권역이 선택된다.
+         */
+        Long regionGroupId,
         String boardKey,
         boolean likedByMe,
         /** 내가 쓴 글인가. 나중에 수정·삭제 버튼을 붙일 자리다. */
@@ -46,6 +51,7 @@ public record PostDetailResponse(
                 post.isHasImage(),
                 post.getPhotoUrl(),
                 regionName,
+                post.getRegion() == null ? null : post.getRegion().getId(),
                 regionName == null ? ALL_BOARD : regionName,
                 likedByMe,
                 viewerId != null && viewerId.equals(post.getUserId()));

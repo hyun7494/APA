@@ -248,7 +248,7 @@ class _RecentPostRow extends StatelessWidget {
                 ),
                 const SizedBox(height: 4),
                 Text(
-                  '${post.regionName ?? '전체'} · ${post.relativeTime}',
+                  [?post.regionName, post.relativeTime].join(' · '),
                   style: AppText.caption,
                   maxLines: 1,
                   overflow: TextOverflow.ellipsis,

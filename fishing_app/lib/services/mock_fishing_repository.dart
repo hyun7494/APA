@@ -208,6 +208,7 @@ class MockFishingRepository implements FishingRepository {
       commentCount: _comments[id]?.length ?? post.commentCount,
       likedByMe: _liked.contains(id),
       regionName: post.regionName,
+      regionGroupId: post.regionGroupId,
       mine: _mine.contains(id),
     );
   }
@@ -219,6 +220,7 @@ class MockFishingRepository implements FishingRepository {
     required String title,
     required String content,
     PickedPhoto? photo,
+    int? regionGroupId,
   }) async {
     await Future.delayed(_latency);
     final i = _posts.indexWhere((p) => p.id == id);
@@ -233,9 +235,20 @@ class MockFishingRepository implements FishingRepository {
       likeCount: old.likeCount,
       commentCount: old.commentCount,
       hasImage: photo != null || old.hasImage,
-      regionName: old.regionName,
+      regionName: _regionName(regionGroupId),
+      regionGroupId: regionGroupId,
     );
     return fetchPost(id);
+  }
+
+  /// 서버는 `regionGroupId` 만 받고 이름은 조인해서 돌려준다. 목도 같게 맞춘다 —
+  /// 안 그러면 방금 쓴 글만 지역 라벨이 비어 목록에서 튄다.
+  String? _regionName(int? regionGroupId) {
+    if (regionGroupId == null) return null;
+    for (final region in MockData.regions) {
+      if (region.id == regionGroupId) return region.name;
+    }
+    return null;
   }
 
   @override
@@ -309,6 +322,7 @@ class MockFishingRepository implements FishingRepository {
     required String title,
     required String content,
     PickedPhoto? photo,
+    int? regionGroupId,
   }) async {
     await Future.delayed(_latency);
     final post = Post(
@@ -321,6 +335,8 @@ class MockFishingRepository implements FishingRepository {
       likeCount: 0,
       commentCount: 0,
       hasImage: photo != null,
+      regionName: _regionName(regionGroupId),
+      regionGroupId: regionGroupId,
     );
     // 목록 맨 앞에 넣는다 — 서버도 최신순이라 방금 쓴 글이 위에 보여야 한다.
     _posts.insert(0, post);

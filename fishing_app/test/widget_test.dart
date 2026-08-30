@@ -426,6 +426,88 @@ void main() {
     expect(find.text('시간대별 조황 예상'), findsOneWidget);
   });
 
+  testWidgets('★ 글쓰기에서 지역을 골라 올리면 카드에 그 지역이 붙는다', (tester) async {
+    // 서버는 처음부터 regionGroupId 를 받았는데 화면에 고르는 칸이 없어서,
+    // 앱으로 쓴 글은 전부 지역이 비어 있었다.
+    await pumpApp(tester, auth: FakeAuthRepository(loggedIn: true));
+
+    await tester.tap(find.text('게시판'));
+    await tester.pumpAndSettle();
+    await tester.tap(find.widgetWithText(HeaderButton, '글쓰기'));
+    await tester.pumpAndSettle();
+
+    final region = MockData.regions.first;
+    expect(find.text('지역'), findsOneWidget);
+    await tester.tap(find.widgetWithText(SquareChip, region.name));
+    await tester.pump();
+
+    await tester.enterText(
+        find.widgetWithText(TextField, '무슨 이야기인가요?'), '지역 붙은 글');
+    await tester.pump();
+    await tester.enterText(find.byType(TextField).last, '본문');
+    await tester.pump();
+    await tester.tap(find.widgetWithText(HeaderButton, '등록'));
+    await tester.pumpAndSettle();
+
+    // 목록 카드의 지역 라벨이 고른 권역이어야 한다.
+    expect(find.textContaining('${region.name} · '), findsWidgets);
+  });
+
+  testWidgets('★ 지역을 안 고른 글에는 라벨을 안 붙인다 — "전체" 는 지명이 아니다', (tester) async {
+    await pumpApp(tester, auth: FakeAuthRepository(loggedIn: true));
+
+    await tester.tap(find.text('게시판'));
+    await tester.pumpAndSettle();
+    await tester.tap(find.widgetWithText(HeaderButton, '글쓰기'));
+    await tester.pumpAndSettle();
+    await tester.enterText(
+        find.widgetWithText(TextField, '무슨 이야기인가요?'), '지역 없는 글');
+    await tester.pump();
+    await tester.enterText(find.byType(TextField).last, '본문');
+    await tester.pump();
+    await tester.tap(find.widgetWithText(HeaderButton, '등록'));
+    await tester.pumpAndSettle();
+
+    expect(find.text('지역 없는 글'), findsOneWidget);
+    expect(find.textContaining('전체 ·'), findsNothing);
+  });
+
+  testWidgets('★ 글을 고치면 새 글이 생기지 않는다', (tester) async {
+    // 예전엔 고치기도 createPost 로 가서 `저장` 을 누르면 같은 글이 하나 더 생겼다.
+    await pumpApp(tester, auth: FakeAuthRepository(loggedIn: true));
+
+    await tester.tap(find.text('게시판'));
+    await tester.pumpAndSettle();
+    await tester.tap(find.widgetWithText(HeaderButton, '글쓰기'));
+    await tester.pumpAndSettle();
+    await tester.enterText(
+        find.widgetWithText(TextField, '무슨 이야기인가요?'), '고치기 전');
+    await tester.pump();
+    await tester.enterText(find.byType(TextField).last, '본문');
+    await tester.pump();
+    await tester.tap(find.widgetWithText(HeaderButton, '등록'));
+    await tester.pumpAndSettle();
+
+    await tester.tap(find.text('고치기 전'));
+    await tester.pumpAndSettle();
+    await tester.tap(find.text('수정'));
+    await tester.pumpAndSettle();
+
+    await tester.enterText(
+        find.widgetWithText(TextField, '무슨 이야기인가요?'), '고친 뒤');
+    await tester.pump();
+    await tester.tap(find.widgetWithText(HeaderButton, '저장'));
+    await tester.pumpAndSettle();
+
+    // 저장하면 게시판으로 돌아온다. 화면 제목과 탭 라벨이 둘 다 '게시판' 이라
+    // 탭 쪽(마지막)을 집는다.
+    await tester.tap(find.text('게시판').last);
+    await tester.pumpAndSettle();
+
+    expect(find.text('고친 뒤'), findsOneWidget);
+    expect(find.text('고치기 전'), findsNothing, reason: '고쳤으면 옛 제목은 없어야 한다');
+  });
+
   testWidgets('★ 홈에 최근 조황 글이 뜨고 누르면 상세로 간다', (tester) async {
     await pumpApp(tester);
 

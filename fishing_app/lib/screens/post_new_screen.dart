@@ -41,6 +41,11 @@ class _PostNewScreenState extends ConsumerState<PostNewScreen> {
   final _content = TextEditingController();
 
   PostCategory _category = PostCategory.catchReport;
+
+  /// 어느 권역 게시판에 올릴지. null 이면 전체다 — 지역과 상관없는 질문 글이 있으므로
+  /// 고르지 않는 것도 정상적인 선택이고, 그래서 기본값이 null 이다.
+  int? _regionGroupId;
+
   bool _saving = false;
 
   /// 고치기일 때 기존 글을 한 번만 채워 넣기 위한 표시.
@@ -88,6 +93,7 @@ class _PostNewScreenState extends ConsumerState<PostNewScreen> {
     _title.text = post.title;
     _content.text = post.content;
     _category = post.category;
+    _regionGroupId = post.regionGroupId;
     _existingPhotoUrl = post.photoUrl;
   }
 
@@ -176,6 +182,11 @@ class _PostNewScreenState extends ConsumerState<PostNewScreen> {
                 ),
                 const SizedBox(height: 22),
 
+                Reveal(child: Text('지역', style: AppText.overline)),
+                const SizedBox(height: 10),
+                Reveal(child: _regionField()),
+                const SizedBox(height: 22),
+
                 Reveal(index: 1, child: Text('제목', style: AppText.overline)),
                 const SizedBox(height: 8),
                 Reveal(
@@ -257,6 +268,44 @@ class _PostNewScreenState extends ConsumerState<PostNewScreen> {
 
   /// 사진 칸. 고른 것이 있으면 그것을, 없으면 (고치기라면) 원래 사진을 보여 준다.
   ///
+  /// 어느 권역 게시판에 올릴지. **선택이다** — `전체` 가 기본이고, 지역과 상관없는
+  /// 질문 글은 그대로 두면 된다.
+  ///
+  /// 목록 카드가 지역 배지를 다는데 이 칸이 없어서, 앱으로 쓴 글은 전부 지역이 비어
+  /// 있었다. 서버는 처음부터 `regionGroupId` 를 받고 있었다 (계약서 3-8).
+  ///
+  /// 권역 목록을 못 받아 오면 **칸을 통째로 감춘다.** 빈 칩 줄을 남기면 고를 게
+  /// 없는 건지 로딩에 실패한 건지 알 수 없다.
+  Widget _regionField() {
+    final regions = ref.watch(regionsProvider).valueOrNull;
+    if (regions == null || regions.isEmpty) {
+      return const SizedBox.shrink();
+    }
+
+    return ChipRow(
+      children: [
+        SquareChip(
+          label: '전체',
+          selected: _regionGroupId == null,
+          onTap: () {
+            if (_saving) return;
+            setState(() => _regionGroupId = null);
+          },
+        ),
+        for (final region in regions)
+          SquareChip(
+            label: region.name,
+            selected: _regionGroupId == region.id,
+            // 저장 중에 바꾸면 어느 게시판으로 올라갔는지 알 수 없다 (분류 칩과 같다).
+            onTap: () {
+              if (_saving) return;
+              setState(() => _regionGroupId = region.id);
+            },
+          ),
+      ],
+    );
+  }
+
   /// **선택이다.** 조과 등록과 달리 글은 사진 없이도 올릴 수 있다 — 질문 글에
   /// 사진을 강요할 이유가 없다.
   Widget _photoField() {
@@ -337,14 +386,32 @@ class _PostNewScreenState extends ConsumerState<PostNewScreen> {
     // ⚠️ try 는 **저장 호출만** 감싼다. 화면 전환까지 넣으면 이미 저장된 글을 두고
     //    "글을 올리지 못했어요"가 뜨고, 사용자는 실패한 줄 알고 다시 눌러 같은 글을
     //    두 번 올린다. 실제로 그렇게 됐었다.
+    // ⚠️ 고치기와 새 글이 **다른 호출**이다. 예전엔 둘 다 createPost 로 가서,
+    //    `글 수정 > 저장` 을 누르면 고쳐지는 게 아니라 **같은 글이 하나 더 생겼다**.
+    //    화면이 하나라고 저장까지 하나일 수는 없다.
+    //
+    // ⚠️ `photo` 도 반드시 넘긴다. 고른 사진을 미리보기까지 띄워 놓고 본문에 안 실어
+    //    보내면, 사용자는 붙인 줄 알고 올렸는데 사진 없는 글이 남는다.
+    final repository = ref.read(fishingRepositoryProvider);
     try {
-      await ref
-          .read(fishingRepositoryProvider)
-          .createPost(
-            category: _category,
-            title: _title.text.trim(),
-            content: _content.text.trim(),
-          );
+      if (widget.isEdit) {
+        await repository.updatePost(
+          id: widget.postId!,
+          category: _category,
+          title: _title.text.trim(),
+          content: _content.text.trim(),
+          photo: _photo,
+          regionGroupId: _regionGroupId,
+        );
+      } else {
+        await repository.createPost(
+          category: _category,
+          title: _title.text.trim(),
+          content: _content.text.trim(),
+          photo: _photo,
+          regionGroupId: _regionGroupId,
+        );
+      }
     } on PostSubmitException catch (e) {
       if (!mounted) return;
       setState(() => _saving = false);
@@ -353,7 +420,7 @@ class _PostNewScreenState extends ConsumerState<PostNewScreen> {
     } catch (e) {
       if (!mounted) return;
       setState(() => _saving = false);
-      _toast('글을 올리지 못했어요 ($e)');
+      _toast(widget.isEdit ? '글을 고치지 못했어요 ($e)' : '글을 올리지 못했어요 ($e)');
       return;
     }
 

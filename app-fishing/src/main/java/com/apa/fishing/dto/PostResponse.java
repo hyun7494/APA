@@ -18,6 +18,9 @@ public record PostResponse(
         /** 붙인 사진. 없으면 null 이고 프론트는 자리를 만들지 않는다. */
         String photoUrl,
         String regionName,
+        /** 상세({@link PostDetailResponse})와 같은 값이다. 두 응답이 어긋나면 앱이 목록에서
+         *  본 글과 상세에서 본 글의 지역을 다르게 안다. */
+        Long regionGroupId,
         String boardKey,
         boolean likedByMe
 ) {
@@ -25,7 +28,7 @@ public record PostResponse(
     /** 목록 카드에 들어가는 길이. 본문 전체를 목록에 실어 보낼 이유가 없다. */
     private static final int SUMMARY_LIMIT = 100;
 
-    /** 지역 없는 글의 boardKey. 프론트는 regionName 이 null 이면 "전체" 로 표시한다. */
+    /** 지역 없는 글의 boardKey. regionName 이 null 이면 프론트는 지역 라벨을 안 붙인다. */
     private static final String ALL_BOARD = "ALL";
 
     public static PostResponse from(FishingPost post) {
@@ -53,6 +56,7 @@ public record PostResponse(
                 post.isHasImage(),
                 post.getPhotoUrl(),
                 regionName,
+                post.getRegion() == null ? null : post.getRegion().getId(),
                 regionName == null ? ALL_BOARD : regionName,
                 likedByMe
         );

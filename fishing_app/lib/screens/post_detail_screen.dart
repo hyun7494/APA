@@ -177,7 +177,9 @@ class _PostDetailScreenState extends ConsumerState<PostDetailScreen> {
               ),
             ),
             const SizedBox(width: 8),
-            Text(post.regionName ?? '전체', style: AppText.caption),
+            // 지역 없는 글은 배지 자리를 비운다 — 목록 카드와 같은 규칙이다.
+            if (post.regionName != null)
+              Text(post.regionName!, style: AppText.caption),
           ],
         ),
         const SizedBox(height: 12),

@@ -17,6 +17,7 @@ class PostDetail {
     required this.likedByMe,
     this.photoUrl,
     this.regionName,
+    this.regionGroupId,
     this.mine = false,
   });
 
@@ -38,8 +39,12 @@ class PostDetail {
   /// 붙인 사진. **공개 경로**라 비로그인도 볼 수 있다.
   final String? photoUrl;
 
-  /// null 이면 지역 없는 글이고 화면에는 "전체" 로 뜬다.
+  /// null 이면 지역을 안 고르고 쓴 글이다. 카드에는 지역 라벨이 안 붙는다.
   final String? regionName;
+
+  /// 고치기 화면이 지역 칩을 되살리는 데 쓴다. 이름으로 되찾으면 이름이 바뀌었을 때
+  /// 조용히 다른 권역이 선택된다.
+  final int? regionGroupId;
 
   /// 내가 쓴 글인가. 수정·삭제를 붙일 때 쓸 자리다.
   final bool mine;
@@ -57,6 +62,7 @@ class PostDetail {
     likedByMe: json['likedByMe'] as bool? ?? false,
     photoUrl: json['photoUrl'] as String?,
     regionName: json['regionName'] as String?,
+    regionGroupId: (json['regionGroupId'] as num?)?.toInt(),
     mine: json['mine'] as bool? ?? false,
   );
 
@@ -75,6 +81,7 @@ class PostDetail {
         likedByMe: likedByMe,
         photoUrl: photoUrl,
         regionName: regionName,
+        regionGroupId: regionGroupId,
         mine: mine,
       );
 }

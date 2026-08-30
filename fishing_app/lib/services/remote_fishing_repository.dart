@@ -236,11 +236,12 @@ class RemoteFishingRepository implements FishingRepository {
     required String title,
     required String content,
     PickedPhoto? photo,
+    int? regionGroupId,
   }) async {
     try {
       final res = await _dio.put<Map<String, dynamic>>(
         '/fishing/board/$id',
-        data: _postForm(category, title, content, photo),
+        data: _postForm(category, title, content, photo, regionGroupId),
       );
       return PostDetail.fromJson(res.data!);
     } on DioException catch (e) {
@@ -328,10 +329,14 @@ class RemoteFishingRepository implements FishingRepository {
     String title,
     String content,
     PickedPhoto? photo,
+    int? regionGroupId,
   ) => FormData.fromMap({
     'category': category.code,
     'title': title,
     'content': content,
+    // 안 고르면 아예 안 보낸다. 빈 문자열을 보내면 서버가 Long 파싱에서 400 을 낸다
+    // (`keepPhotoUrls=` 로 같은 데를 한 번 밟았다).
+    'regionGroupId': ?regionGroupId,
     if (photo != null)
       'photo': MultipartFile.fromBytes(
         photo.bytes,
@@ -347,13 +352,14 @@ class RemoteFishingRepository implements FishingRepository {
     required String title,
     required String content,
     PickedPhoto? photo,
+    int? regionGroupId,
   }) async {
     // 작성자(user_id·닉네임)는 보내지 않는다. 서버가 토큰에서 가져간다 —
     // 본문으로 받으면 아무나 남의 이름으로 쓸 수 있다.
     try {
       final res = await _dio.post<Map<String, dynamic>>(
         '/fishing/board',
-        data: _postForm(category, title, content, photo),
+        data: _postForm(category, title, content, photo, regionGroupId),
       );
       return Post.fromJson(res.data!);
     } on DioException catch (e) {

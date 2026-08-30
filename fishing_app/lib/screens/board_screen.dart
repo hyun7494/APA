@@ -163,7 +163,9 @@ class _PostCard extends StatelessWidget {
               const SizedBox(width: 9),
               Expanded(
                 child: Text(
-                  '${post.regionName ?? '전체'} · ${post.relativeTime}',
+                  // 지역을 안 고르고 쓴 글은 라벨을 뺀다. '전체' 는 지명이 아니라
+                  // 옆에 붙은 '남해'·'서해' 와 같은 자리에 오면 읽히지 않는다.
+                  [?post.regionName, post.relativeTime].join(' · '),
                   style: AppText.caption,
                   overflow: TextOverflow.ellipsis,
                 ),

@@ -36,6 +36,7 @@ class Post {
     required this.hasImage,
     this.photoUrl,
     this.regionName,
+    this.regionGroupId,
     this.boardKey = 'ALL',
     this.likedByMe = false,
   });
@@ -61,6 +62,9 @@ class Post {
 
   /// "부산 기장" — 카드 메타에 태그와 함께 노출
   final String? regionName;
+
+  /// 어느 권역 게시판인가. null 이면 전체다.
+  final int? regionGroupId;
 
   /// board-lib board_key — 지역그룹명 또는 'ALL'
   final String boardKey;
@@ -94,6 +98,7 @@ class Post {
     hasImage: json['hasImage'] as bool? ?? false,
     photoUrl: json['photoUrl'] as String?,
     regionName: json['regionName'] as String?,
+    regionGroupId: (json['regionGroupId'] as num?)?.toInt(),
     boardKey: json['boardKey'] as String? ?? 'ALL',
     likedByMe: json['likedByMe'] as bool? ?? false,
   );
@@ -110,6 +115,7 @@ class Post {
     'hasImage': hasImage,
     'photoUrl': photoUrl,
     'regionName': regionName,
+    'regionGroupId': regionGroupId,
     'boardKey': boardKey,
     'likedByMe': likedByMe,
   };
@@ -125,6 +131,7 @@ class Post {
     commentCount: commentCount,
     hasImage: hasImage,
     regionName: regionName,
+    regionGroupId: regionGroupId,
     boardKey: boardKey,
     likedByMe: likedByMe ?? this.likedByMe,
   );

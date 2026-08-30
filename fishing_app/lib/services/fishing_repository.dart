@@ -83,6 +83,7 @@ abstract interface class FishingRepository {
     required String title,
     required String content,
     PickedPhoto? photo,
+    int? regionGroupId,
   });
 
   /// 내 글 지우기. 댓글·좋아요는 서버가 함께 지운다.
@@ -124,6 +125,8 @@ abstract interface class FishingRepository {
     required String title,
     required String content,
     PickedPhoto? photo,
+    /// 지역 게시판. null 이면 전체 게시판 글이다.
+    int? regionGroupId,
   });
 
   /// GET /fishing/me/profile — 비로그인이면 null
