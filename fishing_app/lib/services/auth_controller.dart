@@ -115,6 +115,7 @@ class AuthController extends StateNotifier<AuthState> {
     required String email,
     required String password,
     required String nickname,
+    required List<ConsentAnswer> consents,
   }) async {
     if (state.isBusy) return false;
     state = state.copyWith(
@@ -127,6 +128,7 @@ class AuthController extends StateNotifier<AuthState> {
       email: email,
       password: password,
       nickname: nickname,
+      consents: consents,
     ));
   }
 

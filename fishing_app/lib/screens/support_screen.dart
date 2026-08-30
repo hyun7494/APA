@@ -9,6 +9,7 @@ import '../widgets/app_card.dart';
 import '../widgets/async_view.dart';
 import '../widgets/press_scale.dart';
 import '../widgets/reveal.dart';
+import '../data/legal_documents.dart';
 
 /// 고객센터 — 자주 묻는 질문, 문의하기, 앱 정보.
 ///
@@ -134,6 +135,32 @@ class SupportScreen extends StatelessWidget {
 
                 Reveal(
                   index: 6,
+                  child: SectionLabel(label: '약관', padded: false),
+                ),
+                const SizedBox(height: 12),
+                Reveal(
+                  index: 6,
+                  child: AppCard(
+                    padding:
+                        const EdgeInsets.symmetric(horizontal: 6, vertical: 4),
+                    child: Column(
+                      children: [
+                        for (var i = 0; i < readableDocuments.length; i++) ...[
+                          if (i > 0)
+                            const Padding(
+                              padding: EdgeInsets.symmetric(horizontal: 12),
+                              child: Divider(),
+                            ),
+                          _LegalRow(doc: readableDocuments[i]),
+                        ],
+                      ],
+                    ),
+                  ),
+                ),
+                const SizedBox(height: AppSpacing.section),
+
+                Reveal(
+                  index: 7,
                   child: SectionLabel(label: '앱 정보', padded: false),
                 ),
                 const SizedBox(height: 12),
@@ -357,6 +384,38 @@ class _AppInfoCard extends StatelessWidget {
             ],
           );
         },
+      ),
+    );
+  }
+}
+
+
+/// 약관 한 줄. 가입 화면과 **같은 문서**를 연다 (`/legal/:type`).
+class _LegalRow extends StatelessWidget {
+  const _LegalRow({required this.doc});
+
+  final LegalDocument doc;
+
+  @override
+  Widget build(BuildContext context) {
+    return GestureDetector(
+      behavior: HitTestBehavior.opaque,
+      onTap: () => context.push('/legal/${doc.consentType}'),
+      child: Padding(
+        padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 15),
+        child: Row(
+          children: [
+            Expanded(child: Text(doc.title, style: AppText.sectionTitle)),
+            Text('${doc.version}판', style: AppText.caption),
+            const SizedBox(width: 8),
+            LineIcon(
+              AppIcon.chevronRight,
+              size: 14,
+              color: AppColors.faint,
+              stroke: 1.5,
+            ),
+          ],
+        ),
       ),
     );
   }

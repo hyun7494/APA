@@ -6,6 +6,8 @@ import 'package:flutter_test/flutter_test.dart';
 import 'package:go_router/go_router.dart';
 import 'package:intl/date_symbol_data_local.dart';
 
+import 'package:fishing_app/data/legal_documents.dart';
+import 'package:fishing_app/screens/signup_screen.dart';
 import 'package:fishing_app/main.dart';
 import 'package:fishing_app/data/mock_data.dart';
 import 'package:fishing_app/models/models.dart';
@@ -74,6 +76,7 @@ class FakeAuthRepository implements AuthRepository {
   String? lastEmail;
   String? lastPassword;
   String? lastNickname;
+  List<ConsentAnswer>? lastConsents;
   bool linkedSocial = false;
 
   @override
@@ -95,10 +98,12 @@ class FakeAuthRepository implements AuthRepository {
     required String email,
     required String password,
     required String nickname,
+    required List<ConsentAnswer> consents,
   }) async {
     lastEmail = email;
     lastPassword = password;
     lastNickname = nickname;
+    lastConsents = consents;
     _loggedIn = true;
     return AuthUser(id: 8, nickname: nickname);
   }
@@ -146,6 +151,7 @@ class FailingAuthRepository implements AuthRepository {
     required String email,
     required String password,
     required String nickname,
+    required List<ConsentAnswer> consents,
   }) async => throw const AuthException('이미 가입된 이메일입니다');
 
   @override
@@ -956,13 +962,106 @@ void main() {
       find.widgetWithText(TextField, '도감과 게시판에 표시돼요'),
       '테스트조사',
     );
+    // 필수 셋을 체크해야 버튼이 살아난다.
+    await tester.tap(find.text('전체 동의'));
+    await tester.pumpAndSettle();
     await tester.tap(find.widgetWithText(PrimaryButton, '가입하고 시작하기'));
     await tester.pumpAndSettle();
 
     expect(auth.lastEmail, 'hong@example.com');
     expect(auth.lastNickname, '테스트조사');
+    // 네 항목이 판과 함께 그대로 올라간다.
+    expect(auth.lastConsents, hasLength(signUpConsents.length));
+    expect(
+      auth.lastConsents!.every((c) => c.agreed && c.version == legalVersion),
+      isTrue,
+    );
     // 가입 응답에 토큰이 함께 오므로 다시 로그인시키지 않는다.
     expect(find.text('기록 추가'), findsOneWidget);
+  });
+
+  testWidgets('★ 필수 동의 전에는 가입 버튼이 안 눌린다', (tester) async {
+    // "가입하면 동의하는 것으로 봅니다" 라는 회색 한 줄이 전부였다 — 읽을 문서도
+    // 없었고 개인정보보호법이 요구하는 명시적 동의도 아니었다.
+    final auth = FakeAuthRepository();
+    await pumpApp(tester, auth: auth);
+
+    await goToLogin(tester);
+    await tester.tap(find.text('회원가입'));
+    await tester.pumpAndSettle();
+
+    await tester.enterText(
+      find.widgetWithText(TextField, 'name@example.com'),
+      'hong@example.com',
+    );
+    await tester.enterText(find.widgetWithText(TextField, '8자 이상'), 'hyun1234');
+    await tester.enterText(find.widgetWithText(TextField, '비밀번호 확인'), 'hyun1234');
+    await tester.enterText(
+      find.widgetWithText(TextField, '도감과 게시판에 표시돼요'),
+      '테스트조사',
+    );
+
+    await tester.tap(find.widgetWithText(PrimaryButton, '가입하고 시작하기'));
+    await tester.pumpAndSettle();
+    expect(auth.lastEmail, isNull, reason: '동의 없이 서버로 가면 안 된다');
+
+    // 선택 항목만 체크해도 여전히 막혀야 한다.
+    await tester.tap(find.text('(선택) ${marketingConsent.title}'));
+    await tester.pumpAndSettle();
+    await tester.tap(find.widgetWithText(PrimaryButton, '가입하고 시작하기'));
+    await tester.pumpAndSettle();
+    expect(auth.lastEmail, isNull, reason: '선택 동의는 필수를 대신하지 못한다');
+  });
+
+  testWidgets('★ 선택 항목은 거부해도 가입된다 (거부한 사실도 함께 보낸다)', (tester) async {
+    // 선택 동의를 가입 조건으로 걸면 그건 동의가 아니라 강요다.
+    final auth = FakeAuthRepository();
+    await pumpApp(tester, auth: auth);
+
+    await goToLogin(tester);
+    await tester.tap(find.text('회원가입'));
+    await tester.pumpAndSettle();
+
+    await tester.enterText(
+      find.widgetWithText(TextField, 'name@example.com'),
+      'hong@example.com',
+    );
+    await tester.enterText(find.widgetWithText(TextField, '8자 이상'), 'hyun1234');
+    await tester.enterText(find.widgetWithText(TextField, '비밀번호 확인'), 'hyun1234');
+    await tester.enterText(
+      find.widgetWithText(TextField, '도감과 게시판에 표시돼요'),
+      '테스트조사',
+    );
+
+    // 필수 셋만 체크한다.
+    // ⚠️ 제목만으로 찾으면 위 스크롤 상자의 본문 제목까지 걸린다. 체크박스 줄에는
+    //    `(필수)`·`(선택)` 이 붙으므로 그것까지 넣어 집는다.
+    for (final doc in signUpConsents.where((d) => d.required)) {
+      await tester.tap(find.text('(필수) ${doc.title}'));
+      await tester.pumpAndSettle();
+    }
+    await tester.tap(find.widgetWithText(PrimaryButton, '가입하고 시작하기'));
+    await tester.pumpAndSettle();
+
+    expect(auth.lastEmail, 'hong@example.com');
+    final marketing =
+        auth.lastConsents!.firstWhere((c) => c.type == 'MARKETING');
+    expect(marketing.agreed, isFalse,
+        reason: '"묻지 않았다" 와 "물었고 거절했다" 는 다른 사실이다');
+  });
+
+  testWidgets('★ 가입 화면에서 약관 전문을 열어 읽을 수 있다', (tester) async {
+    await pumpApp(tester);
+
+    await goToLogin(tester);
+    await tester.tap(find.text('회원가입'));
+    await tester.pumpAndSettle();
+
+    await tester.tap(find.byType(LegalChevron).first);
+    await tester.pumpAndSettle();
+
+    expect(find.text(termsOfService.title), findsWidgets);
+    expect(find.textContaining('제1조 (목적)'), findsOneWidget);
   });
 
   testWidgets('★ 비밀번호 확인이 다르면 서버까지 가지 않는다', (tester) async {
@@ -983,6 +1082,9 @@ void main() {
       find.widgetWithText(TextField, '도감과 게시판에 표시돼요'),
       '테스트조사',
     );
+    // 동의는 해 둔다 — 여기서 보려는 건 비밀번호 검사지 동의 검사가 아니다.
+    await tester.tap(find.text('전체 동의'));
+    await tester.pumpAndSettle();
     await tester.tap(find.widgetWithText(PrimaryButton, '가입하고 시작하기'));
     await tester.pumpAndSettle();
 

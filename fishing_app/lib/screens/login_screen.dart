@@ -119,12 +119,15 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
                     const Reveal(index: 2, child: AuthDivider()),
                     const SizedBox(height: 16),
                     ..._socialButtons(auth),
-                    const SizedBox(height: 18),
-                    Text(
-                      '로그인하면 서비스 이용약관과 개인정보 처리방침에 동의하는 것으로 봅니다.',
-                      style: AppText.caption,
-                      textAlign: TextAlign.center,
-                    ),
+                    // ⚠️ "로그인하면 동의하는 것으로 봅니다" 를 걷어냈다. 동의는 이제
+                    //    가입 화면에서 **명시적으로** 받고 기록까지 남는다
+                    //    (`auth.user_consents`). 이미 동의한 사람에게 로그인할 때마다
+                    //    다시 알릴 이유가 없고, 무엇보다 그 문장은 사실이 아니었다 —
+                    //    읽을 문서가 어디에도 없었다.
+                    //
+                    // ⚠️ **소셜 로그인을 실제로 붙일 때 동의를 함께 받아야 한다.**
+                    //    소셜은 첫 로그인이 곧 가입이라 이 화면이 가입 화면이 된다.
+                    //    지금은 버튼이 아무 일도 하지 않아 뚫릴 구멍이 없다.
                   ],
                 ),
               ),

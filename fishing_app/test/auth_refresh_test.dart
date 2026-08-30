@@ -52,6 +52,7 @@ class _FakeAuth implements AuthRepository {
     required String email,
     required String password,
     required String nickname,
+    required List<ConsentAnswer> consents,
   }) async {
     loggedIn = true;
     return AuthUser(id: 8, nickname: nickname);

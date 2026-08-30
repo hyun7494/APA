@@ -7,6 +7,7 @@ import '../screens/catch_new_screen.dart';
 import '../screens/catch_success_screen.dart';
 import '../screens/collection_screen.dart';
 import '../screens/home_screen.dart';
+import '../screens/legal_screen.dart';
 import '../screens/login_screen.dart';
 import '../screens/post_detail_screen.dart';
 import '../screens/post_new_screen.dart';
@@ -54,6 +55,12 @@ GoRouter createAppRouter() => GoRouter(
       },
     ),
     // 로그인 화면 위에 쌓인다 (`push`) — 가입을 그만두면 로그인으로 되돌아가야 한다.
+    // 셸 밖이다 — 가입 화면(하단 탭이 없는 곳)에서 열리고, 거기서 되돌아와야 한다.
+    GoRoute(
+      path: '/legal/:type',
+      builder: (_, state) =>
+          LegalScreen(consentType: state.pathParameters['type'] ?? ''),
+    ),
     GoRoute(
       path: '/signup',
       builder: (_, state) {

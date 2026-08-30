@@ -52,6 +52,7 @@ public class AuthService {
     private final JwtTokenProvider jwtTokenProvider;
     private final AuthProperties authProperties;
     private final PasswordEncoder passwordEncoder;
+    private final ConsentRecorder consentRecorder;
 
     /**
      * 없는 계정에 대고 대조할 가짜 해시.
@@ -69,7 +70,8 @@ public class AuthService {
                        SocialVerifiers socialVerifiers,
                        JwtTokenProvider jwtTokenProvider,
                        AuthProperties authProperties,
-                       PasswordEncoder passwordEncoder) {
+                       PasswordEncoder passwordEncoder,
+                       ConsentRecorder consentRecorder) {
         this.userRepository = userRepository;
         this.socialAccountRepository = socialAccountRepository;
         this.userAppLinkRepository = userAppLinkRepository;
@@ -78,6 +80,7 @@ public class AuthService {
         this.jwtTokenProvider = jwtTokenProvider;
         this.authProperties = authProperties;
         this.passwordEncoder = passwordEncoder;
+        this.consentRecorder = consentRecorder;
         this.absentUserHash = passwordEncoder.encode(UUID.randomUUID().toString());
     }
 
@@ -107,6 +110,10 @@ public class AuthService {
         } catch (DataIntegrityViolationException e) {
             throw new ConflictException("이미 가입된 이메일입니다");
         }
+
+        // ⚠️ 동의는 **계정을 만든 뒤, 같은 트랜잭션 안에서** 남긴다. 먼저 검사하려 해도
+        //    user_id 가 없어 행을 못 만들고, 트랜잭션 밖으로 빼면 동의 없는 계정이 남는다.
+        consentRecorder.recordForSignUp(user.getId(), request.consents());
 
         linkApp(user.getId(), appId);
         return issueTokens(user, appId);

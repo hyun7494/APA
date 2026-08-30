@@ -6,6 +6,28 @@ import 'social_sign_in.dart';
 
 /// 로그인한 사용자. 서버 `TokenResponse.user` 와 같은 모양이다.
 @immutable
+/// 동의 한 건. 서버 `ConsentRequest` 와 모양이 같다.
+///
+/// ⚠️ [version] 은 **사용자가 실제로 본 문서의 판**이다. 앱이 화면에 띄운 그 값을
+/// 그대로 보낸다 — 서버가 지어내면 "그때 뭐에 동의한 거냐" 에 답할 수 없다.
+class ConsentAnswer {
+  const ConsentAnswer({
+    required this.type,
+    required this.version,
+    required this.agreed,
+  });
+
+  final String type;
+  final String version;
+  final bool agreed;
+
+  Map<String, dynamic> toJson() => {
+    'type': type,
+    'version': version,
+    'agreed': agreed,
+  };
+}
+
 class AuthUser {
   const AuthUser({required this.id, required this.nickname, this.profileUrl});
 
@@ -68,6 +90,9 @@ abstract interface class AuthRepository {
     required String email,
     required String password,
     required String nickname,
+    /// 약관 동의. 서버가 **필수 항목이 빠지면 400** 이다 — 화면에서 막는 것과 별개로
+    /// 서버가 마지막 방어선이라, 여기서 안 보내면 가입이 안 된다.
+    required List<ConsentAnswer> consents,
   });
 
   Future<AuthUser> signInWithEmail({
@@ -133,11 +158,13 @@ class RemoteAuthRepository implements AuthRepository {
     required String email,
     required String password,
     required String nickname,
+    required List<ConsentAnswer> consents,
   }) => _exchange('/auth/signup', {
     'email': email,
     'password': password,
     'nickname': nickname,
     'appId': appId,
+    'consents': [for (final c in consents) c.toJson()],
   });
 
   @override

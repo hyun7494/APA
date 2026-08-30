@@ -2,7 +2,9 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 
+import '../data/legal_documents.dart';
 import '../services/auth_controller.dart';
+import '../services/auth_repository.dart';
 import '../theme/app_theme.dart';
 import '../widgets/app_buttons.dart';
 import '../widgets/auth_field.dart';
@@ -33,6 +35,23 @@ class _SignUpScreenState extends ConsumerState<SignUpScreen> {
 
   /// 서버에 가기 전에 우리가 아는 오류. 서버가 준 문구와 같은 자리에 그린다.
   String? _localError;
+
+  /// 항목별 체크 상태. 코드(`TERMS_OF_SERVICE` 등)를 키로 쓴다.
+  final _agreed = <String, bool>{
+    for (final doc in signUpConsents) doc.consentType: false,
+  };
+
+  bool get _requiredAgreed => signUpConsents
+      .where((doc) => doc.required)
+      .every((doc) => _agreed[doc.consentType] == true);
+
+  bool get _allAgreed => _agreed.values.every((v) => v);
+
+  void _setAll(bool value) => setState(() {
+    for (final key in _agreed.keys) {
+      _agreed[key] = value;
+    }
+  });
 
   /// 서버 규칙과 같은 값이다 (`PasswordPolicy.MIN_LENGTH`).
   static const _minPasswordLength = 8;
@@ -161,7 +180,21 @@ class _SignUpScreenState extends ConsumerState<SignUpScreen> {
                   onSubmitted: _submit,
                 ),
               ),
-              const SizedBox(height: 28),
+              const SizedBox(height: 26),
+
+              // ★ 동의는 **읽을 수 있어야** 동의다. 예전엔 "동의하는 것으로 봅니다" 라는
+              //   회색 한 줄이 전부였는데, 읽을 문서가 어디에도 없었고 개인정보보호법이
+              //   요구하는 명시적 동의도 아니었다.
+              _ConsentSection(
+                agreed: _agreed,
+                allAgreed: _allAgreed,
+                enabled: !auth.isBusy,
+                onToggleAll: _setAll,
+                onToggle: (type, value) => setState(() => _agreed[type] = value),
+                onOpen: (doc) => context.push('/legal/${doc.consentType}'),
+              ),
+              const SizedBox(height: 24),
+
               // 방금 누른 버튼 바로 위. "이미 가입된 이메일입니다" 를 스낵바로 4초 띄우면
               // 그 뒤로 무엇을 해야 할지(로그인하러 갈지) 정할 시간이 없다.
               AuthErrorBox(message: _localError ?? auth.error?.message),
@@ -186,15 +219,10 @@ class _SignUpScreenState extends ConsumerState<SignUpScreen> {
               else
                 PrimaryButton(
                   label: '가입하고 시작하기',
-                  onPressed: auth.isBusy ? null : _submit,
+                  // 필수 동의 전에는 누를 수 없다. 눌러 놓고 거절하는 것보다
+                  // 못 누르는 편이 무엇이 남았는지 분명하다.
+                  onPressed: auth.isBusy || !_requiredAgreed ? null : _submit,
                 ),
-
-              const SizedBox(height: 16),
-              Text(
-                '가입하면 서비스 이용약관과 개인정보 처리방침에 동의하는 것으로 봅니다.',
-                style: AppText.caption,
-                textAlign: TextAlign.center,
-              ),
             ],
           ),
         ),
@@ -220,10 +248,22 @@ class _SignUpScreenState extends ConsumerState<SignUpScreen> {
     }
     if (nickname.isEmpty) return _fail('닉네임을 입력해 주세요');
 
+    if (!_requiredAgreed) return _fail('필수 항목에 동의해 주세요');
+
     final ok = await ref.read(authControllerProvider.notifier).signUp(
       email: email,
       password: password,
       nickname: nickname,
+      // 사용자가 **실제로 본 판**을 그대로 보낸다. 거부한 선택 항목도 보낸다 —
+      // "묻지 않았다" 와 "물었고 거절했다" 는 다른 사실이다.
+      consents: [
+        for (final doc in signUpConsents)
+          ConsentAnswer(
+            type: doc.consentType,
+            version: doc.version,
+            agreed: _agreed[doc.consentType] ?? false,
+          ),
+      ],
     );
     if (!ok || !mounted) return;
 
@@ -232,4 +272,209 @@ class _SignUpScreenState extends ConsumerState<SignUpScreen> {
   }
 
   void _fail(String message) => setState(() => _localError = message);
+}
+
+
+/// 약관 동의 묶음 — 스크롤 되는 본문 한 칸 + 전체 동의 + 항목별 체크.
+///
+/// **본문을 먼저 보여 준다.** 체크박스만 늘어놓고 문서는 다른 화면에 숨겨 두면,
+/// 읽지 않고 누르는 것이 기본 동작이 된다. 여기 뜬 상자 안에서 그대로 읽을 수 있고,
+/// 항목의 `>` 를 누르면 전문을 큰 화면으로 볼 수 있다.
+class _ConsentSection extends StatelessWidget {
+  const _ConsentSection({
+    required this.agreed,
+    required this.allAgreed,
+    required this.enabled,
+    required this.onToggleAll,
+    required this.onToggle,
+    required this.onOpen,
+  });
+
+  final Map<String, bool> agreed;
+  final bool allAgreed;
+  final bool enabled;
+  final void Function(bool value) onToggleAll;
+  final void Function(String type, bool value) onToggle;
+  final void Function(LegalDocument doc) onOpen;
+
+  @override
+  Widget build(BuildContext context) {
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.stretch,
+      children: [
+        // 스크롤 되는 본문 칸. 높이를 고정해야 "스크롤 해서 읽는 것" 이 된다 —
+        // 늘어나게 두면 가입 폼이 문서 길이만큼 길어져 아무도 안 읽는다.
+        Container(
+          height: 150,
+          padding: const EdgeInsets.fromLTRB(14, 12, 8, 12),
+          decoration: BoxDecoration(
+            color: AppColors.surface,
+            borderRadius: BorderRadius.circular(AppRadius.cardTight),
+            border: Border.all(color: AppColors.line),
+          ),
+          child: Scrollbar(
+            child: SingleChildScrollView(
+              padding: const EdgeInsets.only(right: 10),
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  for (final doc in readableDocuments) ...[
+                    Text(doc.title, style: AppText.cardLabel),
+                    const SizedBox(height: 6),
+                    Text(
+                      doc.body.trim(),
+                      style: AppText.caption.copyWith(height: 1.6),
+                    ),
+                    const SizedBox(height: 18),
+                  ],
+                ],
+              ),
+            ),
+          ),
+        ),
+        const SizedBox(height: 14),
+
+        _ConsentRow(
+          label: '전체 동의',
+          checked: allAgreed,
+          enabled: enabled,
+          emphasized: true,
+          onChanged: onToggleAll,
+        ),
+        const Padding(
+          padding: EdgeInsets.symmetric(vertical: 4),
+          child: Divider(),
+        ),
+
+        for (final doc in signUpConsents)
+          _ConsentRow(
+            label: '${doc.required ? '(필수)' : '(선택)'} ${doc.title}',
+            note: doc.summary,
+            checked: agreed[doc.consentType] ?? false,
+            enabled: enabled,
+            onChanged: (value) => onToggle(doc.consentType, value),
+            onOpen: doc.hasBody ? () => onOpen(doc) : null,
+          ),
+      ],
+    );
+  }
+}
+
+class _ConsentRow extends StatelessWidget {
+  const _ConsentRow({
+    required this.label,
+    required this.checked,
+    required this.enabled,
+    required this.onChanged,
+    this.note,
+    this.onOpen,
+    this.emphasized = false,
+  });
+
+  final String label;
+  final String? note;
+  final bool checked;
+  final bool enabled;
+  final void Function(bool value) onChanged;
+  final VoidCallback? onOpen;
+  final bool emphasized;
+
+  @override
+  Widget build(BuildContext context) {
+    return Padding(
+      padding: const EdgeInsets.symmetric(vertical: 3),
+      child: Row(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          // 체크박스만이 아니라 **라벨까지 눌러도 켜진다.** 작은 네모만 겨냥하게
+          // 두면 손가락으로는 잘 안 맞는다.
+          Expanded(
+            child: GestureDetector(
+              behavior: HitTestBehavior.opaque,
+              onTap: enabled ? () => onChanged(!checked) : null,
+              child: Row(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  // 아이콘 세트에 체크박스가 없다. 새 아이콘을 넣기보다 네모를
+                  // 그리고 안에 `check` 를 넣는다 — 표준적인 모양이고 팔레트만 탄다.
+                  Padding(
+                    padding: const EdgeInsets.only(top: 1),
+                    child: Container(
+                      width: 19,
+                      height: 19,
+                      decoration: BoxDecoration(
+                        color: checked ? AppColors.accent : Colors.transparent,
+                        borderRadius: BorderRadius.circular(6),
+                        border: Border.all(
+                          color: checked ? AppColors.accent : AppColors.line,
+                          width: 1.4,
+                        ),
+                      ),
+                      child: checked
+                          ? Center(
+                              child: LineIcon(
+                                AppIcon.check,
+                                size: 12,
+                                color: AppColors.onAccent,
+                                stroke: 2,
+                              ),
+                            )
+                          : null,
+                    ),
+                  ),
+                  const SizedBox(width: 10),
+                  Expanded(
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        Text(
+                          label,
+                          style: emphasized
+                              ? AppText.sectionTitle
+                              : AppText.rowLabel,
+                        ),
+                        if (note != null) ...[
+                          const SizedBox(height: 2),
+                          Text(note!, style: AppText.caption),
+                        ],
+                      ],
+                    ),
+                  ),
+                ],
+              ),
+            ),
+          ),
+          if (onOpen != null) LegalChevron(onTap: onOpen!),
+        ],
+      ),
+    );
+  }
+}
+
+
+/// 약관 전문을 여는 `>`.
+///
+/// 따로 이름을 준 이유는 **테스트가 겨냥할 것이 필요해서**다. 화면에 `>` 가 여럿이라
+/// 아이콘만으로는 어느 것인지 못 고른다.
+class LegalChevron extends StatelessWidget {
+  const LegalChevron({super.key, required this.onTap});
+
+  final VoidCallback onTap;
+
+  @override
+  Widget build(BuildContext context) {
+    return GestureDetector(
+      behavior: HitTestBehavior.opaque,
+      onTap: onTap,
+      child: Padding(
+        padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 4),
+        child: LineIcon(
+          AppIcon.chevronRight,
+          size: 14,
+          color: AppColors.faint,
+          stroke: 1.5,
+        ),
+      ),
+    );
+  }
 }
