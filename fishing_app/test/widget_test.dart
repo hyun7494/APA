@@ -762,9 +762,12 @@ void main() {
 
     expect(find.text('어류 도감'), findsOneWidget);
     expect(find.byType(SpeciesTile), findsWidgets);
-    // 등록된 어종은 이름이 그대로, 미등록은 ??? 로 가려진다
+    // ★ 미등록 칸도 **이름을 보여준다** (기획서 2-3). 뭘 잡아야 할지 알아야
+    //   다음 출조 동기가 생긴다. 한동안 "미기록" 으로 가려서 36칸이 다 똑같았다.
     expect(find.text('감성돔'), findsOneWidget);
-    expect(find.text('미기록'), findsWidgets);
+    expect(find.text('미기록'), findsNothing);
+    // 시드에 기록이 없는 종. 실루엣 칸이지만 이름은 읽힌다.
+    expect(find.text('부시리'), findsOneWidget);
   });
 
   testWidgets('도감 필터로 미등록만 추릴 수 있다', (tester) async {
@@ -792,7 +795,7 @@ void main() {
     expect(find.text('포획'), findsOneWidget);
     // 시드의 감성돔 최고 기록 42.5cm, 4회
     expect(find.textContaining('42.5'), findsWidgets);
-    expect(find.text('MY RECORDS'), findsOneWidget);
+    expect(find.text('내 기록'), findsOneWidget);
   });
 
   testWidgets('★ 비로그인으로 등록을 누르면 로그인 화면으로 보낸다', (tester) async {
@@ -999,10 +1002,10 @@ void main() {
     await tester.pumpAndSettle();
 
     // ① 사진 — 시트에서 갤러리를 고르면 대역 선택기가 한 장 내준다
-    expect(find.text('PHOTOS · 0 / 5'), findsOneWidget);
+    expect(find.text('사진 · 0 / 5'), findsOneWidget);
     await pickPhoto(tester, PhotoSource.gallery);
     expect(picker.lastSource, PhotoSource.gallery);
-    expect(find.text('PHOTOS · 1 / 5'), findsOneWidget);
+    expect(find.text('사진 · 1 / 5'), findsOneWidget);
     // 추가 칸은 남아 있되 문구가 바뀐다 — 더 넣을 수 있다는 뜻이다.
     expect(find.text('사진 추가'), findsNothing);
     expect(find.text('더 넣기'), findsOneWidget);
@@ -1059,7 +1062,7 @@ void main() {
     for (var i = 0; i < 3; i++) {
       await pickPhoto(tester, PhotoSource.gallery);
     }
-    expect(find.text('PHOTOS · 3 / 5'), findsOneWidget);
+    expect(find.text('사진 · 3 / 5'), findsOneWidget);
     // 표지는 언제나 하나다 — 첫 장에만 붙는다.
     expect(find.text('대표'), findsOneWidget);
 
@@ -1072,7 +1075,7 @@ void main() {
     expect(remove, findsNWidgets(3));
     await tester.tap(remove.first);
     await tester.pumpAndSettle();
-    expect(find.text('PHOTOS · 2 / 5'), findsOneWidget);
+    expect(find.text('사진 · 2 / 5'), findsOneWidget);
     expect(find.text('대표'), findsOneWidget);
   });
 
@@ -1167,7 +1170,7 @@ void main() {
     await pumpApp(tester, auth: FakeAuthRepository(loggedIn: true));
     await openCatchEdit(tester);
 
-    expect(find.text('PHOTOS · 0 / 5'), findsOneWidget);
+    expect(find.text('사진 · 0 / 5'), findsOneWidget);
     expect(
       tester.widget<PrimaryButton>(find.widgetWithText(PrimaryButton, '수정 저장'))
           .onPressed,

@@ -91,11 +91,13 @@ abstract final class AppText {
   static TextStyle get navLabel =>
       _f(11, FontWeight.w600, 1.2, 0, color: AppColors.faint);
 
-  /// 섹션을 여는 대문자 라벨 — "PHOTOS", "MEMO" (10).
-  /// 시안의 `letter-spacing:.2em` 을 그대로 옮겼다. 자간이 넓어서 글자가
-  /// 오른쪽으로 밀리므로, 마지막 글자 뒤 여백을 감안하고 배치할 것.
+  /// 섹션을 여는 작은 라벨 — "사진", "제목", "메모" (10).
+  ///
+  /// ⚠️ **자간을 넣지 않는다.** 시안의 `letter-spacing:.2em` 을 그대로 옮겼었는데,
+  /// 그건 "PHOTOS" 같은 라틴 대문자용이다. 한글에 걸면 글자가 뜯어져서
+  /// `이 메 일`·`사 진`·`댓 글` 로 읽힌다. 쓰는 자리가 전부 한글이라 0 으로 되돌렸다.
   static TextStyle get overline =>
-      _f(10, FontWeight.w700, 1.2, 2, color: AppColors.muted);
+      _f(10, FontWeight.w700, 1.2, 0, color: AppColors.muted);
 
   static TextStyle _f(
     double size,

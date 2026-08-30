@@ -196,7 +196,7 @@ class _CatchNewScreenState extends ConsumerState<CatchNewScreen> {
                 Reveal(
                   index: 1,
                   child: _SectionLabel(
-                    'PHOTOS · ${_photos.length} / $_maxPhotos',
+                    '사진 · ${_photos.length} / $_maxPhotos',
                   ),
                 ),
                 const SizedBox(height: 10),
@@ -312,7 +312,16 @@ class _CatchNewScreenState extends ConsumerState<CatchNewScreen> {
             ),
           ),
           const CardDivider(),
-          _inputRow(label: '포인트', controller: _spotController, hint: '기장 학리'),
+          // ⚠️ 힌트에 실제 포인트 이름(`기장 학리`)을 넣지 말 것. 오른쪽 정렬 회색 글씨라
+          //    위의 `어종`·`일시` 행에 찍힌 **값과 똑같이 보인다** — 화살표도 없어서
+          //    이미 채워진 칸으로 읽히고, 그대로 저장하면 안 가 본 곳이 기록에 남는다.
+          //    등록된 51곳 밖에서도 낚을 수 있어 자유 입력인 건 의도한 설계다
+          //    (`CatchRecord.spotName` 주석).
+          _inputRow(
+            label: '포인트',
+            controller: _spotController,
+            hint: '어디서 잡았나요?',
+          ),
         ],
       ),
     );
@@ -403,7 +412,7 @@ class _CatchNewScreenState extends ConsumerState<CatchNewScreen> {
         children: [
           Row(
             children: [
-              Expanded(child: Text('MEMO', style: AppText.overline)),
+              Expanded(child: Text('메모', style: AppText.overline)),
               Text(
                 '$used / $_memoLimit',
                 style: AppText.caption.copyWith(color: AppColors.disabled),

@@ -304,9 +304,12 @@ class _SpotRow extends StatelessWidget {
                 ),
                 const SizedBox(height: 3),
                 Text(
+                  // ⚠️ "여기서" 를 빼지 말 것. KHOA 예보지점 이름에 거리가 들어 있어서
+                  //    (`강릉항 북동(2km)`) 그냥 "2.4km" 라고 쓰면 한 카드에 km 가 둘이 되고,
+                  //    이름 속 숫자가 내 위치에서의 거리로 읽힌다.
                   spot.distanceKm == null
                       ? spot.regionName
-                      : '${spot.regionName} · ${spot.distanceKm!.toStringAsFixed(1)}km',
+                      : '${spot.regionName} · 여기서 ${spot.distanceKm!.toStringAsFixed(1)}km',
                   style: AppText.caption,
                 ),
               ],

@@ -12,7 +12,12 @@ import 'press_scale.dart';
 /// 희귀는 골드 줄무늬 + 좌상단 메달.
 ///
 /// **미기록 칸은 자물쇠가 아니라 어종 실루엣이다** — 잠긴 게 아니라 아직
-/// 안 만난 종이라는 뜻이고, 이름 자리에는 "미기록"만 둔다.
+/// 안 만난 종이라는 뜻이다.
+///
+/// ⚠️ **이름은 가린 적이 없어야 한다.** 기획서 2-3 이 `LOCKED` 의 이름을 "회색 텍스트로
+/// 노출" 로 못박고 이유까지 적어 뒀다 — *뭘 잡아야 할지 알아야 다음 출조 동기가 생긴다.*
+/// 한동안 이름 자리에 "미기록"·"희귀" 만 넣었는데, 그러면 36칸이 글자도 그림도 전부
+/// 같아져서 도감을 열어도 읽을 게 없다. 희귀 여부는 이름 색으로 구분한다.
 class SpeciesTile extends StatelessWidget {
   const SpeciesTile({super.key, required this.entry, required this.onTap});
 
@@ -43,7 +48,7 @@ class SpeciesTile extends StatelessWidget {
           const SizedBox(height: 7),
           Flexible(
             child: Text(
-              owned ? entry.species.name : (rare ? '희귀' : '미기록'),
+              entry.species.name,
               style: AppText.tileName.copyWith(
                 color: owned
                     ? AppColors.ink
@@ -112,8 +117,14 @@ class _EmptyFace extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return ColoredBox(
-      color: rare ? AppColors.goldSoft : AppColors.fill,
+    return DecoratedBox(
+      decoration: BoxDecoration(
+        color: rare ? AppColors.goldSoft : AppColors.fill,
+        // ⚠️ 테두리를 빼지 말 것. 라이트에서 fill(#F4F5F7)이 화면 배경과 거의 같아서
+        //    칸이 안 보이고, 그러면 격자가 아니라 아이콘이 떠 있는 것처럼 읽힌다.
+        //    다크는 카드가 배경보다 밝아 원래 보였다 — 라이트에서만 무너지던 자리다.
+        border: Border.all(color: AppColors.line),
+      ),
       child: Center(
         child: LineIcon(
           AppIcon.fish,

@@ -194,7 +194,11 @@ class _WeeklyCard extends StatelessWidget {
             children: [
               Expanded(child: Text('이번 주 지수', style: AppText.cardLabel)),
               Text(
-                '${week.first.date.month}월',
+                // 일곱 칸이 달을 넘어가는 주가 있다. 첫날의 달만 쓰면 30·31 다음에
+                // 1~5 가 오는데 머리말은 "8월" 이라 날짜를 잘못 읽게 된다.
+                week.first.date.month == week.last.date.month
+                    ? '${week.first.date.month}월'
+                    : '${week.first.date.month}~${week.last.date.month}월',
                 style: AppText.caption,
               ),
             ],
@@ -440,11 +444,13 @@ class _FieldGuideTile extends StatelessWidget {
             const SizedBox(height: 8),
           const SizedBox(height: 12),
           Text(
+            // ⚠️ 타일이 화면 절반이라 한 줄에 아홉 자쯤 들어간다. 길면 말줄임으로
+            //    잘리는데("이번 달 새 등록이 없…") 하필 부정어가 잘려 나간다.
             data == null
                 ? '도감을 불러오는 중'
                 : data.newThisMonth > 0
-                ? '이번 달 새로 ${data.newThisMonth}종 등록'
-                : '이번 달 새 등록이 없어요',
+                ? '이번 달 ${data.newThisMonth}종 등록'
+                : '이번 달 등록 없음',
             style: AppText.rowLabel,
             maxLines: 1,
             overflow: TextOverflow.ellipsis,

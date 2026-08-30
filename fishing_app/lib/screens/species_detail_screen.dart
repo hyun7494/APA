@@ -262,7 +262,9 @@ class _Body extends ConsumerWidget {
                   _InfoRow(
                     icon: AppIcon.ruler,
                     label: '포획금지체장',
-                    value: '${species.minLegalSize!.toStringAsFixed(0)}cm 이하',
+                    // "25cm 이하" 는 그게 금지 대상인지 허용 기준인지 모호하다.
+                    // 규제 정보라 읽는 방향이 하나여야 한다.
+                    value: '${species.minLegalSize!.toStringAsFixed(0)}cm 미만 방류',
                   ),
                 ],
                 if (species.closedSeason != null) ...[
@@ -294,7 +296,7 @@ class _Body extends ConsumerWidget {
         Reveal(
           index: 6,
           child: SectionLabel(
-            label: 'MY RECORDS',
+            label: '내 기록',
             padded: false,
             trailing: Text(
               '${entry.catchCount}',

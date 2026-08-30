@@ -35,8 +35,10 @@ class SpotCard extends StatelessWidget {
                       style: AppText.sectionTitle,
                       overflow: TextOverflow.ellipsis,
                     ),
-                    const SizedBox(height: 3),
-                    Text(spot.regionName, style: AppText.caption),
+                    // ⚠️ 권역 이름을 여기 다시 적지 않는다. 이 카드는 지수 목록에서만
+                    //    쓰이는데, 바로 위 칩이 이미 그 권역을 고른 상태다 —
+                    //    권역이 4개로 묶인 뒤로 14장이 전부 "동해" 를 반복했다.
+                    //    지역이 정보가 되는 자리는 검색 결과다 (거기선 따로 그린다).
                   ],
                 ),
               ),
