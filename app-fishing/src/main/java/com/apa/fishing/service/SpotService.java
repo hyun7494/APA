@@ -15,6 +15,7 @@ import org.springframework.transaction.annotation.Transactional;
 import org.springframework.web.server.ResponseStatusException;
 
 import java.time.LocalDate;
+import java.util.Comparator;
 import java.util.List;
 import java.util.Map;
 import java.util.stream.Collectors;
@@ -58,6 +59,40 @@ public class SpotService {
         return spots.stream()
                 .map(spot -> SpotResponse.from(spot, weeks.getOrDefault(spot.getId(), List.of())))
                 .toList();
+    }
+
+    /**
+     * 홈 요약 카드에 쓸 <b>오늘 가장 좋은 포인트</b> 한 곳.
+     *
+     * <p>예전엔 앱이 "첫 지역의 첫 포인트" 를 골랐다. 권역이 4개에 51곳이 된 뒤로 그건
+     * <b>id 가 가장 작은 곳</b>이라는 뜻밖에 없었고, 화면 카피가 "오늘 출조, 어떠세요?"
+     * 인데 임의의 한 곳을 보여 주고 있었다.
+     *
+     * <p>고르는 일을 서버가 한다 — 앱이 <b>한 곳을 보여주려고 51곳을 받아 갈 이유가
+     * 없다</b> ({@link #findNearby} 와 같은 이유). 앱은 요청도 한 번만 한다(예전엔
+     * 지역 목록 → 포인트 목록으로 두 번이었다).
+     *
+     * <p>고르는 순서 — 등급이 좋은 순, 같으면 <b>잔잔한 순</b>(파고 → 풍속), 그래도
+     * 같으면 id. 등급이 4단계뿐이라 동점이 흔한데, 마지막 기준이 없으면 같은 날
+     * 새로고침할 때마다 다른 곳이 뜬다.
+     *
+     * <p>⚠️ 잴 수 없는 값은 <b>뒤로</b> 보낸다. null 을 0 으로 치면 파고·풍속을 못 받은
+     * 곳이 "가장 잔잔한 곳" 이 되어 맨 앞에 선다.
+     *
+     * @return 포인트가 하나도 없으면 {@code null}
+     */
+    public SpotResponse findFeatured() {
+        return spotRepository.findAllWithRegion().stream()
+                .min(Comparator
+                        .<FishingSpot>comparingInt(s -> s.getRating().ordinal())
+                        .thenComparing(FishingSpot::getWaveHeight,
+                                Comparator.nullsLast(Comparator.naturalOrder()))
+                        .thenComparing(FishingSpot::getWindSpeed,
+                                Comparator.nullsLast(Comparator.naturalOrder()))
+                        .thenComparing(FishingSpot::getId))
+                .map(spot -> SpotResponse.from(spot, weeksOf(List.of(spot.getId()))
+                        .getOrDefault(spot.getId(), List.of())))
+                .orElse(null);
     }
 
     /**

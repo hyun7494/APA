@@ -21,6 +21,12 @@ abstract interface class FishingRepository {
   /// GET /fishing/spots/{id}
   Future<Spot> fetchSpot(int id);
 
+  /// GET /fishing/spots/featured — 홈 요약 카드에 쓸 **오늘 가장 좋은 포인트** 한 곳.
+  ///
+  /// 고르는 일은 서버가 한다. 한 곳을 보여주려고 51곳을 받아 갈 이유가 없다
+  /// (위치 검색과 같은 이유). 포인트가 하나도 없으면 null 이다.
+  Future<Spot?> fetchFeaturedSpot();
+
   /// 내 위치에서 가까운 포인트 — `GET /fishing/spots?lat=&lon=`.
   ///
   /// 거리 계산은 **서버가 한다.** 좌표는 서버에 있고, 앱이 쓰지도 않을 위경도를

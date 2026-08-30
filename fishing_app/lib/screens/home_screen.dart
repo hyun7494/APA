@@ -297,7 +297,9 @@ class _IndexHero extends StatelessWidget {
                 children: [
                   Expanded(
                     child: Text(
-                      '오늘의 낚시지수',
+                      // 임의의 한 곳이 아니라 **고른 결과**라는 게 읽혀야 한다.
+                      // 카피가 "오늘 출조, 어떠세요?" 인데 카드가 그 물음의 답이다.
+                      '오늘 가장 좋은 곳',
                       style: AppText.cardLabel,
                       maxLines: 1,
                       overflow: TextOverflow.ellipsis,

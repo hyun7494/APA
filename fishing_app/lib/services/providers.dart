@@ -99,14 +99,17 @@ final spotProvider = FutureProvider.family<Spot, int>(
   (ref, id) => ref.watch(fishingRepositoryProvider).fetchSpot(id),
 );
 
-/// 홈 요약 카드에 쓸 대표 포인트 1곳 — 첫 지역의 첫 포인트.
-final featuredSpotProvider = FutureProvider<Spot?>((ref) async {
-  final repo = ref.watch(fishingRepositoryProvider);
-  final regions = await repo.fetchRegions();
-  if (regions.isEmpty) return null;
-  final spots = await repo.fetchSpots(regions.first.id);
-  return spots.isEmpty ? null : spots.first;
-});
+/// 홈 요약 카드에 쓸 대표 포인트 1곳 — **오늘 가장 좋은 곳**.
+///
+/// 예전엔 "첫 지역의 첫 포인트" 였다. 권역이 4개에 51곳이 된 뒤로 그건 *id 가 가장
+/// 작은 곳* 이라는 뜻밖에 없었고, 화면이 "오늘 출조, 어떠세요?" 라고 묻고는 임의의
+/// 한 곳을 보여 줬다.
+///
+/// 고르는 일은 서버가 한다 — 요청도 한 번뿐이다(예전엔 지역 목록 → 포인트 목록으로
+/// 두 번이었다). 기준은 `SpotService.findFeatured` 에 있다.
+final featuredSpotProvider = FutureProvider<Spot?>(
+  (ref) => ref.watch(fishingRepositoryProvider).fetchFeaturedSpot(),
+);
 
 // ── 도감 ────────────────────────────────────────────────────────
 

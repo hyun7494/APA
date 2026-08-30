@@ -3,6 +3,7 @@ package com.apa.fishing.controller;
 import com.apa.fishing.dto.SpotResponse;
 import com.apa.fishing.service.SpotService;
 import lombok.RequiredArgsConstructor;
+import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.PathVariable;
 import org.springframework.web.bind.annotation.RequestMapping;
@@ -46,6 +47,21 @@ public class SpotController {
         return q == null || q.isBlank()
                 ? spotService.findByRegion(regionGroupId)
                 : spotService.searchByName(q);
+    }
+
+    /**
+     * 홈 요약 카드에 쓸 오늘 가장 좋은 포인트 한 곳 (계약서 3-3-1).
+     *
+     * <p>⚠️ <b>{@code /{id}} 보다 위에 둔다.</b> 아래에 두면 {@code Long id} 파싱이
+     * "featured" 에서 먼저 터진다 — 앱 라우터에서 {@code /board/new} 를
+     * {@code /board/:id} 앞에 둬야 했던 것과 같은 함정이다.
+     *
+     * @return 포인트가 없으면 204
+     */
+    @GetMapping("/featured")
+    public ResponseEntity<SpotResponse> featured() {
+        SpotResponse spot = spotService.findFeatured();
+        return spot == null ? ResponseEntity.noContent().build() : ResponseEntity.ok(spot);
     }
 
     @GetMapping("/{id}")

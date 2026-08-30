@@ -269,10 +269,16 @@ Spot _stripHourly(Spot s) => Spot(
 );
 
 class _NoWeeklyRepository extends MockFishingRepository {
-  // 홈의 대표 포인트는 `featuredSpotProvider` 가 이 목록의 첫 곳으로 고른다.
   @override
   Future<List<Spot>> fetchSpots(int regionGroupId) async =>
       (await super.fetchSpots(regionGroupId)).map(_stripWeek).toList();
+
+  // 홈의 대표 포인트는 목록이 아니라 이쪽으로 따로 받아 온다.
+  @override
+  Future<Spot?> fetchFeaturedSpot() async {
+    final spot = await super.fetchFeaturedSpot();
+    return spot == null ? null : _stripWeek(spot);
+  }
 }
 
 Spot _stripWeek(Spot s) => Spot(
@@ -404,12 +410,11 @@ void main() {
 
     // ⚠️ 첫 칸은 지수 카드와 같은 등급이어야 한다. 어긋나면 같은 화면에서
     //    `아주 좋음` 카드 아래 빨간 막대가 뜬다.
-    //    대표 포인트는 **첫 지역의 첫 곳**이다 (`featuredSpotProvider`) — 목록의
-    //    맨 앞 포인트가 아니다.
-    final featured = MockData.spots.firstWhere(
-      (s) => s.regionGroupId == MockData.regions.first.id,
-    );
-    expect(strip.days.first.rating, featured.rating);
+    //
+    // 대표 포인트를 고르는 규칙을 여기 베끼지 않는다. **같은 화면에 있는 두 값을
+    // 맞대면 된다** — 카드가 띄운 등급 글자가 스트립 첫 칸의 등급과 같아야 한다.
+    // (저장소를 테스트에서 직접 부르면 `Future.delayed` 가 안 풀려 멈춘다.)
+    expect(find.text(strip.days.first.rating.label), findsWidgets);
   });
 
   testWidgets('★ 주간 예보가 없는 포인트면 카드를 감춘다', (tester) async {
@@ -420,7 +425,43 @@ void main() {
     expect(find.text('이번 주 지수'), findsNothing);
     expect(find.byType(WeeklyIndexStrip), findsNothing);
     // 나머지 홈은 그대로다.
-    expect(find.text('오늘의 낚시지수'), findsOneWidget);
+    expect(find.text('오늘 가장 좋은 곳'), findsOneWidget);
+  });
+
+  testWidgets('★ 홈은 오늘 가장 좋은 곳을 보여준다 (id 가 작은 곳이 아니라)', (tester) async {
+    // 예전엔 "첫 지역의 첫 포인트" 였다 — 권역이 4개에 51곳이 된 뒤로 그건
+    // *id 가 가장 작은 곳* 이라는 뜻밖에 없었다.
+    await pumpApp(tester);
+
+    // ⚠️ 여기서 정렬 규칙을 다시 짜지 않는다 — 그러면 코드를 베낀 테스트가 된다.
+    //    **성질**만 본다: 뽑힌 곳의 등급이 전체 최고여야 하고, 예전처럼 id 순서로
+    //    뽑힌 게 아니어야 한다.
+    expect(find.text('오늘 가장 좋은 곳'), findsOneWidget);
+
+    final bestRating = MockData.spots
+        .map((s) => s.rating.level)
+        .reduce((a, b) => a > b ? a : b);
+    final candidates = MockData.spots.where((s) => s.rating.level == bestRating);
+
+    expect(
+      candidates.any(
+        (s) => find.text('${s.name} · ${s.regionName}').evaluate().isNotEmpty,
+      ),
+      isTrue,
+      reason: '뽑힌 곳의 등급이 전체 최고여야 한다',
+    );
+
+    // 예전 규칙(첫 지역의 첫 포인트)이 최고 등급이 아니라면, 그게 뜨면 안 된다.
+    final oldPick = MockData.spots.firstWhere(
+      (s) => s.regionGroupId == MockData.regions.first.id,
+    );
+    if (oldPick.rating.level != bestRating) {
+      expect(
+        find.text('${oldPick.name} · ${oldPick.regionName}'),
+        findsNothing,
+        reason: 'id 순서로 고르던 옛 규칙이 남아 있다',
+      );
+    }
   });
 
   testWidgets('★ 수치가 없으면 0.0 이 아니라 — 로 그린다', (tester) async {

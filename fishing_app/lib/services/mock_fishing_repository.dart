@@ -62,6 +62,34 @@ class MockFishingRepository implements FishingRepository {
     );
   }
 
+  /// 서버의 `SpotService.findFeatured` 와 **같은 순서**로 고른다 — 등급이 좋은 순,
+  /// 같으면 잔잔한 순(파고 → 풍속), 그래도 같으면 id. 목이 서버와 다르게 고르면
+  /// 목으로 짠 테스트가 실서버에서 안 맞는다.
+  @override
+  Future<Spot?> fetchFeaturedSpot() async {
+    await Future.delayed(_latency);
+    if (MockData.spots.isEmpty) return null;
+
+    final spots = [...MockData.spots]..sort((a, b) {
+      final byRating = a.rating.index.compareTo(b.rating.index);
+      if (byRating != 0) return byRating;
+      final byWave = _nullsLast(a.waveHeight, b.waveHeight);
+      if (byWave != 0) return byWave;
+      final byWind = _nullsLast(a.windSpeed, b.windSpeed);
+      if (byWind != 0) return byWind;
+      return a.id.compareTo(b.id);
+    });
+    return spots.first;
+  }
+
+  /// 잴 수 없는 값은 뒤로. 0 으로 치면 못 받은 곳이 "가장 잔잔한 곳" 이 된다.
+  static int _nullsLast(double? a, double? b) {
+    if (a == null && b == null) return 0;
+    if (a == null) return 1;
+    if (b == null) return -1;
+    return a.compareTo(b);
+  }
+
   @override
   Future<List<CollectionEntry>> fetchCollection() async {
     await Future.delayed(_latency);

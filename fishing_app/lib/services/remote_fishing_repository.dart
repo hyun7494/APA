@@ -57,6 +57,14 @@ class RemoteFishingRepository implements FishingRepository {
   }
 
   @override
+  Future<Spot?> fetchFeaturedSpot() async {
+    // 포인트가 하나도 없으면 서버가 204 다 — 본문이 없으니 data 가 null 로 온다.
+    final res = await _dio.get<Map<String, dynamic>>('/fishing/spots/featured');
+    final data = res.data;
+    return data == null ? null : Spot.fromJson(data);
+  }
+
+  @override
   Future<List<CollectionEntry>> fetchCollection() async {
     try {
       final res = await _dio.get<List<dynamic>>('/fishing/me/collection');

@@ -49,7 +49,7 @@ abstract final class AppText {
   static TextStyle get rowValue => _f(16, FontWeight.w700, 1.35, -0.32);
 
   // ── 본문 ──────────────────────────────────────────────────────
-  /// 카드 소제목 — "오늘의 낚시지수" (15)
+  /// 카드 소제목 — "오늘 가장 좋은 곳" (15)
   static TextStyle get cardLabel =>
       _f(15, FontWeight.w700, 1.35, -0.15, color: AppColors.ink2);
 
