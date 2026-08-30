@@ -16,9 +16,9 @@ public record SpotResponse(
         Long regionGroupId,
         String regionName,
         String rating,
-        double waterTemp,
-        double waveHeight,
-        double windSpeed,
+        Double waterTemp,
+        Double waveHeight,
+        Double windSpeed,
         String weather,
         String tideInfo,
         String sunriseSunset,
@@ -70,8 +70,14 @@ public record SpotResponse(
         );
     }
 
-    private static double toDouble(BigDecimal value) {
-        return value == null ? 0d : value.doubleValue();
+    /**
+     * ⚠️ null 을 0 으로 바꾸지 않는다 — {@link DailyIndexResponse}·{@link CatchResponse} 와
+     * 같은 규칙이다. 여기만 원시 {@code double} 이라 0 을 채우고 있었는데, 그러면
+     * <b>값이 없는 포인트가 "수온 0.0℃" 라고 말한다</b> — 틀렸으면서 정밀해 보이고,
+     * 물이 얼었다는 뜻이 된다. 앱은 null 을 `—` 로 그린다.
+     */
+    private static Double toDouble(BigDecimal value) {
+        return value == null ? null : value.doubleValue();
     }
 
     private static String orDash(String value) {

@@ -10,9 +10,9 @@ class Spot {
     required this.regionGroupId,
     required this.regionName,
     required this.rating,
-    required this.waterTemp,
-    required this.waveHeight,
-    required this.windSpeed,
+    this.waterTemp,
+    this.waveHeight,
+    this.windSpeed,
     required this.weather,
     required this.tideInfo,
     required this.sunriseSunset,
@@ -36,14 +36,15 @@ class Spot {
 
   final Rating rating;
 
-  /// 수온 ℃
-  final double waterTemp;
+  /// 수온 ℃. **null 이 정상**이고 0 이 아니다 — [DailyIndex.waveHeight] 와 같은 규칙이다.
+  /// 서버가 예전엔 없는 값을 0 으로 채워 보내서 "수온 0.0℃" 가 뜰 수 있었다.
+  final double? waterTemp;
 
   /// 파고 m
-  final double waveHeight;
+  final double? waveHeight;
 
   /// 풍속 ㎧
-  final double windSpeed;
+  final double? windSpeed;
 
   /// 맑음 / 구름조금 / 흐림 / 비
   final String weather;
@@ -70,6 +71,12 @@ class Spot {
 
   /// 오늘부터의 예보. 서버가 KHOA 해역을 못 붙인 포인트(영종도)는 **빈 목록**이다.
   final List<DailyIndex> weeklyIndex;
+
+  /// 수치 한 칸을 화면에 그릴 문자열. **없으면 `—` 다 — 0 으로 채우지 않는다.**
+  ///
+  /// 네 화면(홈·지수 목록·지수 상세·지역 검색)이 같은 값을 다르게 그리면, 한 곳만
+  /// 고쳤을 때 다른 곳에서 0.0 이 계속 뜬다. 어종 상세의 `최고 길이` 도 같은 표기다.
+  static String metric(double? value) => value?.toStringAsFixed(1) ?? '—';
 
   /// 막대그래프 x축 라벨 — hourlyForecast와 인덱스가 대응한다.
   static const hourLabels = ['06시', '09시', '12시', '15시', '18시', '21시'];
@@ -101,9 +108,9 @@ class Spot {
     regionGroupId: (json['regionGroupId'] as num?)?.toInt() ?? 0,
     regionName: json['regionName'] as String? ?? '',
     rating: Rating.fromCode(json['rating'] as String?),
-    waterTemp: (json['waterTemp'] as num?)?.toDouble() ?? 0,
-    waveHeight: (json['waveHeight'] as num?)?.toDouble() ?? 0,
-    windSpeed: (json['windSpeed'] as num?)?.toDouble() ?? 0,
+    waterTemp: (json['waterTemp'] as num?)?.toDouble(),
+    waveHeight: (json['waveHeight'] as num?)?.toDouble(),
+    windSpeed: (json['windSpeed'] as num?)?.toDouble(),
     weather: json['weather'] as String? ?? '-',
     tideInfo: json['tideInfo'] as String? ?? '-',
     sunriseSunset: json['sunriseSunset'] as String? ?? '-',

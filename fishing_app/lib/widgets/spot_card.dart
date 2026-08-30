@@ -60,7 +60,7 @@ class SpotCard extends StatelessWidget {
                 child: MetricColumn(
                   icon: AppIcon.thermometer,
                   label: '수온',
-                  value: spot.waterTemp.toStringAsFixed(1),
+                  value: Spot.metric(spot.waterTemp),
                   unit: '℃',
                 ),
               ),
@@ -69,7 +69,7 @@ class SpotCard extends StatelessWidget {
                 child: MetricColumn(
                   icon: AppIcon.swell,
                   label: '파고',
-                  value: spot.waveHeight.toStringAsFixed(1),
+                  value: Spot.metric(spot.waveHeight),
                   unit: 'm',
                 ),
               ),
@@ -78,7 +78,7 @@ class SpotCard extends StatelessWidget {
                 child: MetricColumn(
                   icon: AppIcon.wind,
                   label: '풍속',
-                  value: spot.windSpeed.toStringAsFixed(1),
+                  value: Spot.metric(spot.windSpeed),
                   unit: '㎧',
                 ),
               ),

@@ -183,6 +183,32 @@ class FakeLocationService implements LocationService {
 }
 
 /// 주간 예보가 비어 있는 저장소. 영종도처럼 KHOA 해역이 안 붙은 포인트를 흉내낸다.
+/// 수온·파고·풍속이 없는 포인트. 새로 넣은 포인트가 첫 배치 전까지 이 상태다.
+class _NoMetricsRepository extends MockFishingRepository {
+  @override
+  Future<List<Spot>> fetchSpots(int regionGroupId) async =>
+      (await super.fetchSpots(regionGroupId)).map(_stripMetrics).toList();
+
+  @override
+  Future<Spot> fetchSpot(int id) async => _stripMetrics(await super.fetchSpot(id));
+}
+
+Spot _stripMetrics(Spot s) => Spot(
+  id: s.id,
+  name: s.name,
+  regionGroupId: s.regionGroupId,
+  regionName: s.regionName,
+  rating: s.rating,
+  weather: s.weather,
+  tideInfo: s.tideInfo,
+  sunriseSunset: s.sunriseSunset,
+  comment: s.comment,
+  hourlyForecast: s.hourlyForecast,
+  recommendedFish: s.recommendedFish,
+  updatedAt: s.updatedAt,
+  weeklyIndex: s.weeklyIndex,
+);
+
 /// 어종을 '-' 하나로만 주는 먼바다 해역의 포인트 (인천항 서측·안흥항 등 17곳).
 class _NoFishRepository extends MockFishingRepository {
   @override
@@ -395,6 +421,25 @@ void main() {
     expect(find.byType(WeeklyIndexStrip), findsNothing);
     // 나머지 홈은 그대로다.
     expect(find.text('오늘의 낚시지수'), findsOneWidget);
+  });
+
+  testWidgets('★ 수치가 없으면 0.0 이 아니라 — 로 그린다', (tester) async {
+    // 서버가 `SpotResponse.toDouble(null)` 로 0 을 채워 보내던 자리다. 0.0℃ 는
+    // 틀렸으면서 정밀해 보이고, 물이 얼었다는 뜻이 된다.
+    await pumpApp(tester, repository: _NoMetricsRepository());
+
+    // ⚠️ MetricColumn 은 값과 단위를 한 Text.rich 로 붙여 그린다 — `findRichText` 를
+    //    빼거나 값만 찾으면 **아무것도 못 찾고 헛통과한다.**
+    await tester.tap(find.text('지수'));
+    await tester.pumpAndSettle();
+    expect(find.text('0.0 ℃', findRichText: true), findsNothing);
+    expect(find.text('— ℃', findRichText: true), findsWidgets);
+    expect(find.text('— m', findRichText: true), findsWidgets);
+
+    await tester.tap(find.byType(SpotCard).first);
+    await tester.pumpAndSettle();
+    expect(find.text('0.0 ℃', findRichText: true), findsNothing);
+    expect(find.text('— ㎧', findRichText: true), findsWidgets);
   });
 
   testWidgets('★ 시간대별 예보가 없으면 그래프 카드를 감춘다', (tester) async {

@@ -341,7 +341,7 @@ class _IndexHero extends StatelessWidget {
                     child: MetricColumn(
                       icon: AppIcon.thermometer,
                       label: '수온',
-                      value: s.waterTemp.toStringAsFixed(1),
+                      value: Spot.metric(s.waterTemp),
                       unit: '℃',
                     ),
                   ),
@@ -350,7 +350,7 @@ class _IndexHero extends StatelessWidget {
                     child: MetricColumn(
                       icon: AppIcon.swell,
                       label: '파고',
-                      value: s.waveHeight.toStringAsFixed(1),
+                      value: Spot.metric(s.waveHeight),
                       unit: 'm',
                     ),
                   ),
@@ -359,7 +359,7 @@ class _IndexHero extends StatelessWidget {
                     child: MetricColumn(
                       icon: AppIcon.wind,
                       label: '풍속',
-                      value: s.windSpeed.toStringAsFixed(1),
+                      value: Spot.metric(s.windSpeed),
                       unit: '㎧',
                     ),
                   ),

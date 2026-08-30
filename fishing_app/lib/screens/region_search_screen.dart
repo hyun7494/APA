@@ -316,7 +316,7 @@ class _SpotRow extends StatelessWidget {
             ),
           ),
           Text(
-            '${spot.waterTemp.toStringAsFixed(1)}℃',
+            '${Spot.metric(spot.waterTemp)}℃',
             style: AppText.numberMedium.copyWith(color: AppColors.muted),
           ),
           const SizedBox(width: 10),
