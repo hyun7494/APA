@@ -119,11 +119,17 @@ public class FishingSpot {
                            String weather,
                            String tideInfo,
                            String comment,
+                           List<Integer> hourlyForecast,
+                           String sunriseSunset,
                            LocalDateTime updatedAt) {
         if (rating != null) {
             this.rating = rating;
         }
-        if (recommendedFish != null) {
+        // ⚠️ 빈 목록도 덮어쓰지 않는다. 어종을 '-' 하나로만 주는 해역이 있는데
+        //    (인천항 서측·안흥항 같은 먼바다 지점 17곳) 파서가 그걸 걸러내면 빈 목록이 온다.
+        //    빈 목록은 "추천할 어종이 없다" 가 아니라 **그 해역이 어종을 안 준다**는 뜻이라
+        //    기존 값을 지울 근거가 못 된다. null 을 안 덮어쓰는 것과 같은 이유다.
+        if (recommendedFish != null && !recommendedFish.isEmpty()) {
             this.recommendedFish = recommendedFish;
         }
         if (waterTemp != null) {
@@ -143,6 +149,12 @@ public class FishingSpot {
         }
         if (comment != null && !comment.isBlank()) {
             this.comment = comment;
+        }
+        if (hourlyForecast != null) {
+            this.hourlyForecast = hourlyForecast;
+        }
+        if (sunriseSunset != null) {
+            this.sunriseSunset = sunriseSunset;
         }
         this.updatedAt = updatedAt;
     }

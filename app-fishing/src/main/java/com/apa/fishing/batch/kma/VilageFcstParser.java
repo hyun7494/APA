@@ -1,11 +1,14 @@
 package com.apa.fishing.batch.kma;
 
+import com.apa.fishing.batch.HourlyScore;
 import com.apa.fishing.batch.publicapi.PublicApiResponse;
 import com.fasterxml.jackson.databind.JsonNode;
 
 import java.time.LocalDate;
 import java.time.format.DateTimeFormatter;
+import java.util.ArrayList;
 import java.util.Comparator;
+import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 
@@ -32,6 +35,15 @@ public final class VilageFcstParser {
     /** 출조 시간대. 이 바깥의 새벽·야간 값은 카드 지수에 반영하지 않는다. */
     private static final int WINDOW_START_HOUR = 6;
     private static final int WINDOW_END_HOUR = 18;
+
+    /**
+     * 상세 화면 막대그래프의 x축. 단기예보는 3시간 간격이라 이 여섯 칸이 그대로 응답에 있다
+     * (보간이 필요 없다). {@code Spot.hourLabels} 와 순서가 같아야 한다.
+     *
+     * <p>21시는 위 출조 시간대 밖이다 — 하루 요약은 06~18시만 보지만 그래프는 저녁까지
+     * 그린다. 밤 낚시를 나가는 사람에게 21시 칸이 비면 그래프를 볼 이유가 없다.
+     */
+    private static final int[] FORECAST_HOURS = {6, 9, 12, 15, 18, 21};
 
     private static final String CATEGORY_WIND_SPEED = "WSD";
     private static final String CATEGORY_WAVE_HEIGHT = "WAV";
@@ -71,16 +83,28 @@ public final class VilageFcstParser {
         String sky = null;
         String precipitation = null;
 
+        // 그래프용. 하루 요약과 달리 시간대를 뭉개지 않고 칸마다 따로 들고 있는다.
+        Map<Integer, Slot> slots = new HashMap<>();
+
         for (JsonNode item : items) {
             if (!targetDateKey.equals(item.path("fcstDate").asText())) {
                 continue;
             }
-            if (!withinWindow(item.path("fcstTime").asText())) {
+
+            String fcstTime = item.path("fcstTime").asText();
+            String category = item.path("category").asText();
+            String value = item.path("fcstValue").asText();
+
+            Integer slotHour = forecastSlotOf(fcstTime);
+            if (slotHour != null) {
+                slots.computeIfAbsent(slotHour, h -> new Slot()).accept(category, value);
+            }
+
+            if (!withinWindow(fcstTime)) {
                 continue;
             }
 
-            String value = item.path("fcstValue").asText();
-            switch (item.path("category").asText()) {
+            switch (category) {
                 case CATEGORY_WIND_SPEED -> windSpeed = maxOf(windSpeed, toDouble(value));
                 case CATEGORY_WAVE_HEIGHT -> waveHeight = maxOf(waveHeight, toDouble(value));
                 case CATEGORY_SKY -> sky = worstOf(sky, SKY_LABELS.get(value));
@@ -98,7 +122,73 @@ public final class VilageFcstParser {
 
         // 강수가 있으면 하늘상태보다 우선한다 — 비 오는 흐린 날은 '비'다
         String weather = precipitation != null ? precipitation : sky;
-        return new KmaForecast(weather, windSpeed, waveHeight);
+        return new KmaForecast(weather, windSpeed, waveHeight, hourlyOf(slots));
+    }
+
+    /**
+     * 여섯 칸을 전부 채웠을 때만 그래프를 준다.
+     *
+     * <p>예보 창은 발표 시각 기준으로 잘리므로(늦은 오후에 받으면 그날 06시가 이미 지났다)
+     * 일부만 오는 날이 흔하다. 빠진 칸을 0 으로 메우면 <b>조황이 0 인 시간대</b>로 보인다 —
+     * 값 없음과 0 을 그래프에서 구별할 방법이 없으니 통째로 포기하는 쪽이 정직하다.
+     */
+    private static List<Integer> hourlyOf(Map<Integer, Slot> slots) {
+        List<Integer> hourly = new ArrayList<>(FORECAST_HOURS.length);
+        for (int hour : FORECAST_HOURS) {
+            Slot slot = slots.get(hour);
+            Integer score = slot == null ? null : slot.score();
+            if (score == null) {
+                return null;
+            }
+            hourly.add(score);
+        }
+        return hourly;
+    }
+
+    /** {@code "0900"} → 9. 그래프 칸이 아닌 시각이면 null. */
+    private static Integer forecastSlotOf(String fcstTime) {
+        if (fcstTime.length() < 2) {
+            return null;
+        }
+        try {
+            int hour = Integer.parseInt(fcstTime.substring(0, 2));
+            for (int slot : FORECAST_HOURS) {
+                if (slot == hour) {
+                    return hour;
+                }
+            }
+            return null;
+        } catch (NumberFormatException e) {
+            return null;
+        }
+    }
+
+    /**
+     * 한 시간대에 모인 카테고리들. 시각당 카테고리가 한 번씩 오므로 최댓값·최악값을
+     * 고를 일이 없다 — 그냥 마지막 값을 들고 있는다.
+     */
+    private static final class Slot {
+        private Double windSpeed;
+        private Double waveHeight;
+        private String sky;
+        private String precipitation;
+
+        void accept(String category, String value) {
+            switch (category) {
+                case CATEGORY_WIND_SPEED -> windSpeed = toDouble(value);
+                case CATEGORY_WAVE_HEIGHT -> waveHeight = toDouble(value);
+                case CATEGORY_SKY -> sky = SKY_LABELS.get(value);
+                case CATEGORY_PRECIPITATION_TYPE -> precipitation = PRECIPITATION_LABELS.get(value);
+                default -> {
+                    // 그래프도 같은 넷만 본다
+                }
+            }
+        }
+
+        Integer score() {
+            return HourlyScore.of(windSpeed, waveHeight,
+                    precipitation != null ? precipitation : sky);
+        }
     }
 
     private static JsonNode readItems(String body) {

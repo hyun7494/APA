@@ -182,6 +182,65 @@ class FakeLocationService implements LocationService {
 }
 
 /// 주간 예보가 비어 있는 저장소. 영종도처럼 KHOA 해역이 안 붙은 포인트를 흉내낸다.
+/// 어종을 '-' 하나로만 주는 먼바다 해역의 포인트 (인천항 서측·안흥항 등 17곳).
+class _NoFishRepository extends MockFishingRepository {
+  @override
+  Future<List<Spot>> fetchSpots(int regionGroupId) async =>
+      (await super.fetchSpots(regionGroupId)).map(_stripFish).toList();
+
+  @override
+  Future<Spot> fetchSpot(int id) async => _stripFish(await super.fetchSpot(id));
+}
+
+Spot _stripFish(Spot s) => Spot(
+  id: s.id,
+  name: s.name,
+  regionGroupId: s.regionGroupId,
+  regionName: s.regionName,
+  rating: s.rating,
+  waterTemp: s.waterTemp,
+  waveHeight: s.waveHeight,
+  windSpeed: s.windSpeed,
+  weather: s.weather,
+  tideInfo: s.tideInfo,
+  sunriseSunset: s.sunriseSunset,
+  comment: s.comment,
+  hourlyForecast: s.hourlyForecast,
+  recommendedFish: const [],
+  updatedAt: s.updatedAt,
+  weeklyIndex: s.weeklyIndex,
+);
+
+/// 시간대별 예보가 없는 포인트. 기상청 예보 창이 잘려 여섯 칸을 못 채운 날이 그렇다.
+class _NoHourlyRepository extends MockFishingRepository {
+  @override
+  Future<List<Spot>> fetchSpots(int regionGroupId) async =>
+      (await super.fetchSpots(regionGroupId)).map(_stripHourly).toList();
+
+  // 상세 화면은 목록이 아니라 이쪽으로 다시 받아 온다.
+  @override
+  Future<Spot> fetchSpot(int id) async => _stripHourly(await super.fetchSpot(id));
+}
+
+Spot _stripHourly(Spot s) => Spot(
+  id: s.id,
+  name: s.name,
+  regionGroupId: s.regionGroupId,
+  regionName: s.regionName,
+  rating: s.rating,
+  waterTemp: s.waterTemp,
+  waveHeight: s.waveHeight,
+  windSpeed: s.windSpeed,
+  weather: s.weather,
+  tideInfo: s.tideInfo,
+  sunriseSunset: s.sunriseSunset,
+  comment: s.comment,
+  hourlyForecast: const [],
+  recommendedFish: s.recommendedFish,
+  updatedAt: s.updatedAt,
+  weeklyIndex: s.weeklyIndex,
+);
+
 class _NoWeeklyRepository extends MockFishingRepository {
   // 홈의 대표 포인트는 `featuredSpotProvider` 가 이 목록의 첫 곳으로 고른다.
   @override
@@ -335,6 +394,36 @@ void main() {
     expect(find.byType(WeeklyIndexStrip), findsNothing);
     // 나머지 홈은 그대로다.
     expect(find.text('오늘의 낚시지수'), findsOneWidget);
+  });
+
+  testWidgets('★ 시간대별 예보가 없으면 그래프 카드를 감춘다', (tester) async {
+    // 예전엔 서버가 없는 값을 [0,0,0,0,0,0] 으로 채워 보내서, 예보가 없는 포인트가
+    // **막대 없는 그래프 위에 "06시 최적"** 이라고 단언하고 있었다.
+    await pumpApp(tester, repository: _NoHourlyRepository());
+
+    await tester.tap(find.text('지수'));
+    await tester.pumpAndSettle();
+    await tester.tap(find.byType(SpotCard).first);
+    await tester.pumpAndSettle();
+
+    expect(find.text('시간대별 조황 예상'), findsNothing);
+    expect(find.textContaining('최적'), findsNothing);
+    // 나머지 상세는 그대로다.
+    expect(find.text('추천 어종'), findsOneWidget);
+  });
+
+  testWidgets('★ 추천 어종이 없으면 섹션째 감춘다', (tester) async {
+    // 먼바다 해역은 어종을 '-' 로만 준다. 제목만 남으면 로딩에 실패한 것처럼 보인다.
+    await pumpApp(tester, repository: _NoFishRepository());
+
+    await tester.tap(find.text('지수'));
+    await tester.pumpAndSettle();
+    await tester.tap(find.byType(SpotCard).first);
+    await tester.pumpAndSettle();
+
+    expect(find.text('추천 어종'), findsNothing);
+    // 나머지 상세는 그대로다.
+    expect(find.text('시간대별 조황 예상'), findsOneWidget);
   });
 
   testWidgets('★ 홈에 최근 조황 글이 뜨고 누르면 상세로 간다', (tester) async {

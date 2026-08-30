@@ -176,28 +176,36 @@ class _Body extends StatelessWidget {
         ),
         const SizedBox(height: AppSpacing.section),
 
-        Reveal(index: 5, child: _HourlyCard(values: spot.hourlyForecast)),
-        const SizedBox(height: AppSpacing.section),
+        // 예보가 없으면 카드를 통째로 뺀다. 빈 그래프를 남겨 두면 "온종일 조황 0" 으로
+        // 읽히고, 그러고도 "06시 최적" 이라는 문구가 붙어 스스로를 반박한다.
+        if (spot.hourlyForecast.isNotEmpty) ...[
+          Reveal(index: 5, child: _HourlyCard(values: spot.hourlyForecast)),
+          const SizedBox(height: AppSpacing.section),
+        ],
 
-        Reveal(
-          index: 6,
-          child: Column(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              Text('추천 어종', style: AppText.sectionTitle),
-              const SizedBox(height: 14),
-              Wrap(
-                spacing: 8,
-                runSpacing: 8,
-                children: [
-                  for (final fish in spot.recommendedFish)
-                    StaticPill(label: fish),
-                ],
-              ),
-            ],
+        // 어종을 '-' 하나로만 주는 먼바다 해역이 있다 (인천항 서측·안흥항 등 17곳).
+        // 파서가 그걸 걸러내면 목록이 비는데, 그때 제목만 남으면 빠진 것처럼 보인다.
+        if (spot.recommendedFish.isNotEmpty) ...[
+          Reveal(
+            index: 6,
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Text('추천 어종', style: AppText.sectionTitle),
+                const SizedBox(height: 14),
+                Wrap(
+                  spacing: 8,
+                  runSpacing: 8,
+                  children: [
+                    for (final fish in spot.recommendedFish)
+                      StaticPill(label: fish),
+                  ],
+                ),
+              ],
+            ),
           ),
-        ),
-        const SizedBox(height: AppSpacing.section),
+          const SizedBox(height: AppSpacing.section),
+        ],
 
         const Reveal(
           index: 7,
@@ -243,6 +251,9 @@ class _InfoRow extends StatelessWidget {
 }
 
 /// 시간대별 조황 예상 — 6구간 막대그래프.
+///
+/// ⚠️ [values] 가 비어 있으면 **이 위젯을 만들지 말 것**. 호출부가 카드째로 감춘다.
+/// 값이 없는 그래프는 "온종일 조황 0" 과 구별되지 않는다.
 class _HourlyCard extends StatelessWidget {
   const _HourlyCard({required this.values});
 
@@ -252,9 +263,7 @@ class _HourlyCard extends StatelessWidget {
   Widget build(BuildContext context) {
     // 가장 높은 구간만 살리고 나머지는 눌러서, 언제 나가야 하는지가
     // 그래프를 읽지 않아도 한눈에 들어오게 한다.
-    final peak = values.isEmpty
-        ? -1
-        : values.indexOf(values.reduce((a, b) => a > b ? a : b));
+    final peak = values.indexOf(values.reduce((a, b) => a > b ? a : b));
 
     return AppCard(
       padding: const EdgeInsets.fromLTRB(18, 18, 18, 16),
@@ -272,11 +281,10 @@ class _HourlyCard extends StatelessWidget {
                 ),
               ),
               const SizedBox(width: 10),
-              if (peak >= 0)
-                Text(
-                  '${Spot.hourLabels[peak]} 최적',
-                  style: AppText.caption.copyWith(color: AppColors.accentDark),
-                ),
+              Text(
+                '${Spot.hourLabels[peak]} 최적',
+                style: AppText.caption.copyWith(color: AppColors.accentDark),
+              ),
             ],
           ),
           const SizedBox(height: 22),

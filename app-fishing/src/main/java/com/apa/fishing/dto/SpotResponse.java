@@ -4,7 +4,6 @@ import com.apa.fishing.domain.FishingSpot;
 
 import java.math.BigDecimal;
 import java.time.LocalDateTime;
-import java.util.ArrayList;
 import java.util.List;
 
 /**
@@ -79,17 +78,18 @@ public record SpotResponse(
         return value == null || value.isBlank() ? "-" : value;
     }
 
+    /**
+     * 여섯 칸이 아니면 <b>빈 목록</b>이다. 앱은 그때 그래프 카드를 통째로 감춘다.
+     *
+     * <p>⚠️ 여기서 0 으로 메우면 안 된다. 예전엔 null 을 {@code [0,0,0,0,0,0]} 으로 채웠는데,
+     * 그러면 <b>예보가 없는 포인트가 "온종일 조황 0, 06시 최적"</b> 이라고 단언하는 화면이 된다.
+     * 배치가 {@code hourly_forecast} 를 안 채우던 45곳이 전부 그 상태였다.
+     * 없는 값과 0 은 다른 뜻이다 — {@code SpotIndexUpdate} 가 지키는 규칙과 같다.
+     */
     private static List<Integer> padForecast(List<Integer> forecast) {
-        if (forecast == null) {
-            return List.of(0, 0, 0, 0, 0, 0);
+        if (forecast == null || forecast.size() != FORECAST_SLOTS) {
+            return List.of();
         }
-        if (forecast.size() == FORECAST_SLOTS) {
-            return forecast;
-        }
-        List<Integer> padded = new ArrayList<>(forecast.subList(0, Math.min(forecast.size(), FORECAST_SLOTS)));
-        while (padded.size() < FORECAST_SLOTS) {
-            padded.add(0);
-        }
-        return padded;
+        return forecast;
     }
 }

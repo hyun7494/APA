@@ -46,6 +46,8 @@ public class SpotIndexWriter {
                 update.weather(),
                 update.tideInfo(),
                 update.comment(),
+                update.hourlyForecast(),
+                update.sunriseSunset(),
                 updatedAt);
     }
 

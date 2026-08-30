@@ -108,13 +108,31 @@ public class SpotIndexBatch {
                 return false;
             }
 
-            spotIndexWriter.write(spot.getId(), update, updatedAt);
+            spotIndexWriter.write(
+                    spot.getId(), update.withSunriseSunset(sunriseSunsetOf(spot, targetDate)),
+                    updatedAt);
             return true;
         } catch (Exception e) {
             // 여기까지 온 건 DB 쓰기 실패 같은 예상 밖의 것이다. 그래도 다음 포인트는 돌아야 한다.
             log.error("지수 배치: [{}] 갱신 실패", spot.getName(), e);
             return false;
         }
+    }
+
+    /**
+     * 일출·일몰. 좌표만 있으면 나오므로 API 실패와 무관하게 51곳 전부 채워진다.
+     *
+     * <p>좌표가 없는 포인트는 null 이다 — 시드 값을 남긴다. 지금은 그런 포인트가 없다.
+     */
+    private String sunriseSunsetOf(FishingSpot spot, LocalDate targetDate) {
+        if (spot.getLatitude() == null || spot.getLongitude() == null) {
+            return null;
+        }
+        return SolarTime.describe(
+                spot.getLatitude().doubleValue(),
+                spot.getLongitude().doubleValue(),
+                targetDate,
+                FortuneGenerator.KST);
     }
 
     /** {@code khoa_place_name} 이 NULL 인 포인트(영종도)는 애초에 호출하지 않는다. */

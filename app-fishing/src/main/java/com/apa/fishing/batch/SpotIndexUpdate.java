@@ -29,7 +29,9 @@ public record SpotIndexUpdate(
         Double windSpeed,
         String weather,
         String tideInfo,
-        String comment) {
+        String comment,
+        List<Integer> hourlyForecast,
+        String sunriseSunset) {
 
     /**
      * 받아온 것들로 갱신 내용을 만든다.
@@ -56,7 +58,9 @@ public record SpotIndexUpdate(
                     windSpeed,
                     weather,
                     khoa.tideInfo(),
-                    SpotComment.describe(khoa.rating(), waveHeight, windSpeed, weather));
+                    SpotComment.describe(khoa.rating(), waveHeight, windSpeed, weather),
+                    hourlyOf(kma),
+                    null);          // 좌표로 계산한다 — 아래 withSunriseSunset
         }
 
         // 폴백. RatingRule 은 원시 double 을 받으므로 둘 다 있어야 돌릴 수 있다.
@@ -77,7 +81,30 @@ public record SpotIndexUpdate(
                 windSpeed,
                 weather,
                 null,           // 물때도 마찬가지
-                SpotComment.describe(rating, waveHeight, windSpeed, weather));
+                SpotComment.describe(rating, waveHeight, windSpeed, weather),
+                hourlyOf(kma),
+                null);              // 좌표로 계산한다 — 아래 withSunriseSunset
+    }
+
+    /**
+     * 일출·일몰을 얹는다. <b>두 기관 어느 쪽에서도 오지 않는 값</b>이라 {@link #combine} 이
+     * 만들 수 없다 — 좌표와 날짜만 있으면 {@link SolarTime} 이 계산해 준다.
+     *
+     * <p>따로 두는 이유가 하나 더 있다: API 가 전부 실패해도 이 값은 나온다. 그렇다고
+     * 지수 없이 일출만 쓰지는 않는다 — {@code combine} 이 null 이면 그 포인트는 통째로 건너뛴다.
+     */
+    public SpotIndexUpdate withSunriseSunset(String sunriseSunset) {
+        return new SpotIndexUpdate(rating, recommendedFish, waterTemp, waveHeight, windSpeed,
+                weather, tideInfo, comment, hourlyForecast, sunriseSunset);
+    }
+
+    /**
+     * 시간대별 그래프는 <b>언제나 기상청 쪽</b>이다. KHOA 바다낚시지수에는 시간축이 없다
+     * (오전/오후 둘로만 나뉘고 그마저 앞 사흘뿐이다). KHOA 가 붙는 포인트에서도 이 값만은
+     * 기상청에서 온다.
+     */
+    private static List<Integer> hourlyOf(KmaForecast kma) {
+        return kma == null ? null : kma.hourly();
     }
 
     private static Double waveHeightOf(KmaForecast kma) {

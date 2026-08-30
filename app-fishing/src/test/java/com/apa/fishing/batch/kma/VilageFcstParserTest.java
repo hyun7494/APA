@@ -4,6 +4,7 @@ import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
 
 import java.time.LocalDate;
+import java.util.List;
 
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
@@ -165,5 +166,53 @@ class VilageFcstParserTest {
 
         assertThatThrownBy(() -> VilageFcstParser.parse(body, TARGET))
                 .isInstanceOf(KmaApiException.class);
+    }
+
+    @Test
+    @DisplayName("★ 여섯 칸(06~21시)이 다 차면 시간대별 그래프를 준다")
+    void buildsHourlyGraph() {
+        String[] items = new String[12];
+        int[] hours = {6, 9, 12, 15, 18, 21};
+        for (int i = 0; i < hours.length; i++) {
+            String time = "%02d00".formatted(hours[i]);
+            items[i * 2] = item("20260812", time, "WSD", "3.0");
+            items[i * 2 + 1] = item("20260812", time, "WAV", "0.5");
+        }
+
+        List<Integer> hourly = VilageFcstParser.parse(envelope(items), TARGET).hourly();
+
+        assertThat(hourly).hasSize(6).allSatisfy(v -> assertThat(v).isBetween(5, 95));
+    }
+
+    @Test
+    @DisplayName("★ 한 칸이라도 비면 그래프를 통째로 포기한다 — 빈 칸은 '조황 0' 으로 읽힌다")
+    void dropsGraphWhenASlotIsMissing() {
+        // 21시 WSD 가 없다. 발표 시각에 따라 예보 창이 잘리면 실제로 이렇게 온다
+        String body = envelope(
+                item("20260812", "0600", "WSD", "3.0"),
+                item("20260812", "0900", "WSD", "3.0"),
+                item("20260812", "1200", "WSD", "3.0"),
+                item("20260812", "1500", "WSD", "3.0"),
+                item("20260812", "1800", "WSD", "3.0"));
+
+        assertThat(VilageFcstParser.parse(body, TARGET).hourly()).isNull();
+    }
+
+    @Test
+    @DisplayName("그래프는 시간대를 뭉개지 않는다 — 바람이 센 칸이 더 낮게 나온다")
+    void graphKeepsEachSlotSeparate() {
+        String[] items = new String[12];
+        int[] hours = {6, 9, 12, 15, 18, 21};
+        for (int i = 0; i < hours.length; i++) {
+            String time = "%02d00".formatted(hours[i]);
+            // 12시만 강풍
+            items[i * 2] = item("20260812", time, "WSD", hours[i] == 12 ? "9.0" : "2.0");
+            items[i * 2 + 1] = item("20260812", time, "WAV", "0.3");
+        }
+
+        List<Integer> hourly = VilageFcstParser.parse(envelope(items), TARGET).hourly();
+
+        assertThat(hourly.get(2)).isLessThan(hourly.get(0));
+        assertThat(hourly.get(2)).isEqualTo(hourly.stream().min(Integer::compare).orElseThrow());
     }
 }
