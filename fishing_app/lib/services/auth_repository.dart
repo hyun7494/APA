@@ -1,3 +1,4 @@
+import 'dart:async';
 import 'package:dio/dio.dart';
 import 'package:flutter/foundation.dart';
 
@@ -243,12 +244,23 @@ class RemoteAuthRepository implements AuthRepository {
     } catch (_) {
       // 서버에 못 알려도 계속 진행한다. 액세스 토큰은 1시간이면 어차피 만료된다.
     }
+
+    // ★ 로컬 토큰을 **제공자 세션보다 먼저** 지운다.
+    //
+    // 예전엔 순서가 반대였는데, 웹에서 카카오·구글 SDK 가 초기화되지 않은 채로
+    // `signOut()` 을 부르면 **예외가 아니라 영영 안 끝나는 Future** 가 돌아온다.
+    // try/catch 로는 멈춤을 못 잡아서 `clearTokens()` 까지 닿지 못했고,
+    // 그 결과 **웹에서 로그아웃과 탈퇴가 아예 동작하지 않았다** — 토큰이 그대로 남고
+    // 화면도 로그인 상태에 머물렀다.
+    await _client.clearTokens();
+
+    // 제공자 세션 해제는 여기부터 덤이다. 못 끊어도 우리 로그아웃은 이미 끝났다.
+    // 시간 제한을 두는 이유는 위와 같다 — 안 끝나는 경우가 실제로 있다.
     try {
-      await _socialSignIn.signOut();
+      await _socialSignIn.signOut().timeout(const Duration(seconds: 3));
     } catch (_) {
       // 제공자 세션 해제 실패도 로그아웃을 막을 이유는 못 된다.
     }
-    await _client.clearTokens();
   }
 
   @override
