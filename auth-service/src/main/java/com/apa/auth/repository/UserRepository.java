@@ -14,4 +14,11 @@ public interface UserRepository extends JpaRepository<User, Long> {
      * 구분하므로, 정규화하지 않고 넣으면 같은 주소로 계정이 두 개 생긴다.
      */
     Optional<User> findByEmail(String email);
+
+    /**
+     * 닉네임이 이미 쓰이는지. <b>대소문자를 가리지 않는다</b> — UNIQUE 인덱스가
+     * {@code lower(nickname)} 위에 걸려 있어서, 여기서만 구분하면 검사는 통과했는데
+     * INSERT 에서 터지는 일이 생긴다.
+     */
+    boolean existsByNicknameIgnoreCase(String nickname);
 }

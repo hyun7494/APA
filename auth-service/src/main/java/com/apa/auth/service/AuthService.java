@@ -93,14 +93,21 @@ public class AuthService {
         String rawPassword = PasswordPolicy.require(request.password());
         String appId = normalizeAppId(request.appId());
 
-        String nickname = request.nickname() == null || request.nickname().isBlank()
-                ? EmailAddress.toNickname(email)
-                : request.nickname().trim();
+        // ★ 적어 낸 이름과 우리가 지어 준 이름을 **다르게** 다룬다.
+        //   적어 낸 것이 겹치면 되묻고(409), 이메일에서 뽑아 준 것이 겹치면 뒤에 숫자를
+        //   붙인다 — 후자는 사용자가 고른 이름이 아니라서 물어볼 것이 없다.
+        boolean chosen = request.nickname() != null && !request.nickname().isBlank();
+        String nickname = chosen
+                ? Nickname.require(request.nickname())
+                : Nickname.withSuffix(EmailAddress.toNickname(email), 0, this::nicknameTaken);
 
         // 미리 조회해 봐야 동시 요청은 못 막는다. UNIQUE 제약이 진짜 방어선이고,
         // 이 조회는 대부분의 경우에 더 친절한 메시지를 주기 위한 것이다.
         if (userRepository.findByEmail(email).isPresent()) {
             throw new ConflictException("이미 가입된 이메일입니다");
+        }
+        if (chosen && nicknameTaken(nickname)) {
+            throw new ConflictException("이미 사용 중인 닉네임입니다");
         }
 
         User user;
@@ -108,7 +115,11 @@ public class AuthService {
             user = userRepository.saveAndFlush(
                     User.registerWithEmail(email, passwordEncoder.encode(rawPassword), nickname));
         } catch (DataIntegrityViolationException e) {
-            throw new ConflictException("이미 가입된 이메일입니다");
+            // ⚠️ 이메일과 닉네임 **둘 다** 여기로 온다. 어느 쪽이 걸렸는지 예외만으로는
+            //    알 수 없어서 다시 물어본다 — 틀린 이유를 대면 사용자는 엉뚱한 칸을 고친다.
+            throw new ConflictException(userRepository.findByEmail(email).isPresent()
+                    ? "이미 가입된 이메일입니다"
+                    : "이미 사용 중인 닉네임입니다");
         }
 
         // ⚠️ 동의는 **계정을 만든 뒤, 같은 트랜잭션 안에서** 남긴다. 먼저 검사하려 해도
@@ -179,7 +190,14 @@ public class AuthService {
         if (!user.isActive()) {
             throw new UnauthorizedException("탈퇴한 계정입니다");
         }
-        user.syncProfile(profile.nickname(), profile.profileUrl());
+        // ⚠️ 닉네임까지 매번 덮어쓰지 않는다. 제공자 쪽 이름이 **다른 사람이 이미 쓰는
+        //    이름**이면 UNIQUE 에 걸려 로그인 자체가 죽고, 우리 앱에서 바꾼 이름도
+        //    로그인할 때마다 되돌아간다. 겹치지 않을 때만 따라간다.
+        String incoming = Nickname.normalize(profile.nickname());
+        boolean keepNickname = incoming == null
+                || incoming.equalsIgnoreCase(user.getNickname())
+                || nicknameTaken(incoming);
+        user.syncProfile(keepNickname ? user.getNickname() : incoming, profile.profileUrl());
 
         linkApp(user.getId(), appId);
         return issueTokens(user, appId);
@@ -384,12 +402,20 @@ public class AuthService {
      * 식별자가 화면에 노출되므로 뒤 4자리만 붙인다.
      */
     private String defaultNickname(SocialProfile profile) {
-        if (profile.nickname() != null && !profile.nickname().isBlank()) {
-            return profile.nickname();
+        String fromProvider = Nickname.normalize(profile.nickname());
+        if (fromProvider != null) {
+            // 제공자가 준 이름도 남이 쓰고 있을 수 있다. 소셜은 물어볼 화면이 없어서
+            // (첫 로그인이 곧 가입이다) 되묻는 대신 숫자를 붙인다.
+            return Nickname.withSuffix(fromProvider, 0, this::nicknameTaken);
         }
         String id = profile.socialId();
         String suffix = id.length() <= 4 ? id : id.substring(id.length() - 4);
-        return "낚시꾼" + suffix;
+        return Nickname.withSuffix("낚시꾼" + suffix, 0, this::nicknameTaken);
+    }
+
+    /** 대소문자를 가리지 않는다 — UNIQUE 인덱스가 `lower(nickname)` 위에 있다. */
+    private boolean nicknameTaken(String nickname) {
+        return userRepository.existsByNicknameIgnoreCase(nickname);
     }
 
     private void linkApp(Long userId, String appId) {
