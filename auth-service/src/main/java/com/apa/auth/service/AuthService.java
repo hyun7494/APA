@@ -84,6 +84,35 @@ public class AuthService {
         this.absentUserHash = passwordEncoder.encode(UUID.randomUUID().toString());
     }
 
+    // ───────────────────────────────────────────────────────────── 탈퇴
+
+    /**
+     * 회원 탈퇴 — 계정을 비활성하고 로그인 수단을 지운다 (이용약관 12조).
+     *
+     * <p>★ <b>행을 지우지 않는다.</b> 조과·게시글이 {@code user_id} 를 참조하고, 무엇보다
+     * 행이 사라지면 {@code uq_users_nickname_lower} 가 풀려 <b>떠난 사람의 닉네임을 남이
+     * 가져갈 수 있다</b> — 게시글에 박힌 옛 이름이 다른 사람 것처럼 보이게 된다.
+     *
+     * <p>★ <b>다른 서비스의 데이터는 여기서 손대지 않는다.</b> 앱이 먼저
+     * {@code DELETE /fishing/me} 를 불러 조과·사진을 지우고 글쓴이를 가린 뒤에 이걸 부른다.
+     * 순서를 뒤집으면 토큰이 죽어 그 요청을 보낼 수 없다.
+     *
+     * <p>이미 탈퇴한 계정에 다시 불러도 조용히 통과한다 — 앱이 중간에 실패해 다시 눌러도
+     * 안전해야 한다.
+     */
+    @Transactional
+    public void withdraw(Long userId) {
+        User user = userRepository.findById(userId)
+                .orElseThrow(() -> new UnauthorizedException("계정을 찾을 수 없습니다"));
+
+        if (user.isActive()) {
+            user.withdraw(LocalDateTime.now());
+        }
+        // 토큰·소셜 연결은 상태와 무관하게 확실히 끊는다.
+        refreshTokenRepository.deleteByUserId(userId);
+        socialAccountRepository.deleteByUserId(userId);
+    }
+
     // ───────────────────────────────────────────────────────────── 자체 가입
 
     /** 이메일·비밀번호로 가입하고 곧바로 로그인시킨다. 가입 직후 다시 로그인을 시키면 이탈한다. */

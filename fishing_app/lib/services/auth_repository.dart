@@ -106,6 +106,12 @@ abstract interface class AuthRepository {
 
   Future<void> signOut();
 
+  /// DELETE /auth/me — 계정을 비활성하고 로그인 수단을 지운다.
+  ///
+  /// ⚠️ **앱 서비스 데이터를 먼저 지운 뒤에 부를 것.** 이게 먼저 돌면 토큰이 죽어서
+  /// 그 요청들을 보낼 수 없다.
+  Future<void> withdraw();
+
   Future<bool> get isLoggedIn;
 }
 
@@ -230,6 +236,24 @@ class RemoteAuthRepository implements AuthRepository {
   ///
   /// **로컬 토큰은 서버 호출이 실패해도 반드시 지운다.** 서버가 죽었다고 로그아웃이
   /// 안 되면 사용자는 자기 기기에서 계정을 뺄 방법이 없다.
+  @override
+  Future<void> withdraw() async {
+    final token = await _client.accessToken;
+    if (token == null) {
+      throw const AuthException('로그인이 만료됐어요. 다시 로그인한 뒤 시도해 주세요');
+    }
+    try {
+      await _dio.delete<void>(
+        '/auth/me',
+        options: Options(headers: {'Authorization': 'Bearer $token'}),
+      );
+    } on DioException catch (e) {
+      // ⚠️ 로그아웃과 달리 **삼키지 않는다.** 여기서 실패하면 계정이 살아 있는데
+      //    앱은 지워진 줄 안다. 실패를 알려야 다시 시도할 수 있다.
+      throw _toAuthException(e);
+    }
+  }
+
   @override
   Future<void> signOut() async {
     try {

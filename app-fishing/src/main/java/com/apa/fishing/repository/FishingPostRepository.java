@@ -4,6 +4,7 @@ import com.apa.fishing.domain.FishingPost;
 import com.apa.fishing.domain.PostCategory;
 import jakarta.persistence.LockModeType;
 import org.springframework.data.jpa.repository.JpaRepository;
+import org.springframework.data.jpa.repository.Modifying;
 import org.springframework.data.jpa.repository.Lock;
 import org.springframework.data.jpa.repository.Query;
 import org.springframework.data.repository.query.Param;
@@ -53,4 +54,15 @@ public interface FishingPostRepository extends JpaRepository<FishingPost, Long> 
      * null 인 행은 어느 사용자의 것도 아니므로 이 셈에 들어오지 않는다.
      */
     long countByUserId(Long userId);
+
+    /**
+     * 탈퇴한 사람의 글에서 작성자 이름만 가린다. <b>글은 지우지 않는다</b> —
+     * 이용약관 12조 3항이 "이미 등록한 게시물은 탈퇴 후에도 남을 수 있다" 고 알린다.
+     *
+     * <p>{@code user_id} 는 남긴다. 지우면 같은 사람의 글에 같은 꼬리표를 다시 붙일 수
+     * 없고, 신고 처리 이력도 끊긴다.
+     */
+    @Modifying(clearAutomatically = true, flushAutomatically = true)
+    @Query("update FishingPost p set p.authorNickname = :masked where p.userId = :userId")
+    int maskAuthor(@Param("userId") Long userId, @Param("masked") String masked);
 }

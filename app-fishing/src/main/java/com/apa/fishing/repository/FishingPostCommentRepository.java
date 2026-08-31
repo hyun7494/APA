@@ -2,6 +2,9 @@ package com.apa.fishing.repository;
 
 import com.apa.fishing.domain.FishingPostComment;
 import org.springframework.data.jpa.repository.JpaRepository;
+import org.springframework.data.repository.query.Param;
+import org.springframework.data.jpa.repository.Query;
+import org.springframework.data.jpa.repository.Modifying;
 
 import java.util.List;
 
@@ -11,4 +14,9 @@ public interface FishingPostCommentRepository extends JpaRepository<FishingPostC
     List<FishingPostComment> findByPostIdOrderByCreatedAtAsc(Long postId);
 
     long countByPostId(Long postId);
+
+    /** 댓글도 같이 가린다 — 글만 가리면 댓글에 옛 이름이 그대로 남는다. */
+    @Modifying(clearAutomatically = true, flushAutomatically = true)
+    @Query("update FishingPostComment c set c.authorNickname = :masked where c.userId = :userId")
+    int maskAuthor(@Param("userId") Long userId, @Param("masked") String masked);
 }

@@ -35,12 +35,18 @@ class ProfileScreen extends ConsumerWidget {
     (icon: AppIcon.headset, label: '고객센터', route: '/support'),
     // 로그인 상태에 따라 라벨이 바뀌는 유일한 행이다. 아래 [_authLabel] 로 갈아끼운다.
     (icon: AppIcon.logout, label: authLabel, route: null),
+    // 이용약관 12조가 "서비스 내 기능을 통해 탈퇴할 수 있다" 고 약속한다 — 그 기능이 이거다.
+    (icon: AppIcon.close, label: withdrawLabel, route: null),
   ];
 
   /// 메뉴 목록은 const 라 여기서 상태를 반영할 수 없다. 자리 표시자를 두고
   /// 그릴 때 실제 라벨로 바꾼다.
   @visibleForTesting
   static const authLabel = '__AUTH__';
+
+  /// 로그인했을 때만 그리는 행의 자리 표시자 — [authLabel] 과 같은 방식이다.
+  @visibleForTesting
+  static const withdrawLabel = '__WITHDRAW__';
 
   /// 로그아웃은 되돌리기 어려운 동작이라 한 번 되묻는다. 로그인은 안 묻는다 —
   /// 어차피 다음 화면에서 취소할 수 있다.
@@ -81,6 +87,55 @@ class ProfileScreen extends ConsumerWidget {
 
     if (confirmed != true) return;
     await ref.read(authControllerProvider.notifier).signOut();
+  }
+
+  /// 탈퇴 — 로그아웃보다 세게 되묻는다. **정말로 되돌릴 수 없다.**
+  static Future<void> _withdraw(BuildContext context, WidgetRef ref) async {
+    final confirmed = await showDialog<bool>(
+      context: context,
+      builder: (dialogContext) => AlertDialog(
+        backgroundColor: AppColors.surface,
+        title: Text('정말 탈퇴할까요?', style: AppText.cardLabel),
+        content: Text(
+          '조과 기록과 사진이 모두 지워지고 되돌릴 수 없습니다.\n'
+          '게시판에 쓴 글은 남지만 작성자가 익명으로 바뀝니다.',
+          style: AppText.body,
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(dialogContext, false),
+            child: Text('취소', style: AppText.rowValue.copyWith(
+              color: AppColors.sub,
+            )),
+          ),
+          TextButton(
+            onPressed: () => Navigator.pop(dialogContext, true),
+            child: Text('탈퇴', style: AppText.rowValue.copyWith(
+              color: AppColors.alert,
+            )),
+          ),
+        ],
+      ),
+    );
+    if (confirmed != true || !context.mounted) return;
+
+    // 순서가 전부다 — fishing 데이터 정리가 먼저, 계정 비활성이 나중이다.
+    // 계정이 먼저 죽으면 토큰이 사라져 정리 요청을 보낼 수 없다.
+    final erase = ref.read(fishingRepositoryProvider).eraseMyData;
+    final messenger = ScaffoldMessenger.of(context);
+    final ok = await ref.read(authControllerProvider.notifier).withdraw(erase);
+
+    if (!ok) {
+      final error = ref.read(authControllerProvider).error;
+      messenger.showSnackBar(SnackBar(
+        content: Text(error?.message ?? '탈퇴하지 못했어요. 잠시 후 다시 시도해 주세요'),
+      ));
+      return;
+    }
+    if (context.mounted) context.go('/home');
+    messenger.showSnackBar(
+      const SnackBar(content: Text('탈퇴했습니다. 그동안 함께해 주셔서 감사합니다')),
+    );
   }
 
   @override
@@ -269,13 +324,20 @@ class _Body extends ConsumerWidget {
             child: Column(
               children: [
                 for (var i = 0; i < menu.length; i++) ...[
+                  // 탈퇴는 로그인한 사람에게만 뜻이 있다. 행째로 숨긴다.
+                  if (menu[i].label == ProfileScreen.withdrawLabel &&
+                      !ref.watch(authControllerProvider).isLoggedIn)
+                    const SizedBox.shrink()
+                  else ...[
                   if (i > 0)
                     const Padding(
                       padding: EdgeInsets.symmetric(horizontal: 12),
                       child: Divider(),
                     ),
                   _MenuRow(
-                    item: menu[i].label == ProfileScreen.authLabel
+                    item: menu[i].label == ProfileScreen.withdrawLabel
+                        ? (icon: menu[i].icon, label: '회원 탈퇴', route: null)
+                        : menu[i].label == ProfileScreen.authLabel
                         // 로그인 상태에 따라 이 행만 문구가 바뀐다.
                         ? (
                             icon: menu[i].icon,
@@ -287,7 +349,9 @@ class _Body extends ConsumerWidget {
                         : menu[i],
                     onTap: () {
                       final route = menu[i].route;
-                      if (menu[i].label == ProfileScreen.authLabel) {
+                      if (menu[i].label == ProfileScreen.withdrawLabel) {
+                        ProfileScreen._withdraw(context, ref);
+                      } else if (menu[i].label == ProfileScreen.authLabel) {
                         ProfileScreen._toggleAuth(context, ref);
                       } else if (route != null) {
                         context.go(route);
@@ -300,6 +364,7 @@ class _Body extends ConsumerWidget {
                       }
                     },
                   ),
+                  ],
                 ],
               ],
             ),

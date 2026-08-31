@@ -192,6 +192,40 @@ class AuthController extends StateNotifier<AuthState> {
     if (mounted) state = const AuthState();
   }
 
+  /// 회원 탈퇴. **순서가 전부다** — fishing 데이터를 먼저 지우고 계정을 나중에 죽인다.
+  /// 계정이 먼저 죽으면 토큰이 사라져 fishing 쪽 정리를 보낼 수 없다.
+  ///
+  /// [eraseAppData] 는 화면이 넘긴다 — 이 컨트롤러가 fishing 저장소를 직접 알면
+  /// 인증 계층이 앱 데이터 계층에 묶인다.
+  ///
+  /// @return 성공하면 true. 실패는 [AuthState.error] 로 남는다 — 실패를 조용히 넘기면
+  /// 계정이 살아 있는데 사용자는 지워진 줄 안다.
+  Future<bool> withdraw(Future<void> Function() eraseAppData) async {
+    if (state.isBusy) return false;
+    state = state.copyWith(emailBusy: true, clearError: true, clearLinkRequest: true);
+
+    try {
+      await eraseAppData();
+      await _repository.withdraw();
+    } on AuthException catch (e) {
+      if (mounted) state = state.copyWith(emailBusy: false, error: e);
+      return false;
+    } catch (e) {
+      if (mounted) {
+        state = state.copyWith(
+          emailBusy: false,
+          error: AuthException('탈퇴하지 못했어요. 잠시 후 다시 시도해 주세요 ($e)'),
+        );
+      }
+      return false;
+    }
+
+    // 계정이 죽었으니 남은 토큰도 정리한다. 실패해도 상관없다 — 서버가 이미 다 끊었다.
+    await _repository.signOut();
+    if (mounted) state = const AuthState();
+    return true;
+  }
+
   void clearError() {
     if (state.error != null) state = state.copyWith(clearError: true);
   }

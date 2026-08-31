@@ -129,6 +129,33 @@ public class User {
         return passwordHash != null;
     }
 
+    /**
+     * 탈퇴 — 행은 남기고 로그인 수단만 지운다.
+     *
+     * <p>★ <b>닉네임은 그대로 둔다.</b> {@code uq_users_nickname_lower} 가 계속 붙잡고 있어야
+     * 떠난 사람의 이름을 아무도 못 가져간다 ({@link UserStatus} 참고). 그게 풀리면 게시글에
+     * 박힌 옛 닉네임이 다른 사람 것처럼 보인다.
+     *
+     * <p>반대로 <b>이메일과 비밀번호는 비운다.</b>
+     * <ul>
+     *   <li>개인정보 처리방침이 "회원 정보는 탈퇴 시까지" 라고 알린다 — 남겨 둘 근거가 없다</li>
+     *   <li>비워야 로그인할 수 없다. 상태만 바꾸면 비밀번호가 남아 인증 경로가 열려 있다</li>
+     *   <li>주소가 풀리므로 <b>같은 이메일로 다시 가입할 수 있다</b>. 그때는 새 계정이고,
+     *       옛 글은 가려진 채로 남는다</li>
+     * </ul>
+     *
+     * <p>⚠️ {@code ck_users_password_needs_email} 이 "비밀번호가 있으면 이메일도 있어야 한다"
+     * 이므로 <b>둘을 함께</b> 비워야 한다. 하나만 비우면 제약에 걸린다.
+     */
+    public void withdraw(LocalDateTime at) {
+        this.status = UserStatus.WITHDRAWN;
+        this.withdrawnAt = at;
+        this.email = null;
+        this.passwordHash = null;
+        this.emailVerified = false;
+        this.profileUrl = null;
+    }
+
     public boolean isActive() {
         return status == UserStatus.ACTIVE;
     }

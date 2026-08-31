@@ -31,6 +31,18 @@ public class AuthController {
         return ResponseEntity.status(HttpStatus.CREATED).body(authService.signUp(request));
     }
 
+    /**
+     * 회원 탈퇴 (계약서 3-9). 계정을 비활성하고 로그인 수단을 지운다.
+     *
+     * <p>⚠️ 앱은 <b>이걸 마지막에</b> 부른다. 먼저 각 앱 서비스에 자기 데이터를 지우라고
+     * 요청해야 한다 — 여기가 먼저 돌면 토큰이 죽어서 그 요청들을 보낼 수 없다.
+     */
+    @DeleteMapping("/me")
+    public ResponseEntity<Void> withdraw(@AuthenticationPrincipal AuthenticatedUser user) {
+        authService.withdraw(user.userId());
+        return ResponseEntity.noContent().build();
+    }
+
     /** 자체 가입 계정 로그인. */
     @PostMapping("/login/email")
     public ResponseEntity<TokenResponse> loginWithEmail(@RequestBody EmailLoginRequest request) {

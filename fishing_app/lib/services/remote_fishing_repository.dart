@@ -376,6 +376,12 @@ class RemoteFishingRepository implements FishingRepository {
   }
 
   @override
+  Future<void> eraseMyData() async {
+    // 실패를 삼키지 않는다 — 여기서 조용히 넘어가면 계정만 죽고 데이터가 영영 남는다.
+    await _dio.delete<void>('/fishing/me');
+  }
+
+  @override
   Future<Profile?> fetchProfile() async {
     if (!await _client.isLoggedIn) return null;
     try {

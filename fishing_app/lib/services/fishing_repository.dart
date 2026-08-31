@@ -137,6 +137,10 @@ abstract interface class FishingRepository {
 
   /// GET /fishing/me/profile — 비로그인이면 null
   Future<Profile?> fetchProfile();
+
+  /// DELETE /fishing/me — 탈퇴 전에 이 서비스의 흔적을 정리한다 (계약서 3-9).
+  /// 조과·사진은 지워지고, 글·댓글은 남되 글쓴이가 가려진다.
+  Future<void> eraseMyData();
 }
 
 /// 글쓰기가 실패했을 때 화면에 그대로 띄울 수 있는 메시지.

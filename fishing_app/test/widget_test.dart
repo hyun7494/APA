@@ -131,6 +131,9 @@ class FakeAuthRepository implements AuthRepository {
   Future<void> signOut() async => _loggedIn = false;
 
   @override
+  Future<void> withdraw() async => _loggedIn = false;
+
+  @override
   Future<bool> get isLoggedIn async => _loggedIn;
 }
 
@@ -160,6 +163,9 @@ class FailingAuthRepository implements AuthRepository {
 
   @override
   Future<void> signOut() async {}
+
+  @override
+  Future<void> withdraw() async {}
 
   @override
   Future<bool> get isLoggedIn async => false;
@@ -599,6 +605,43 @@ void main() {
 
     expect(find.text('고친 뒤'), findsOneWidget);
     expect(find.text('고치기 전'), findsNothing, reason: '고쳤으면 옛 제목은 없어야 한다');
+  });
+
+  testWidgets('★ 마이에서 탈퇴하면 되묻고, 확인해야 로그아웃 상태가 된다', (tester) async {
+    // 이용약관 12조가 "서비스 내 기능을 통해 탈퇴할 수 있다" 고 약속한다.
+    await pumpApp(tester, auth: FakeAuthRepository(loggedIn: true));
+
+    await tester.tap(find.text('마이'));
+    await tester.pumpAndSettle();
+    expect(find.text('회원 탈퇴'), findsOneWidget);
+
+    await tester.tap(find.text('회원 탈퇴'));
+    await tester.pumpAndSettle();
+    // 로그아웃보다 세게 되묻는다 — 되돌릴 수 없는 동작이다.
+    expect(find.textContaining('되돌릴 수 없습니다'), findsOneWidget);
+
+    // 취소하면 아무 일도 없다.
+    await tester.tap(find.text('취소'));
+    await tester.pumpAndSettle();
+    expect(find.text('로그아웃'), findsOneWidget, reason: '아직 로그인 상태여야 한다');
+
+    // 확인하면 홈으로 나가고 로그아웃 상태다.
+    await tester.tap(find.text('회원 탈퇴'));
+    await tester.pumpAndSettle();
+    await tester.tap(find.text('탈퇴'));
+    await tester.pumpAndSettle();
+
+    expect(find.textContaining('오늘 출조'), findsOneWidget);
+    await tester.tap(find.text('마이'));
+    await tester.pumpAndSettle();
+    expect(find.text('로그인'), findsWidgets, reason: '탈퇴 뒤에는 비로그인이다');
+  });
+
+  testWidgets('★ 비로그인 마이에는 탈퇴 메뉴가 없다', (tester) async {
+    await pumpApp(tester);
+    await tester.tap(find.text('마이'));
+    await tester.pumpAndSettle();
+    expect(find.text('회원 탈퇴'), findsNothing);
   });
 
   testWidgets('★ 비로그인이어도 설정·고객센터에는 들어갈 수 있다', (tester) async {

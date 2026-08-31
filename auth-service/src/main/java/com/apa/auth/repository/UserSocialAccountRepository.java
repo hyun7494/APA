@@ -13,4 +13,7 @@ public interface UserSocialAccountRepository extends JpaRepository<UserSocialAcc
 
     /** 연동 판정 — 이 사람이 이 제공자를 이미 붙였는가. */
     Optional<UserSocialAccount> findByUserIdAndSocialType(Long userId, SocialType socialType);
+
+    /** 탈퇴 — 제공자 식별자는 개인정보라 남기지 않는다. */
+    void deleteByUserId(Long userId);
 }

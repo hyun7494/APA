@@ -33,6 +33,9 @@ public interface FishingPostLikeRepository
 
     void deleteByPostIdAndUserId(Long postId, Long userId);
 
+    /** 탈퇴 정리용. 좋아요는 집계에만 쓰이고 이름이 안 붙어 지워도 대화가 안 깨진다. */
+    void deleteByUserId(Long userId);
+
     long countByPostId(Long postId);
 
     /**

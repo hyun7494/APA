@@ -373,6 +373,12 @@ class MockFishingRepository implements FishingRepository {
   }
 
   @override
+  Future<void> eraseMyData() async {
+    await Future.delayed(_latency);
+    // 목에는 사용자별 데이터 구분이 없어 지울 것이 없다.
+  }
+
+  @override
   Future<Profile?> fetchProfile() async {
     await Future.delayed(_latency);
     return MockData.profile;
