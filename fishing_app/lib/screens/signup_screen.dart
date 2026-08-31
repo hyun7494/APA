@@ -397,26 +397,31 @@ class _ConsentRow extends StatelessWidget {
                 children: [
                   // 아이콘 세트에 체크박스가 없다. 새 아이콘을 넣기보다 네모를
                   // 그리고 안에 `check` 를 넣는다 — 표준적인 모양이고 팔레트만 탄다.
+                  //
+                  // ⚠️ 안 켠 네모에 `AppColors.line` 을 쓰지 말 것. 그건 **구분선 색**이라
+                  //    라이트에서 #F0F2F4 인데 배경이 #F4F5F7 이다 — 네 단계 차이라
+                  //    사실상 안 보인다. 눌러야 하는 컨트롤은 찾을 수 있어야 하므로
+                  //    테두리는 `muted`, 안은 `surface` 로 채워 바탕에서 떼어 놓는다.
                   Padding(
                     padding: const EdgeInsets.only(top: 1),
                     child: Container(
-                      width: 19,
-                      height: 19,
+                      width: 20,
+                      height: 20,
                       decoration: BoxDecoration(
-                        color: checked ? AppColors.accent : Colors.transparent,
+                        color: checked ? AppColors.accent : AppColors.surface,
                         borderRadius: BorderRadius.circular(6),
                         border: Border.all(
-                          color: checked ? AppColors.accent : AppColors.line,
-                          width: 1.4,
+                          color: checked ? AppColors.accent : AppColors.muted,
+                          width: 1.6,
                         ),
                       ),
                       child: checked
                           ? Center(
                               child: LineIcon(
                                 AppIcon.check,
-                                size: 12,
+                                size: 13,
                                 color: AppColors.onAccent,
-                                stroke: 2,
+                                stroke: 2.2,
                               ),
                             )
                           : null,
