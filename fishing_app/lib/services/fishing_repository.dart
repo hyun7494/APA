@@ -138,6 +138,12 @@ abstract interface class FishingRepository {
   /// GET /fishing/me/profile — 비로그인이면 null
   Future<Profile?> fetchProfile();
 
+  /// GET /fishing/users/{userId} — 남의 공개 프로필 (계약서 3-10).
+  ///
+  /// **게시판 활동만** 온다. 조과·도감·사진은 본인만 본다 (약관 10조 2항).
+  /// 공개할 활동이 없으면 서버가 404 다.
+  Future<PublicProfile> fetchPublicProfile(int userId);
+
   /// DELETE /fishing/me — 탈퇴 전에 이 서비스의 흔적을 정리한다 (계약서 3-9).
   /// 조과·사진은 지워지고, 글·댓글은 남되 글쓴이가 가려진다.
   Future<void> eraseMyData();

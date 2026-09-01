@@ -65,4 +65,23 @@ public interface FishingPostRepository extends JpaRepository<FishingPost, Long> 
     @Modifying(clearAutomatically = true, flushAutomatically = true)
     @Query("update FishingPost p set p.authorNickname = :masked where p.userId = :userId")
     int maskAuthor(@Param("userId") Long userId, @Param("masked") String masked);
+
+    /**
+     * 공개 프로필이 보여 줄 그 사람의 글 (계약서 3-10). 최신순이다.
+     *
+     * <p>⚠️ <b>게시판 글만</b>이다. 조과 기록·도감·사진은 여기 섞지 않는다 —
+     * 약관 10조 2항이 "게시판에 따로 공개하지 않는 한 다른 회원에게 노출되지 않는다"
+     * 고 알린다. 공개 프로필은 <b>이미 공개된 것만</b> 모아 보여 주는 자리다.
+     */
+    @Query("""
+            select p from FishingPost p
+            left join fetch p.region r
+            where p.userId = :userId
+            order by p.createdAt desc
+            """)
+    List<FishingPost> findByAuthor(@Param("userId") Long userId);
+
+    /** 받은 좋아요 합계. 글 목록을 다 세지 않고 DB 가 더한다. */
+    @Query("select coalesce(sum(p.likeCount), 0) from FishingPost p where p.userId = :userId")
+    long sumLikesReceived(@Param("userId") Long userId);
 }

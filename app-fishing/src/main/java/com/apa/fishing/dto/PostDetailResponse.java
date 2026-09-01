@@ -16,6 +16,12 @@ public record PostDetailResponse(
         String title,
         String content,
         String authorNickname,
+        /**
+         * 작성자. 프로필로 넘어가는 데 쓴다 (계약서 3-10). 시드 글은 null 이다.
+         *
+         * <p>닉네임이 아니라 이걸로 넘어간다 — 이름은 표시용이고 신원은 id 다.
+         */
+        Long authorId,
         LocalDateTime createdAt,
         int likeCount,
         int commentCount,
@@ -45,6 +51,7 @@ public record PostDetailResponse(
                 post.getTitle(),
                 post.getContent(),
                 post.getAuthorNickname(),
+                post.getUserId(),
                 post.getCreatedAt(),
                 post.getLikeCount(),
                 post.getCommentCount(),

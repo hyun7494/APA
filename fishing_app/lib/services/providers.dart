@@ -239,6 +239,12 @@ final commentsProvider = FutureProvider.family<List<Comment>, int>((ref, postId)
   return ref.watch(fishingRepositoryProvider).fetchComments(postId);
 });
 
+/// 남의 공개 프로필 (계약서 3-10). 로그인과 무관하다 — 게시판처럼 읽기는 열려 있다.
+final publicProfileProvider = FutureProvider.family<PublicProfile, int>(
+  (ref, userId) =>
+      ref.watch(fishingRepositoryProvider).fetchPublicProfile(userId),
+);
+
 final profileProvider = FutureProvider<Profile?>((ref) {
   ref.watch(loggedInProvider);
   return ref.watch(fishingRepositoryProvider).fetchProfile();

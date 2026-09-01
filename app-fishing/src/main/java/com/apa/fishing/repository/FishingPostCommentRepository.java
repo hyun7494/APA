@@ -19,4 +19,7 @@ public interface FishingPostCommentRepository extends JpaRepository<FishingPostC
     @Modifying(clearAutomatically = true, flushAutomatically = true)
     @Query("update FishingPostComment c set c.authorNickname = :masked where c.userId = :userId")
     int maskAuthor(@Param("userId") Long userId, @Param("masked") String masked);
+
+    /** 공개 프로필의 댓글 수. 내용은 안 보여 주고 활동량만 센다. */
+    long countByUserId(Long userId);
 }

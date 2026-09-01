@@ -2,6 +2,7 @@ export 'catch_record.dart';
 export 'post.dart';
 export 'post_detail.dart';
 export 'profile.dart';
+export 'public_profile.dart';
 export 'rating.dart';
 export 'report.dart';
 export 'region_group.dart';

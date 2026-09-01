@@ -220,6 +220,11 @@ class MockFishingRepository implements FishingRepository {
   /// 이게 없으면 수정·삭제 버튼이 어디에도 안 뜬다. 시드 글은 여기 없다(남의 글).
   final Set<int> _mine = {};
 
+  /// 목에서 "나" 의 id. 서버는 토큰에서 가져오지만 목에는 토큰이 없다.
+  /// 공개 프로필이 `authorId` 로 글을 모으므로 내 글에도 주인을 남겨야 한다 —
+  /// 안 그러면 목에서만 프로필이 비어 서버와 다르게 동작한다.
+  static const mockUserId = 8;
+
   @override
   Future<PostDetail> fetchPost(int id) async {
     await Future.delayed(_latency);
@@ -231,6 +236,7 @@ class MockFishingRepository implements FishingRepository {
       // 목 데이터에는 본문이 따로 없다. 목록 요약을 그대로 쓴다.
       content: post.summary,
       authorNickname: post.authorNickname,
+      authorId: post.authorId,
       createdAt: post.createdAt,
       likeCount: post.likeCount + (_liked.contains(id) ? 1 : 0),
       commentCount: _comments[id]?.length ?? post.commentCount,
@@ -259,6 +265,7 @@ class MockFishingRepository implements FishingRepository {
       title: title,
       summary: content,
       authorNickname: old.authorNickname,
+      authorId: old.authorId,
       createdAt: old.createdAt,
       likeCount: old.likeCount,
       commentCount: old.commentCount,
@@ -363,6 +370,7 @@ class MockFishingRepository implements FishingRepository {
       likeCount: 0,
       commentCount: 0,
       hasImage: photo != null,
+      authorId: mockUserId,
       regionName: _regionName(regionGroupId),
       regionGroupId: regionGroupId,
     );
@@ -376,6 +384,30 @@ class MockFishingRepository implements FishingRepository {
   Future<void> eraseMyData() async {
     await Future.delayed(_latency);
     // 목에는 사용자별 데이터 구분이 없어 지울 것이 없다.
+  }
+
+  /// 서버(`PublicProfileService`)와 **같은 규칙**으로 만든다 — 게시판 활동만 담고,
+  /// 공개할 글이 없으면 404 에 해당하는 실패를 낸다.
+  @override
+  Future<PublicProfile> fetchPublicProfile(int userId) async {
+    await Future.delayed(_latency);
+    final mine = _posts.where((p) => p.authorId == userId).toList()
+      ..sort((a, b) => b.createdAt.compareTo(a.createdAt));
+    if (mine.isEmpty) {
+      throw StateError('프로필을 찾을 수 없습니다: $userId');
+    }
+    return PublicProfile(
+      userId: userId,
+      nickname: mine.first.authorNickname,
+      postCount: mine.length,
+      commentCount: _comments.values
+          .expand((list) => list)
+          .where((c) => c.mine)
+          .length,
+      likesReceived: mine.fold(0, (sum, p) => sum + p.likeCount),
+      firstPostAt: mine.last.createdAt,
+      recentPosts: mine.take(20).toList(),
+    );
   }
 
   @override

@@ -11,6 +11,7 @@ import '../screens/legal_screen.dart';
 import '../screens/login_screen.dart';
 import '../screens/post_detail_screen.dart';
 import '../screens/post_new_screen.dart';
+import '../screens/public_profile_screen.dart';
 import '../screens/profile_screen.dart';
 import '../screens/region_search_screen.dart';
 import '../screens/score_detail_screen.dart';
@@ -148,6 +149,14 @@ GoRouter createAppRouter() => GoRouter(
               path: '/board/:id/edit',
               builder: (_, state) => PostNewScreen(
                 postId: int.tryParse(state.pathParameters['id'] ?? ''),
+              ),
+            ),
+            // 공개 프로필. 게시판에서 작성자를 눌러 들어오므로 같은 브랜치에 쌓는다 —
+            // 뒤로 가면 보던 글로 돌아온다.
+            GoRoute(
+              path: '/users/:userId',
+              builder: (_, state) => PublicProfileScreen(
+                userId: int.tryParse(state.pathParameters['userId'] ?? '') ?? 0,
               ),
             ),
             // ⚠️ `/board/new` 보다 **뒤에** 둔다. 앞에 두면 `:id` 가 "new" 를 먼저

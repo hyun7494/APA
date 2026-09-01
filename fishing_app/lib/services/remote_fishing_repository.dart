@@ -382,6 +382,12 @@ class RemoteFishingRepository implements FishingRepository {
   }
 
   @override
+  Future<PublicProfile> fetchPublicProfile(int userId) async {
+    final res = await _dio.get<Map<String, dynamic>>('/fishing/users/$userId');
+    return PublicProfile.fromJson(res.data!);
+  }
+
+  @override
   Future<Profile?> fetchProfile() async {
     if (!await _client.isLoggedIn) return null;
     try {

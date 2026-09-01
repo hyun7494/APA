@@ -6,6 +6,7 @@ import '../models/post.dart';
 import '../services/login_gate.dart';
 import '../services/providers.dart';
 import '../theme/app_theme.dart';
+import '../widgets/author_name.dart';
 import '../widgets/app_buttons.dart';
 import '../widgets/app_card.dart';
 import '../widgets/authed_photo.dart';
@@ -216,7 +217,11 @@ class _PostCard extends StatelessWidget {
               const SizedBox(width: 16),
               _Stat(icon: AppIcon.chat, value: post.commentCount),
               const Spacer(),
-              Text(post.authorNickname, style: AppText.caption),
+              AuthorName(
+                nickname: post.authorNickname,
+                authorId: post.authorId,
+                style: AppText.caption,
+              ),
             ],
           ),
         ],

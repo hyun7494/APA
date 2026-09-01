@@ -11,6 +11,7 @@ class PostDetail {
     required this.title,
     required this.content,
     required this.authorNickname,
+    this.authorId,
     required this.createdAt,
     required this.likeCount,
     required this.commentCount,
@@ -29,6 +30,10 @@ class PostDetail {
   final String content;
 
   final String authorNickname;
+
+  /// 작성자. 프로필로 넘어가는 데 쓴다 — 이름은 표시용이고 신원은 id 다.
+  /// 시드 글처럼 주인이 없는 글은 null 이라 링크를 걸지 않는다.
+  final int? authorId;
   final DateTime createdAt;
   final int likeCount;
   final int commentCount;
@@ -55,6 +60,7 @@ class PostDetail {
     title: json['title'] as String? ?? '',
     content: json['content'] as String? ?? '',
     authorNickname: json['authorNickname'] as String? ?? '익명',
+    authorId: (json['authorId'] as num?)?.toInt(),
     createdAt:
         DateTime.tryParse(json['createdAt'] as String? ?? '') ?? DateTime.now(),
     likeCount: (json['likeCount'] as num?)?.toInt() ?? 0,
@@ -75,6 +81,7 @@ class PostDetail {
         title: title,
         content: content,
         authorNickname: authorNickname,
+        authorId: authorId,
         createdAt: createdAt,
         likeCount: likeCount,
         commentCount: commentCount,

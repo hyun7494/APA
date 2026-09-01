@@ -9,6 +9,7 @@ import '../services/fishing_repository.dart';
 import '../services/login_gate.dart';
 import '../services/providers.dart';
 import '../theme/app_theme.dart';
+import '../widgets/author_name.dart';
 import '../widgets/app_card.dart';
 import '../widgets/async_view.dart';
 import '../widgets/authed_photo.dart';
@@ -187,7 +188,11 @@ class _PostDetailScreenState extends ConsumerState<PostDetailScreen> {
         const SizedBox(height: 10),
         Row(
           children: [
-            Text(post.authorNickname, style: AppText.rowLabel),
+            AuthorName(
+              nickname: post.authorNickname,
+              authorId: post.authorId,
+              style: AppText.rowLabel,
+            ),
             const SizedBox(width: 8),
             Text(
               DateFormat('M월 d일 HH:mm', 'ko_KR').format(post.createdAt),

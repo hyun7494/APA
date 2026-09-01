@@ -8,6 +8,7 @@ import 'package:intl/date_symbol_data_local.dart';
 
 import 'package:fishing_app/data/legal_documents.dart';
 import 'package:fishing_app/screens/signup_screen.dart';
+import 'package:fishing_app/widgets/author_name.dart';
 import 'package:fishing_app/main.dart';
 import 'package:fishing_app/data/mock_data.dart';
 import 'package:fishing_app/models/models.dart';
@@ -474,6 +475,47 @@ void main() {
         reason: 'id 순서로 고르던 옛 규칙이 남아 있다',
       );
     }
+  });
+
+  testWidgets('★ 게시판에서 글쓴이를 눌러 공개 프로필로 간다', (tester) async {
+    final auth = FakeAuthRepository(loggedIn: true);
+    await pumpApp(tester, auth: auth);
+
+    // 내 글을 하나 만들어야 authorId 가 붙는다 (시드 글은 주인이 없다).
+    await tester.tap(find.text('게시판'));
+    await tester.pumpAndSettle();
+    await tester.tap(find.widgetWithText(HeaderButton, '글쓰기'));
+    await tester.pumpAndSettle();
+    await tester.enterText(
+        find.widgetWithText(TextField, '무슨 이야기인가요?'), '프로필 검증용');
+    await tester.pump();
+    await tester.enterText(find.byType(TextField).last, '본문');
+    await tester.pump();
+    await tester.tap(find.widgetWithText(HeaderButton, '등록'));
+    await tester.pumpAndSettle();
+
+    await tester.tap(find.byType(AuthorName).first);
+    await tester.pumpAndSettle();
+
+    expect(find.text('작성한 글'), findsOneWidget);
+    expect(find.text('프로필 검증용'), findsWidgets);
+    // ★ 남의 화면에 개인 기록이 새면 안 된다 — 약관 10조 2항.
+    expect(find.text('도감 진행률'), findsNothing);
+    expect(find.text('조과 기록'), findsNothing);
+    expect(find.textContaining('본인만 볼 수 있어'), findsOneWidget);
+  });
+
+  testWidgets('★ 주인 없는 글은 글쓴이가 눌리지 않는다', (tester) async {
+    // 시드 글은 user_id 가 없다. 눌리는 것처럼 보이면 안 된다.
+    await pumpApp(tester);
+
+    await tester.tap(find.text('게시판'));
+    await tester.pumpAndSettle();
+
+    final names = tester.widgetList<AuthorName>(find.byType(AuthorName));
+    expect(names, isNotEmpty);
+    expect(names.every((w) => w.authorId == null), isTrue,
+        reason: '시드 글은 user_id 가 없어 주인이 없다');
   });
 
   testWidgets('★ 수치가 없으면 0.0 이 아니라 — 로 그린다', (tester) async {
