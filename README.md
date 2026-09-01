@@ -14,6 +14,16 @@ APA/
 └── .github/           이슈·PR 템플릿
 ```
 
+### 이름 규칙
+
+- 테이블은 스키마 안에서도 서비스 접두사를 붙인다 — `fishing.fishing_posts`.
+  스키마가 이미 이름을 나누지만, 스키마 없이 테이블명만 보는 자리(로그·백업·모니터링)
+  에서도 어느 서비스 것인지 읽히게 **일부러** 겹쳐 둔다 (2026-09-01 결정)
+- `fishing_regions` 의 행은 권역(동해·서해·남해·제주)이고 참조 컬럼은
+  `region_group_id` 다. V14 가 시·군 지역을 권역으로 재편하면서 남은 어긋남인데,
+  `regionGroupId` 가 API 계약(3-1)에 굳어 있어 **그대로 둔다** — 고치는 값보다
+  계약을 깨는 값이 크다
+
 DB 는 Postgres 하나(`apa`)를 쓰되 **서비스마다 스키마를 나눈다** — `auth` 와 `fishing`.
 마이그레이션은 서비스별 Flyway 가 각자 관리한다 (`src/main/resources/db/migration`).
 
@@ -84,7 +94,6 @@ lib/
 ├── models/          API 응답 모델 (barrel: models.dart)
 ├── theme/           팔레트·타이포·아이콘 (barrel: app_theme.dart). 라이트/다크 런타임 전환
 ├── data/            시드·목 데이터 · 약관 본문(legal_documents.dart)
-└── config/          기능 플래그
 design/              Deep Tide 시안 (.dc.html) — 화면 주석이 이 파일들을 참조한다
 test/                위젯 테스트. 저장소를 대역으로 갈아끼워 화면 흐름을 잡는다
 ```
@@ -111,6 +120,21 @@ flutter run --dart-define=USE_MOCK=false \
 ./gradlew :app-fishing:test :auth-service:test
 cd fishing_app && flutter analyze && flutter test
 ```
+
+## 나중에 붙일 것
+
+- **오늘의 운세** — Rev 2 에서 프론트를 안 만들었고, 남겨 둔 백엔드(배치·표·API)마저
+  아무도 안 읽는 행만 매일 쌓아서 2026-09-01 에 **통째로 걷어냈다** (`V17`).
+  되살릴 때: 사양은 기획서 **Rev 1 의 2-2·3-4**, 코드는 V17 커밋에서 지워진
+  아홉 파일을 git 히스토리에서 꺼내면 된다 (`git log --diff-filter=D -- '*Fortune*'`)
+- **소셜 로그인 실연동** — 카카오·구글 키 발급이 먼저다. ⚠️ 소셜은 첫 로그인이 곧
+  가입이라 **약관 동의를 그 화면에서 함께 받아야 한다**
+- **즐겨찾는 지역** — 표(`fishing_user_favorites`)와 조회는 있는데 넣는 엔드포인트가
+  없어 UI 를 뺐다. 쓰기 API 부터
+- **푸시 알림** — `user_fcm_tokens` 표만 있다. FCM 을 붙일 때 마이 메뉴의
+  `알림 설정` 을 되살릴 것
+- **동호회 탭 · 프로필(갤로그)** — 경계를 안 넘고 만들 수 있다. 구조 노트는
+  진행상황 md 7장 참고
 
 ## 문서
 

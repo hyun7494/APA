@@ -1,5 +1,5 @@
 name: fishing_app
-description: "A new Flutter project."
+description: "낚시 출조 정보 앱 — 낚시 지수, 어류 도감, 조과 기록, 게시판."
 # The following line prevents the package from being accidentally published to
 # pub.dev using `flutter pub publish`. This is preferred for private packages.
 publish_to: 'none' # Remove this line if you wish to publish to pub.dev
