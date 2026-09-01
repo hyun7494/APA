@@ -308,6 +308,8 @@ class MockFishingRepository implements FishingRepository {
     final comment = Comment(
       id: _nextCommentId++,
       authorNickname: MockData.profile.nickname,
+      // 서버가 토큰에서 채우는 자리. 목에도 주인을 남겨야 프로필 링크가 같이 동작한다.
+      authorId: mockUserId,
       content: content,
       createdAt: DateTime.now(),
       mine: true,
@@ -393,19 +395,31 @@ class MockFishingRepository implements FishingRepository {
     await Future.delayed(_latency);
     final mine = _posts.where((p) => p.authorId == userId).toList()
       ..sort((a, b) => b.createdAt.compareTo(a.createdAt));
-    if (mine.isEmpty) {
+    final myComments = _comments.values
+        .expand((list) => list)
+        .where((c) => c.authorId == userId)
+        .toList()
+      ..sort((a, b) => b.createdAt.compareTo(a.createdAt));
+
+    // 서버와 같은 규칙 — 글이든 댓글이든 하나라도 있으면 프로필이 있다.
+    if (mine.isEmpty && myComments.isEmpty) {
       throw StateError('프로필을 찾을 수 없습니다: $userId');
     }
+
+    final times = [
+      for (final p in mine) p.createdAt,
+      for (final c in myComments) c.createdAt,
+    ]..sort();
+
     return PublicProfile(
       userId: userId,
-      nickname: mine.first.authorNickname,
+      nickname: mine.isNotEmpty
+          ? mine.first.authorNickname
+          : myComments.first.authorNickname,
       postCount: mine.length,
-      commentCount: _comments.values
-          .expand((list) => list)
-          .where((c) => c.mine)
-          .length,
+      commentCount: myComments.length,
       likesReceived: mine.fold(0, (sum, p) => sum + p.likeCount),
-      firstPostAt: mine.last.createdAt,
+      firstActivityAt: times.first,
       recentPosts: mine.take(20).toList(),
     );
   }

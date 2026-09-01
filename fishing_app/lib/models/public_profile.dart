@@ -16,7 +16,7 @@ class PublicProfile {
     required this.commentCount,
     required this.likesReceived,
     required this.recentPosts,
-    this.firstPostAt,
+    this.firstActivityAt,
   });
 
   final int userId;
@@ -28,8 +28,8 @@ class PublicProfile {
   final int commentCount;
   final int likesReceived;
 
-  /// 첫 글 작성 시각. "언제부터 활동했나" 가 신뢰의 단서다.
-  final DateTime? firstPostAt;
+  /// 글이든 댓글이든 **처음 남긴 시각**. "언제부터 활동했나" 가 신뢰의 단서다.
+  final DateTime? firstActivityAt;
 
   /// 최신순. 전부가 아니라 잘라서 온다 — 프로필은 목록 화면이 아니다.
   final List<Post> recentPosts;
@@ -40,7 +40,7 @@ class PublicProfile {
     postCount: (json['postCount'] as num?)?.toInt() ?? 0,
     commentCount: (json['commentCount'] as num?)?.toInt() ?? 0,
     likesReceived: (json['likesReceived'] as num?)?.toInt() ?? 0,
-    firstPostAt: DateTime.tryParse(json['firstPostAt'] as String? ?? ''),
+    firstActivityAt: DateTime.tryParse(json['firstActivityAt'] as String? ?? ''),
     recentPosts:
         (json['recentPosts'] as List?)
             ?.map((e) => Post.fromJson(e as Map<String, dynamic>))

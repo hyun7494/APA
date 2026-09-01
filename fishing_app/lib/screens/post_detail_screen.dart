@@ -485,7 +485,11 @@ class _CommentTile extends StatelessWidget {
         children: [
           Row(
             children: [
-              Text(comment.authorNickname, style: AppText.tileName),
+              AuthorName(
+                nickname: comment.authorNickname,
+                authorId: comment.authorId,
+                style: AppText.tileName,
+              ),
               const SizedBox(width: 8),
               Expanded(
                 child: Text(

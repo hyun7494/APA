@@ -81,10 +81,23 @@ class _Body extends StatelessWidget {
 
         Reveal(index: 2, child: Text('작성한 글', style: AppText.sectionTitle)),
         const SizedBox(height: 12),
-        for (var i = 0; i < profile.recentPosts.length; i++) ...[
-          if (i > 0) const SizedBox(height: 10),
-          Reveal(index: 3, child: _PostRow(post: profile.recentPosts[i])),
-        ],
+        // 댓글만 쓴 사람도 프로필이 있다. 그때 목록만 비워 두면 로딩에 실패한 것처럼
+        // 보이므로 왜 비었는지 말해 준다.
+        if (profile.recentPosts.isEmpty)
+          Reveal(
+            index: 3,
+            child: AppCard(
+              padding: const EdgeInsets.symmetric(vertical: 26),
+              child: Center(
+                child: Text('아직 쓴 글이 없어요', style: AppText.body),
+              ),
+            ),
+          )
+        else
+          for (var i = 0; i < profile.recentPosts.length; i++) ...[
+            if (i > 0) const SizedBox(height: 10),
+            Reveal(index: 3, child: _PostRow(post: profile.recentPosts[i])),
+          ],
         const SizedBox(height: AppSpacing.section),
 
         // 왜 조과·도감이 없는지 말해 준다. 없는 것을 그냥 비워 두면 "안 만들었나" 로
@@ -156,7 +169,7 @@ class _Body extends StatelessWidget {
   /// "2026년 8월부터 활동" — 언제부터 있었는지가 신뢰의 단서다.
   String _since() {
     if (profile.isWithdrawn) return '탈퇴한 회원입니다';
-    final at = profile.firstPostAt;
+    final at = profile.firstActivityAt;
     if (at == null) return '활동 기록';
     return '${at.year}년 ${at.month}월부터 활동';
   }

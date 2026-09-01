@@ -14,7 +14,7 @@ import java.util.List;
  * 닉네임은 유일하고 회수되지 않으므로 스냅샷이 곧 현재 이름이다.
  *
  * @param nickname     최근 글의 작성자명. 탈퇴했으면 `탈퇴한 사용자 a3f9` 가 그대로 온다
- * @param firstPostAt  첫 글 작성 시각. "언제부터 활동했나" 가 신뢰의 단서다
+ * @param firstActivityAt 글이든 댓글이든 처음 남긴 시각. "언제부터 활동했나" 가 신뢰의 단서다
  * @param recentPosts  최신순. 전부 주지 않고 잘라서 준다 — 프로필은 목록 화면이 아니다
  */
 public record PublicProfileResponse(
@@ -23,7 +23,7 @@ public record PublicProfileResponse(
         long postCount,
         long commentCount,
         long likesReceived,
-        LocalDateTime firstPostAt,
+        LocalDateTime firstActivityAt,
         List<PostResponse> recentPosts
 ) {
 }

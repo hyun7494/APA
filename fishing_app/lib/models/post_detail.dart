@@ -100,11 +100,15 @@ class Comment {
     required this.authorNickname,
     required this.content,
     required this.createdAt,
+    this.authorId,
     this.mine = false,
   });
 
   final int id;
   final String authorNickname;
+
+  /// 작성자. 프로필로 넘어가는 데 쓴다 — 글과 같은 규칙이다.
+  final int? authorId;
   final String content;
   final DateTime createdAt;
 
@@ -114,6 +118,7 @@ class Comment {
   factory Comment.fromJson(Map<String, dynamic> json) => Comment(
     id: (json['id'] as num).toInt(),
     authorNickname: json['authorNickname'] as String? ?? '익명',
+    authorId: (json['authorId'] as num?)?.toInt(),
     content: json['content'] as String? ?? '',
     createdAt:
         DateTime.tryParse(json['createdAt'] as String? ?? '') ?? DateTime.now(),

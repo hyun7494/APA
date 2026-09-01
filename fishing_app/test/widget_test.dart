@@ -505,6 +505,32 @@ void main() {
     expect(find.textContaining('본인만 볼 수 있어'), findsOneWidget);
   });
 
+  testWidgets('★ 댓글 작성자도 눌러서 프로필로 간다', (tester) async {
+    await pumpApp(tester, auth: FakeAuthRepository(loggedIn: true));
+
+    await tester.tap(find.text('게시판'));
+    await tester.pumpAndSettle();
+    await tester.tap(find.text('오늘 학리에서 감성돔 4짜 손맛!'));
+    await tester.pumpAndSettle();
+
+    await tester.enterText(
+        find.widgetWithText(TextField, '댓글을 남겨보세요'), '내 댓글');
+    await tester.pump();
+    // 댓글 보내기는 HeaderButton 이 아니라 PressScale 로 감싼 네모다.
+    await tester.tap(find.widgetWithText(PressScale, '등록'));
+    await tester.pumpAndSettle();
+
+    // 글쓴이(시드·주인 없음)는 안 눌리고, 내 댓글 작성자는 눌린다.
+    final names = tester.widgetList<AuthorName>(find.byType(AuthorName));
+    expect(names.any((w) => w.authorId != null), isTrue,
+        reason: '내 댓글에는 주인이 있다');
+
+    await tester.tap(find.byWidgetPredicate(
+        (w) => w is AuthorName && w.authorId != null));
+    await tester.pumpAndSettle();
+    expect(find.text('작성한 글'), findsOneWidget);
+  });
+
   testWidgets('★ 주인 없는 글은 글쓴이가 눌리지 않는다', (tester) async {
     // 시드 글은 user_id 가 없다. 눌리는 것처럼 보이면 안 된다.
     await pumpApp(tester);

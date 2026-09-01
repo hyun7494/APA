@@ -22,4 +22,13 @@ public interface FishingPostCommentRepository extends JpaRepository<FishingPostC
 
     /** 공개 프로필의 댓글 수. 내용은 안 보여 주고 활동량만 센다. */
     long countByUserId(Long userId);
+
+    /**
+     * 그 사람의 댓글, 최신순.
+     *
+     * <p>글은 없고 댓글만 쓴 사람도 있다. 그때 <b>닉네임과 활동 시작 시각</b>을 여기서
+     * 얻는다 — 글만 보면 그런 사람의 프로필이 통째로 404 가 되어, 댓글 작성자를 눌렀을 때
+     * 막다른 길이 된다.
+     */
+    List<FishingPostComment> findByUserIdOrderByCreatedAtDesc(Long userId);
 }
