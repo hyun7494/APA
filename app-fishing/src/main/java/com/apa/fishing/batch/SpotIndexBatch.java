@@ -47,13 +47,13 @@ public class SpotIndexBatch {
      */
     @Scheduled(cron = "0 20 5 * * *", zone = "Asia/Seoul")
     public void refreshDaily() {
-        refresh(LocalDate.now(FortuneGenerator.KST));
+        refresh(LocalDate.now(Kst.ZONE));
     }
 
     /**
      * 부팅 직후에도 한 번 돈다.
      *
-     * <p>운세 배치에서 겪은 것과 같은 사정이다 — 개발 노트북에서 05:20 에 서버가 떠 있는 일이
+     * <p>개발 노트북에서 05:20 에 서버가 떠 있는 일이
      * 거의 없어서 {@code @Scheduled} 만으로는 <b>영영 안 도는 배치</b>가 된다. 그러면 포인트
      * 화면이 시드 값에 머문 채로 "잘 되는 것처럼" 보인다.
      *
@@ -65,7 +65,7 @@ public class SpotIndexBatch {
             log.info("지수 배치: 인증키가 없어 건너뜀 (KHOA_SERVICE_KEY / KMA_SERVICE_KEY)");
             return;
         }
-        CompletableFuture.runAsync(() -> refresh(LocalDate.now(FortuneGenerator.KST)));
+        CompletableFuture.runAsync(() -> refresh(LocalDate.now(Kst.ZONE)));
     }
 
     /**
@@ -73,7 +73,7 @@ public class SpotIndexBatch {
      */
     public int refresh(LocalDate targetDate) {
         List<FishingSpot> spots = spotRepository.findAll();
-        LocalDateTime updatedAt = LocalDateTime.now(FortuneGenerator.KST);
+        LocalDateTime updatedAt = LocalDateTime.now(Kst.ZONE);
         int updated = 0;
 
         for (FishingSpot spot : spots) {
@@ -132,7 +132,7 @@ public class SpotIndexBatch {
                 spot.getLatitude().doubleValue(),
                 spot.getLongitude().doubleValue(),
                 targetDate,
-                FortuneGenerator.KST);
+                Kst.ZONE);
     }
 
     /** {@code khoa_place_name} 이 NULL 인 포인트(영종도)는 애초에 호출하지 않는다. */
@@ -154,7 +154,7 @@ public class SpotIndexBatch {
         }
         try {
             return kmaClient.fetch(spot.getGridNx(), spot.getGridNy(), targetDate,
-                    LocalDateTime.now(FortuneGenerator.KST));
+                    LocalDateTime.now(Kst.ZONE));
         } catch (PublicApiException e) {
             log.warn("지수 배치: [{}] 단기예보 실패 — {}", spot.getName(), e.getMessage());
             return null;

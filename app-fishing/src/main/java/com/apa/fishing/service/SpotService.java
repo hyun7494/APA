@@ -1,8 +1,8 @@
 package com.apa.fishing.service;
 
 import com.apa.fishing.dto.SpotResponse;
-import com.apa.fishing.batch.FortuneGenerator;
 import com.apa.fishing.batch.Haversine;
+import com.apa.fishing.batch.Kst;
 import com.apa.fishing.domain.FishingSpot;
 import com.apa.fishing.domain.SpotDailyIndex;
 import com.apa.fishing.dto.DailyIndexResponse;
@@ -141,7 +141,7 @@ public class SpotService {
         if (spotIds.isEmpty()) {
             return Map.of();
         }
-        LocalDate today = LocalDate.now(FortuneGenerator.KST);
+        LocalDate today = LocalDate.now(Kst.ZONE);
 
         return dailyIndexRepository
                 .findBySpotIdInAndForecastDateGreaterThanEqualOrderByForecastDate(spotIds, today)
