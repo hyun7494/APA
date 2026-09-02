@@ -9,6 +9,8 @@ APA/
 ├── auth-service/      계정 서비스        :8081  (스프링 부트)
 ├── app-fishing/       낚시 앱 서비스     :8086  (스프링 부트)
 ├── fishing_app/       낚시 앱 프론트           (Flutter)
+├── Dockerfile         두 서비스가 함께 쓰는 이미지 (SERVICE 로 고른다)
+├── docker-compose.yml postgres + 두 서비스 + 사진 볼륨
 ├── gradle/ gradlew    그레이들 래퍼
 ├── settings.gradle    백엔드 모듈 구성 (common-lib · auth-service · app-fishing)
 └── .github/           이슈·PR 템플릿
@@ -101,6 +103,30 @@ test/                위젯 테스트. 저장소를 대역으로 갈아끼워 �
 ⚠️ 위젯 테스트는 대역을 쓰므로 **플랫폼 SDK 를 타는 흐름(로그인·로그아웃·보안 저장소)은
 브라우저에서 눈으로 봐야 한다.** 실제로 웹 로그아웃이 멈추는 버그를 테스트가 못 잡았다.
 
+## 시간대 — 이 저장소의 두 번째 원칙
+
+**맨 `LocalDateTime.now()` 를 쓰지 말 것.** `common-lib` 의 `Kst.now()`·`Kst.today()` 를 쓴다.
+
+맨 `now()` 는 JVM 기본 시간대를 따르는데 **컨테이너는 기본이 UTC** 다. 개발 노트북에서는
+KST 라 맞아 보이지만 그대로 올리면 글·조과의 작성 시각과 토큰 만료가 아홉 시간 밀린다.
+더 나쁜 건 배치(KST 명시)와 글(UTC)이 **한 DB 안에서 갈라진다**는 것이다 — 컬럼이 전부
+`timestamp without time zone` 이라 나중에 어느 쪽인지 알 방법도 없다.
+
+컨테이너에도 `TZ=Asia/Seoul` 을 준다. 그건 **덤**이다 — 환경변수를 빠뜨려도 코드만 통하면
+값은 맞는다. 나라가 늘면 그때는 컬럼을 `timestamptz` 로 옮기는 것이 먼저다.
+
+## 설정 — 전부 환경변수
+
+| | 기본값 | 배포에서 |
+|---|---|---|
+| `JWT_SECRET` | **없음 (부팅 실패)** | 32바이트 이상. **두 서비스가 같은 값** |
+| `DB_HOST`·`DB_PORT`·`DB_NAME`·`DB_USER` | localhost:5432/apa/apa_user | 도커는 `postgres` |
+| `DB_PASSWORD` | 없음 | 필수 |
+| `AUTH_DEV_LOGIN` | **false** | 켜면 누구나 userId=1 토큰을 받아간다 |
+| `CORS_ALLOWED_ORIGINS` | `localhost:*` | **실제 도메인만** |
+| `PHOTO_DIR` | `data/photos` | 볼륨 경로 |
+| `KMA_SERVICE_KEY`·`KHOA_SERVICE_KEY` | 없음 | 없으면 지수 배치만 건너뛴다 |
+
 ## 실행
 
 ```bash
@@ -120,6 +146,20 @@ flutter run --dart-define=USE_MOCK=false \
 ./gradlew :app-fishing:test :auth-service:test
 cd fishing_app && flutter analyze && flutter test
 ```
+
+### 도커로 한 번에
+
+```bash
+docker compose --env-file ../apa-secrets.env up -d --build
+docker compose ps          # 셋 다 healthy 가 될 때까지 기다린다
+docker compose logs -f app-fishing
+```
+
+⚠️ **사진 볼륨(`photos`)을 지우지 말 것.** `docker compose down` 은 볼륨을 남기지만
+`down -v` 는 지운다 — 그러면 사용자 도감의 표지 사진이 통째로 사라진다.
+
+⚠️ app-fishing 은 부팅 직후 지수 배치(51곳 × 공공 API, 약 60초)를 돈다. 그동안
+healthy 로 안 바뀌므로 `start_period` 를 120초로 잡아 뒀다.
 
 ## 나중에 붙일 것
 
