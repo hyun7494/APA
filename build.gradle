@@ -23,6 +23,15 @@ subprojects {
 		mavenCentral()
 	}
 
+	ext {
+		// ⚠️ 스프링 부트 3.4.1 이 관리하는 판(1.20.4)은 도커 API 를 **1.32 로 붙는다.**
+		//    도커 29 부터 1.40 미만을 거절해서, 그대로 두면 통합 테스트가 컨테이너를
+		//    띄우지도 못하고 전부 죽는다 — 정작 오류에는 도커 이야기가 안 나오고
+		//    `NoClassDefFoundError` 만 뜬다.
+		//    부트가 판을 올리면 이 줄을 지울 것.
+		set('testcontainers.version', '1.21.3')
+	}
+
 	// 실행 가능한 jar 하나만 만든다. 켜 두면 `-plain.jar` 가 같이 나와서
 	// Dockerfile 의 COPY 가 어느 쪽을 집을지 모호해진다.
 	// ⚠️ common-lib 은 예외다 — 라이브러리라 plain jar 가 **결과물 자체**이고,
@@ -33,6 +42,10 @@ subprojects {
 
 	dependencies {
 		testImplementation 'org.springframework.boot:spring-boot-starter-test'
+		// 통합 테스트용 진짜 Postgres. 도커를 띄우므로 `test` 가 아니라
+		// `integrationTest` 에서만 돈다 (아래 태그 분리 참고).
+		testImplementation 'org.testcontainers:junit-jupiter'
+		testImplementation 'org.testcontainers:postgresql'
 		implementation 'org.springframework.boot:spring-boot-starter-validation'
 		// 헬스체크. 도커 compose 가 이걸로 기동 순서를 잡는다 —
 		// 없으면 DB 가 뜨기 전에 서비스가 붙어 Flyway 가 실패한다.
@@ -46,7 +59,44 @@ subprojects {
 		runtimeOnly 'io.jsonwebtoken:jjwt-jackson:0.12.6'
 	}
 
+	// ★ 단위 테스트와 통합 테스트를 **태그로 가른다.**
+	//
+	// 통합 테스트는 Testcontainers 로 진짜 Postgres 를 띄우므로 도커가 돌고 있어야 하고
+	// 몇십 초가 걸린다. 그걸 `test` 에 섞으면 도커를 안 켠 노트북에서 `./gradlew test` 가
+	// 통째로 실패해서, 결국 아무도 테스트를 안 돌리게 된다.
+	//
+	//   ./gradlew test              단위만. 도커 불필요, 몇 초
+	//   ./gradlew integrationTest   진짜 DB. 도커 필요
+	//   ./gradlew check             둘 다 (CI 가 이걸 부른다)
 	tasks.named('test') {
-		useJUnitPlatform()
+		useJUnitPlatform {
+			excludeTags 'integration'
+		}
+	}
+
+	tasks.register('integrationTest', Test) {
+		group = 'verification'
+		description = '진짜 Postgres 를 띄워 서비스 전체를 태워 본다 (도커 필요)'
+		testClassesDirs = sourceSets.test.output.classesDirs
+		classpath = sourceSets.test.runtimeClasspath
+		useJUnitPlatform {
+			includeTags 'integration'
+		}
+
+		// ⚠️ docker-java 는 협상 없이 **API 1.32 로 붙는다.** 도커 29 는 1.40 미만을
+		//    거절하므로 그대로 두면 컨테이너를 띄우지도 못한다. 더 나쁜 건 오류가
+		//    "Could not find a valid Docker environment" 로 나와서, 도커가 멀쩡히
+		//    돌고 있는데도 도커 문제로 안 보인다는 점이다.
+		//
+		//    1.41 을 고른 이유 — 도커 29 의 최소(1.40)보다 높고, 예전 판
+		//    (20.10 = 최대 1.41)에서도 통한다. 그 사이 어디에 붙어도 돈다.
+		systemProperty 'api.version',
+				System.getenv().getOrDefault('DOCKER_API_VERSION', '1.41')
+		// 단위 테스트가 먼저 깨지면 그쪽을 먼저 보는 게 빠르다.
+		shouldRunAfter tasks.named('test')
+	}
+
+	tasks.named('check') {
+		dependsOn tasks.named('integrationTest')
 	}
 }
