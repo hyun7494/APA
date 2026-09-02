@@ -1,5 +1,6 @@
 package com.apa.fishing.domain;
 
+import com.apa.common.time.Kst;
 import jakarta.persistence.Column;
 import jakarta.persistence.Entity;
 import jakarta.persistence.EnumType;
@@ -134,7 +135,7 @@ public class FishingPost {
         post.commentCount = 0;
         post.photoUrl = photoUrl;
         post.hasImage = photoUrl != null;
-        post.createdAt = LocalDateTime.now();
+        post.createdAt = Kst.now();
         return post;
     }
 }

@@ -1,5 +1,6 @@
 package com.apa.auth.domain;
 
+import com.apa.common.time.Kst;
 import jakarta.persistence.*;
 import lombok.AccessLevel;
 import lombok.Getter;
@@ -39,13 +40,13 @@ public class UserAppLink {
         UserAppLink link = new UserAppLink();
         link.userId = userId;
         link.appId = appId;
-        link.firstLoginAt = LocalDateTime.now();
+        link.firstLoginAt = Kst.now();
         link.lastLoginAt = link.firstLoginAt;
         return link;
     }
 
     public void touch() {
-        this.lastLoginAt = LocalDateTime.now();
+        this.lastLoginAt = Kst.now();
     }
 
     /** 복합 키. */

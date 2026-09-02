@@ -1,5 +1,6 @@
 package com.apa.fishing.domain;
 
+import com.apa.common.time.Kst;
 import jakarta.persistence.CollectionTable;
 import jakarta.persistence.Column;
 import jakarta.persistence.ElementCollection;
@@ -108,7 +109,7 @@ public class CatchRecord {
         this.caughtAt = caughtAt;
         // DB 기본값이 now() 지만 JPA INSERT 는 컬럼을 명시해 보내므로 여기서 채운다.
         // 비워 두면 not-null 위반으로 등록 자체가 실패한다.
-        this.createdAt = LocalDateTime.now();
+        this.createdAt = Kst.now();
     }
 
     public static CatchRecord create(Long userId, Species species,

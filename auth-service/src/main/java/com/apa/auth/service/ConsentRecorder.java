@@ -1,5 +1,6 @@
 package com.apa.auth.service;
 
+import com.apa.common.time.Kst;
 import com.apa.auth.domain.ConsentType;
 import com.apa.auth.domain.UserConsent;
 import com.apa.auth.dto.ConsentRequest;
@@ -54,7 +55,7 @@ public class ConsentRecorder {
             throw new BadRequestException("필수 동의 항목이 빠졌습니다: " + String.join(", ", missing));
         }
 
-        LocalDateTime now = LocalDateTime.now();
+        LocalDateTime now = Kst.now();
         List<UserConsent> rows = new ArrayList<>(received.size());
         received.forEach((type, given) -> rows.add(
                 UserConsent.record(userId, type, version(given), given.agreed(), now)));

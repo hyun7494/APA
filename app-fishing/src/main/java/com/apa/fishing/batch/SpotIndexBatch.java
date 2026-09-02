@@ -1,5 +1,6 @@
 package com.apa.fishing.batch;
 
+import com.apa.common.time.Kst;
 import com.apa.fishing.batch.khoa.KhoaClient;
 import com.apa.fishing.batch.khoa.KhoaFishingResult;
 import com.apa.fishing.batch.kma.KmaClient;
@@ -47,7 +48,7 @@ public class SpotIndexBatch {
      */
     @Scheduled(cron = "0 20 5 * * *", zone = "Asia/Seoul")
     public void refreshDaily() {
-        refresh(LocalDate.now(Kst.ZONE));
+        refresh(Kst.today());
     }
 
     /**
@@ -65,7 +66,7 @@ public class SpotIndexBatch {
             log.info("지수 배치: 인증키가 없어 건너뜀 (KHOA_SERVICE_KEY / KMA_SERVICE_KEY)");
             return;
         }
-        CompletableFuture.runAsync(() -> refresh(LocalDate.now(Kst.ZONE)));
+        CompletableFuture.runAsync(() -> refresh(Kst.today()));
     }
 
     /**
@@ -73,7 +74,7 @@ public class SpotIndexBatch {
      */
     public int refresh(LocalDate targetDate) {
         List<FishingSpot> spots = spotRepository.findAll();
-        LocalDateTime updatedAt = LocalDateTime.now(Kst.ZONE);
+        LocalDateTime updatedAt = Kst.now();
         int updated = 0;
 
         for (FishingSpot spot : spots) {
@@ -154,7 +155,7 @@ public class SpotIndexBatch {
         }
         try {
             return kmaClient.fetch(spot.getGridNx(), spot.getGridNy(), targetDate,
-                    LocalDateTime.now(Kst.ZONE));
+                    Kst.now());
         } catch (PublicApiException e) {
             log.warn("지수 배치: [{}] 단기예보 실패 — {}", spot.getName(), e.getMessage());
             return null;

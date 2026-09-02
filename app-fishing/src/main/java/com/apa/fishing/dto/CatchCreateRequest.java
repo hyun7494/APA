@@ -1,5 +1,6 @@
 package com.apa.fishing.dto;
 
+import com.apa.common.time.Kst;
 import org.springframework.http.HttpStatus;
 import org.springframework.web.server.ResponseStatusException;
 
@@ -83,7 +84,7 @@ public record CatchCreateRequest(
      */
     private static LocalDateTime parseCaughtAt(String caughtAt) {
         if (caughtAt == null || caughtAt.isBlank()) {
-            return LocalDateTime.now();
+            return Kst.now();
         }
         String value = caughtAt.trim();
         try {
@@ -99,7 +100,7 @@ public record CatchCreateRequest(
         try {
             return LocalDateTime.ofInstant(Instant.parse(value), ZoneId.systemDefault());
         } catch (DateTimeParseException ignored) {
-            return LocalDateTime.now();
+            return Kst.now();
         }
     }
 

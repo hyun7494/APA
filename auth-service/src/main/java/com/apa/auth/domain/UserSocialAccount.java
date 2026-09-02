@@ -1,5 +1,6 @@
 package com.apa.auth.domain;
 
+import com.apa.common.time.Kst;
 import jakarta.persistence.*;
 import lombok.AccessLevel;
 import lombok.Getter;
@@ -52,7 +53,7 @@ public class UserSocialAccount {
         account.socialType = socialType;
         account.socialId = socialId;
         account.email = email;
-        account.createdAt = LocalDateTime.now();
+        account.createdAt = Kst.now();
         return account;
     }
 }

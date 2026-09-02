@@ -1,5 +1,6 @@
 package com.apa.fishing.domain;
 
+import com.apa.common.time.Kst;
 import jakarta.persistence.*;
 import lombok.AccessLevel;
 import lombok.Getter;
@@ -44,7 +45,7 @@ public class FishingPostComment {
         comment.userId = userId;
         comment.authorNickname = authorNickname;
         comment.content = content;
-        comment.createdAt = LocalDateTime.now();
+        comment.createdAt = Kst.now();
         return comment;
     }
 

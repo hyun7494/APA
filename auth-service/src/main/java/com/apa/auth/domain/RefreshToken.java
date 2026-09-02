@@ -1,5 +1,6 @@
 package com.apa.auth.domain;
 
+import com.apa.common.time.Kst;
 import jakarta.persistence.*;
 import lombok.AccessLevel;
 import lombok.Getter;
@@ -44,7 +45,7 @@ public class RefreshToken {
         token.appId = appId;
         token.tokenHash = tokenHash;
         token.expiresAt = expiresAt;
-        token.createdAt = LocalDateTime.now();
+        token.createdAt = Kst.now();
         return token;
     }
 

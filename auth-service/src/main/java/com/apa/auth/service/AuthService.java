@@ -1,5 +1,6 @@
 package com.apa.auth.service;
 
+import com.apa.common.time.Kst;
 import com.apa.auth.config.AuthProperties;
 import com.apa.auth.domain.RefreshToken;
 import com.apa.auth.domain.SocialType;
@@ -106,7 +107,7 @@ public class AuthService {
                 .orElseThrow(() -> new UnauthorizedException("계정을 찾을 수 없습니다"));
 
         if (user.isActive()) {
-            user.withdraw(LocalDateTime.now());
+            user.withdraw(Kst.now());
         }
         // 토큰·소셜 연결은 상태와 무관하게 확실히 끊는다.
         refreshTokenRepository.deleteByUserId(userId);
@@ -400,7 +401,7 @@ public class AuthService {
                 .orElseThrow(() -> new UnauthorizedException("다시 로그인해 주세요"));
 
         // 만료된 줄은 지우고 나간다. 남겨 두면 매번 같은 실패를 반복하며 쌓이기만 한다.
-        if (stored.isExpired(LocalDateTime.now())) {
+        if (stored.isExpired(Kst.now())) {
             refreshTokenRepository.delete(stored);
             throw new UnauthorizedException("로그인이 만료되었습니다. 다시 로그인해 주세요");
         }
@@ -462,7 +463,7 @@ public class AuthService {
                 user.getId(),
                 appId,
                 TokenHash.hash(refreshToken),
-                LocalDateTime.now().plusSeconds(authProperties.refreshExpirationSeconds())));
+                Kst.now().plusSeconds(authProperties.refreshExpirationSeconds())));
 
         return TokenResponse.of(accessToken, refreshToken, jwtTokenProvider.getExpiration(), user);
     }

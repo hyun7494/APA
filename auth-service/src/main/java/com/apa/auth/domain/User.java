@@ -1,5 +1,6 @@
 package com.apa.auth.domain;
 
+import com.apa.common.time.Kst;
 import jakarta.persistence.*;
 import lombok.AccessLevel;
 import lombok.Getter;
@@ -99,7 +100,7 @@ public class User {
         user.nickname = trimNickname(nickname);
         user.profileUrl = trimProfileUrl(profileUrl);
         user.status = UserStatus.ACTIVE;
-        user.createdAt = LocalDateTime.now();
+        user.createdAt = Kst.now();
         user.updatedAt = user.createdAt;
         return user;
     }
@@ -122,7 +123,7 @@ public class User {
             this.profileUrl = newProfileUrl;
             changed = true;
         }
-        if (changed) this.updatedAt = LocalDateTime.now();
+        if (changed) this.updatedAt = Kst.now();
     }
 
     public boolean hasPassword() {
