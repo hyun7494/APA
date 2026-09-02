@@ -4,6 +4,7 @@ import com.apa.common.security.AppAuthFilter;
 import com.apa.common.security.JwtSecurityConfig;
 import com.apa.common.security.JwtTokenProvider;
 import jakarta.servlet.DispatcherType;
+import org.springframework.beans.factory.annotation.Value;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
 import org.springframework.context.annotation.Import;
@@ -61,6 +62,11 @@ public class SecurityConfig {
                         // 그 자리에서 인증하므로, 들어올 때 들고 있는 토큰이 없다.
                         .requestMatchers("/auth/signup", "/auth/login", "/auth/login/email",
                                 "/auth/link/social", "/auth/refresh", "/auth/dev-login").permitAll()
+                        // 헬스체크는 열어 둔다 — 도커·로드밸런서가 토큰 없이 부른다.
+                        // ⚠️ `/actuator/**` 이 아니라 **health 만** 연다. 전부 열면
+                        //    env·configprops 로 비밀값이 새어 나간다
+                        //    (노출 자체도 application.yml 에서 health 로 좁혀 뒀다).
+                        .requestMatchers("/actuator/health", "/actuator/health/**").permitAll()
                         // 로그아웃은 다르다 — 누구의 토큰을 지울지 알아야 하므로 인증이 필요하다.
                         .requestMatchers("/auth/logout").authenticated()
                         .anyRequest().authenticated()
@@ -73,17 +79,21 @@ public class SecurityConfig {
     }
 
     /**
-     * Flutter Web(`flutter run -d chrome`)은 매번 임의 포트로 뜨므로 localhost 전체를 패턴으로 연다.
-     * 로컬 개발 전용 설정이다 — <b>배포 시에는 실제 도메인으로 좁힐 것.</b>
+     * 브라우저에서 부를 수 있는 출처.
      *
-     * <p>⚠️ {@code app-fishing} 의 {@code SecurityConfig} 에 <b>같은 설정이 하나 더 있다</b>
-     * (앱이 두 서버를 각각 부르기 때문이다: 로그인은 :8081, 나머지는 :8086).
-     * <b>좁힐 때 한쪽만 고치면 다른 쪽이 열린 채로 남는다</b> — 반드시 둘 다 볼 것.
+     * <p>기본값은 <b>로컬 개발용</b>이다 — Flutter Web(`flutter run -d chrome`)이 매번 임의
+     * 포트로 떠서 localhost 전체를 패턴으로 연다.
+     *
+     * <p>⚠️ <b>배포에서는 {@code CORS_ALLOWED_ORIGINS} 로 실제 도메인만 넣을 것.</b>
+     * 기본값을 그대로 두면 로컬에서 도는 아무 페이지나 이 API 를 부를 수 있다.
+     * 쉼표로 여러 개를 준다: {@code https://app.example.com,https://www.example.com}
      */
     @Bean
-    public CorsConfigurationSource corsConfigurationSource() {
+    public CorsConfigurationSource corsConfigurationSource(
+            @Value("${cors.allowed-origins:http://localhost:*,http://127.0.0.1:*}")
+            List<String> allowedOrigins) {
         CorsConfiguration config = new CorsConfiguration();
-        config.setAllowedOriginPatterns(List.of("http://localhost:*", "http://127.0.0.1:*"));
+        config.setAllowedOriginPatterns(allowedOrigins);
         config.setAllowedMethods(List.of("GET", "POST", "PUT", "DELETE", "OPTIONS"));
         config.setAllowedHeaders(List.of("*"));
         config.setAllowCredentials(true);

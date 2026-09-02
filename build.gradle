@@ -23,9 +23,20 @@ subprojects {
 		mavenCentral()
 	}
 
+	// 실행 가능한 jar 하나만 만든다. 켜 두면 `-plain.jar` 가 같이 나와서
+	// Dockerfile 의 COPY 가 어느 쪽을 집을지 모호해진다.
+	// ⚠️ common-lib 은 예외다 — 라이브러리라 plain jar 가 **결과물 자체**이고,
+	//    자기 build.gradle 에서 bootJar 를 끄고 jar 를 켠다.
+	tasks.matching { it.name == 'jar' && project.name != 'common-lib' }.configureEach {
+		enabled = false
+	}
+
 	dependencies {
 		testImplementation 'org.springframework.boot:spring-boot-starter-test'
 		implementation 'org.springframework.boot:spring-boot-starter-validation'
+		// 헬스체크. 도커 compose 가 이걸로 기동 순서를 잡는다 —
+		// 없으면 DB 가 뜨기 전에 서비스가 붙어 Flyway 가 실패한다.
+		implementation 'org.springframework.boot:spring-boot-starter-actuator'
 
 		compileOnly 'org.projectlombok:lombok'
 		annotationProcessor 'org.projectlombok:lombok'

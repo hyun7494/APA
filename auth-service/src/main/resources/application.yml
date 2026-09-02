@@ -3,8 +3,10 @@ spring:
     name: auth-service
 
   datasource:
-    url: jdbc:postgresql://localhost:5432/apa?currentSchema=auth
-    username: apa_user
+    # ⚠️ 컨테이너의 localhost 는 자기 자신이다. 호스트를 환경변수로 뺀다 —
+    #    도커에서는 서비스 이름(postgres)이 들어온다.
+    url: jdbc:postgresql://${DB_HOST:localhost}:${DB_PORT:5432}/${DB_NAME:apa}?currentSchema=auth
+    username: ${DB_USER:apa_user}
     password: ${DB_PASSWORD}
 
   jpa:
@@ -17,7 +19,7 @@ spring:
     default-schema: auth
 
 server:
-  port: 8081
+  port: ${SERVER_PORT:8081}
 
 logging:
   level:
@@ -25,7 +27,11 @@ logging:
     org.springframework.web: INFO
 
 jwt:
-  secret: ${JWT_SECRET:test1234test1234test1234test1234test1234test1234}  # 32바이트 이상. 운영은 JWT_SECRET 환경변수로 주입
+  # ⚠️ **기본값이 없다.** 예전엔 `test1234...` 가 소스에 박혀 있었는데, 공개 저장소라
+  #    그 값을 아는 누구나 **아무 사용자의 토큰을 위조**할 수 있었다.
+  #    없으면 부팅이 실패하는 편이 낫다 — 조용히 뚫린 채 도는 것보다.
+  #    32바이트 이상. app-fishing 과 **같은 값**이어야 한다 (HS256 대칭키).
+  secret: ${JWT_SECRET}
   expiration: 3600000 # 1시간 (1000 * 60 * 60)
 
 auth:
@@ -36,7 +42,10 @@ auth:
   #    낚시출조앱_6G검증.ps1 이 이 계정으로 서버를 두드리기 때문에 로컬에서는 켜 둔다.
   #    운영 배포에서는 반드시 false 로 둘 것 — 켜져 있으면 아이디·비밀번호만 알면
   #    누구나 userId=1 의 토큰을 받아간다.
-  dev-login-enabled: ${AUTH_DEV_LOGIN:true}
+  # ⚠️ **기본값이 false 다.** 예전엔 true 였는데, 그건 아무 설정 없이 배포하면
+  #    `testuser`/`hyun1234` 만 알면 **누구나 userId=1 의 토큰을 받아간다**는 뜻이었다.
+  #    안전한 쪽이 기본이어야 한다 — 로컬에서 필요하면 AUTH_DEV_LOGIN=true 로 켠다.
+  dev-login-enabled: ${AUTH_DEV_LOGIN:false}
 
 social:
   # 구글 ID 토큰의 aud 로 허용할 클라이언트 ID 목록.
@@ -48,3 +57,22 @@ social:
   # iOS 는 iOS 클라이언트 ID 가 온다. 둘 다 넣어야 한 쪽만 막히지 않는다.
   # 값은 비밀이 아니지만 환경마다 달라서 환경변수로 뺀다.
   google-audiences: ${GOOGLE_AUDIENCES:}
+
+cors:
+  # 브라우저에서 이 API 를 부를 수 있는 출처. 쉼표로 여러 개.
+  # ⚠️ 기본값은 로컬 개발용이다. **배포에서는 실제 도메인만 넣을 것.**
+  allowed-origins: ${CORS_ALLOWED_ORIGINS:http://localhost:*,http://127.0.0.1:*}
+
+management:
+  endpoints:
+    web:
+      exposure:
+        # ⚠️ health 만 연다. 기본값도 health 뿐이지만 명시해 둔다 — 나중에 누가
+        #    `*` 로 열면 env·configprops 로 **비밀값이 그대로 노출**된다.
+        include: health
+  endpoint:
+    health:
+      # 도커 헬스체크가 DB 연결까지 보고 판단하도록 상세를 남긴다.
+      show-details: when_authorized
+      probes:
+        enabled: true

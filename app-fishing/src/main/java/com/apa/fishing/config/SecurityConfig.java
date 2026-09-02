@@ -3,6 +3,7 @@ package com.apa.fishing.config;
 import com.apa.common.security.AppAuthFilter;
 import com.apa.common.security.JwtSecurityConfig;
 import com.apa.common.security.JwtTokenProvider;
+import org.springframework.beans.factory.annotation.Value;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
 import org.springframework.context.annotation.Import;
@@ -60,13 +61,21 @@ public class SecurityConfig {
     }
 
     /**
-     * Flutter Web(flutter run -d chrome)은 매번 임의 포트로 뜨므로 localhost 전체를 패턴으로 연다.
-     * 로컬 개발 전용 설정이다 — 배포 시에는 실제 도메인으로 좁힐 것.
+     * 브라우저에서 부를 수 있는 출처.
+     *
+     * <p>기본값은 <b>로컬 개발용</b>이다 — Flutter Web(`flutter run -d chrome`)이 매번 임의
+     * 포트로 떠서 localhost 전체를 패턴으로 연다.
+     *
+     * <p>⚠️ <b>배포에서는 {@code CORS_ALLOWED_ORIGINS} 로 실제 도메인만 넣을 것.</b>
+     * 기본값을 그대로 두면 로컬에서 도는 아무 페이지나 이 API 를 부를 수 있다.
+     * 쉼표로 여러 개를 준다: {@code https://app.example.com,https://www.example.com}
      */
     @Bean
-    public CorsConfigurationSource corsConfigurationSource() {
+    public CorsConfigurationSource corsConfigurationSource(
+            @Value("${cors.allowed-origins:http://localhost:*,http://127.0.0.1:*}")
+            List<String> allowedOrigins) {
         CorsConfiguration config = new CorsConfiguration();
-        config.setAllowedOriginPatterns(List.of("http://localhost:*", "http://127.0.0.1:*"));
+        config.setAllowedOriginPatterns(allowedOrigins);
         config.setAllowedMethods(List.of("GET", "POST", "PUT", "DELETE", "OPTIONS"));
         config.setAllowedHeaders(List.of("*"));
         config.setAllowCredentials(true);
