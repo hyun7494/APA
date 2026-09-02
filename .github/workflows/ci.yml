@@ -1,0 +1,114 @@
+name: CI
+
+# 언제 도는가 — 올린 것과 합치려는 것 양쪽.
+#
+# ⚠️ `push` 만 걸면 **PR 로 들어오는 남의 브랜치를 못 본다.** 반대로 `pull_request` 만
+#    걸면 내가 main 에 바로 밀어 넣은 것을 아무도 안 본다. 둘 다 있어야 빈 곳이 없다.
+on:
+  push:
+    branches: ['**']
+  pull_request:
+  workflow_dispatch:
+
+# 같은 브랜치에 연달아 밀면 앞엣것을 취소한다. 어차피 볼 것은 마지막 결과다.
+concurrency:
+  group: ${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  # ────────────────────────────────────────────────────────────────── 백엔드
+  #
+  # 단위 테스트와 통합 테스트를 **한 잡에서 이어 돌린다.** 통합 테스트는
+  # Testcontainers 로 진짜 Postgres 를 띄우는데, 깃허브 러너에는 도커가 이미 있어서
+  # 따로 서비스 컨테이너를 선언할 필요가 없다.
+  backend:
+    name: 백엔드 (단위 + 통합)
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: 자바 21
+        uses: actions/setup-java@v4
+        with:
+          java-version: '21'
+          distribution: temurin
+
+      - name: 그레이들 캐시
+        uses: gradle/actions/setup-gradle@v4
+
+      # `check` 가 test 와 integrationTest 를 둘 다 부른다 (build.gradle 참고).
+      #
+      # ⚠️ 비밀값은 **하나도 필요 없다.** 테스트가 JWT_SECRET·DB 접속 정보를 스스로
+      #    만들고, 공공 API 키는 일부러 비워 배치를 재운다. 그래서 포크에서 온 PR 도
+      #    그대로 돌아간다 — 여기에 시크릿을 끌어들이면 그 순간 남의 PR 에서 못 돈다.
+      - name: 테스트
+        run: ./gradlew check --no-daemon
+
+      # 깨졌을 때 이유를 보려면 리포트가 있어야 한다. 로그만으로는 스택이 잘린다.
+      - name: 테스트 리포트 보관
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: backend-test-reports
+          path: '*/build/reports/tests/'
+          retention-days: 7
+          if-no-files-found: ignore
+
+  # ────────────────────────────────────────────────────────────────── 도커
+  #
+  # 이미지가 빌드되는지만 본다. 띄우지는 않는다 — 그건 사람이 손으로 확인했고,
+  # 여기서 하려면 비밀값이 필요해서 포크 PR 에서 못 돈다.
+  #
+  # ⚠️ 이 잡이 없으면 **배포 직전에야** 도커가 깨진 걸 알게 된다. 실제로 gradle 이
+  #    plain jar 를 같이 뱉어서 COPY 가 모호해진 적이 있는데, 백엔드 테스트는 그때도
+  #    전부 초록이었다.
+  docker:
+    name: 도커 이미지 빌드
+    runs-on: ubuntu-latest
+    timeout-minutes: 25
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: docker/setup-buildx-action@v3
+
+      - name: 이미지 빌드
+        uses: docker/build-push-action@v6
+        with:
+          context: .
+          push: false
+          cache-from: type=gha
+          cache-to: type=gha,mode=max
+
+  # ────────────────────────────────────────────────────────────────── 프론트
+  frontend:
+    name: 프론트 (분석 + 테스트)
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    defaults:
+      run:
+        working-directory: fishing_app
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: 플러터
+        uses: subosito/flutter-action@v2
+        with:
+          flutter-version: '3.44.3'
+          channel: stable
+          cache: true
+
+      - run: flutter pub get
+
+      # ⚠️ 경고도 실패로 친다. 안 그러면 경고가 쌓이다가 아무도 안 읽게 된다.
+      - name: 분석
+        run: flutter analyze --fatal-infos --fatal-warnings
+
+      # 포맷 검사(`dart format --set-exit-if-changed`)는 일부러 뺐다 —
+      # 지금 76개 중 44개가 걸려서 넣는 순간 첫날부터 빨간불이고, 고치려면 프론트
+      # 거의 전부를 다시 포맷해야 한다. 그건 이 커밋과 섞을 일이 아니라 따로 할 일이다.
+      - name: 테스트
+        run: flutter test
