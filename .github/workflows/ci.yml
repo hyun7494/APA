@@ -54,11 +54,15 @@ jobs:
       #
       # 저장소 소유자가 아니면 CI 로그도 리포트 아티팩트도 API 로 못 받는다(403/401).
       # 그러니 **결과를 읽어서 판단하지 말고, 어긋나면 빌드가 깨지게** 해 둔다.
+      #
+      # ⚠️ 아래 스크립트에 역슬래시 줄이음과 `\n` 을 쓰지 말 것 — 편집 경로에서 풀려
+      #    `run:` 블록의 들여쓰기를 깨뜨린다. 그러면 **YAML 이 통째로 파싱 실패해
+      #    잡이 하나도 안 뜨는데**, 실패 화면에 이유가 안 나와서 원인 찾기가 고약하다.
+      #    (실제로 이 단계를 넣은 첫 커밋이 그렇게 죽었다.)
       - name: 통합 테스트가 실제로 돌았는지
         run: |
           count() {
-            find . -path "*/build/test-results/$1/*.xml" -print0 2>/dev/null               | xargs -0 -r grep -ho 'tests="[0-9]*"'               | tr -dc '0-9
-' | awk '{s+=$1} END {print s+0}'
+            find . -path "*/build/test-results/$1/*.xml" -exec cat {} + 2>/dev/null | grep -o 'tests="[0-9]*"' | grep -o '[0-9][0-9]*' | awk '{s+=$1} END {print s+0}'
           }
           unit=$(count test)
           integration=$(count integrationTest)
