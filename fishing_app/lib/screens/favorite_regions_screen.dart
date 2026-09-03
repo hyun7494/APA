@@ -168,27 +168,33 @@ class _RegionToggle extends StatelessWidget {
               RatingBadge(rating: region.previewRating!, compact: true),
               const SizedBox(width: 12),
             ],
-            // 보내는 동안 아이콘을 그대로 두면 눌린 게 먹혔는지 알 수 없고,
-            // 자리를 비우면 줄이 덜컥거린다. 같은 크기로 바꿔 끼운다.
-            SizedBox(
-              width: 22,
-              height: 22,
-              child: busy
-                  ? const Center(
-                      child: SizedBox(
-                        width: 14,
-                        height: 14,
-                        child: CircularProgressIndicator(strokeWidth: 2),
+            // ⚠️ **상태를 색으로만 알리면 안 된다.** 화면을 못 보는 사람에게는
+            //    켜짐/꺼짐이 아예 전달되지 않는다 — 실제로 접근성 트리에 줄 이름과
+            //    등급만 나오고 즐겨찾기 여부는 한 글자도 없었다.
+            Semantics(
+              label: isFavorite ? '즐겨찾기됨' : '즐겨찾기 안 함',
+              child: SizedBox(
+                // 보내는 동안 아이콘을 그대로 두면 눌린 게 먹혔는지 알 수 없고,
+                // 자리를 비우면 줄이 덜컥거린다. 같은 크기로 바꿔 끼운다.
+                width: 22,
+                height: 22,
+                child: busy
+                    ? const Center(
+                        child: SizedBox(
+                          width: 14,
+                          height: 14,
+                          child: CircularProgressIndicator(strokeWidth: 2),
+                        ),
+                      )
+                    // 채워진 변형이 따로 없다 — 좋아요 칩과 같은 규칙으로 색이
+                    // 상태를 거든다 (`post_detail_screen` 의 하트).
+                    : LineIcon(
+                        AppIcon.bookmark,
+                        size: 22,
+                        color: isFavorite ? AppColors.accent : AppColors.faint,
+                        stroke: isFavorite ? 2.0 : 1.6,
                       ),
-                    )
-                  // 채워진 변형이 따로 없다 — 좋아요 칩과 같은 규칙으로 **색이
-                  // 상태를 말한다** (`post_detail_screen` 의 하트).
-                  : LineIcon(
-                      AppIcon.bookmark,
-                      size: 22,
-                      color: isFavorite ? AppColors.accent : AppColors.faint,
-                      stroke: isFavorite ? 2.0 : 1.6,
-                    ),
+              ),
             ),
           ],
       ),

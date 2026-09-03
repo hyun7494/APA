@@ -1847,6 +1847,53 @@ void main() {
     expect(find.text('구룡포 방파제'), findsNothing);
   });
 
+  /// ⚠️ **상태를 색으로만 알리면 안 된다.** 화면을 못 보는 사람에게는 켜짐/꺼짐이
+  /// 아예 전달되지 않는다 — 브라우저로 확인해 보니 접근성 트리에 줄 이름과 등급만
+  /// 나오고 즐겨찾기 여부는 한 글자도 없었다.
+  testWidgets('★ 즐겨찾기 여부가 색 말고 말로도 전달된다', (tester) async {
+    // 위젯 테스트는 기본적으로 접근성 트리를 안 만든다. 켜지 않으면 라벨이 하나도
+    // 안 잡혀서, 검사가 **아무것도 확인하지 않은 채 실패**한다.
+    //
+    // ⚠️ 정리를 `addTearDown` 에 맡기면 안 된다 — 그건 프레임워크의 끝 검사보다
+    //    **나중에** 돌아서 "SemanticsHandle 이 살아 있다" 로 실패한다. 본문에서 닫는다.
+    final semantics = tester.ensureSemantics();
+
+    await pumpApp(tester);
+
+    await tester.tap(find.text('마이'));
+    await tester.pumpAndSettle();
+    await tester.tap(find.text('즐겨찾는 지역').last);
+    await tester.pumpAndSettle();
+
+    // ⚠️ 라벨은 줄 전체(버튼)의 이름에 **병합된다** — 정확히 일치하는 것을 찾으면
+    //    0 개다. 브라우저에서도 `"동해 강원 · 경북 · 울산 보통"` 처럼 한 덩어리로
+    //    읽힌다. 그래서 부분 일치로 본다.
+    //
+    // 목은 동해·남해·제주 셋이 켜져 있고 서해만 꺼져 있다. 켜짐과 꺼짐이 **서로 다른
+    // 말로** 나오는지가 이 검사의 전부다.
+    expect(find.bySemanticsLabel(RegExp('즐겨찾기됨')), findsNWidgets(3));
+    expect(find.bySemanticsLabel(RegExp('즐겨찾기 안 함')), findsOneWidget);
+
+    // 누르면 말도 함께 바뀐다.
+    //
+    // ⚠️ **`pumpAndSettle()` 만으로는 부족하고, 한 번 기다리는 것으로도 부족하다.**
+    //    목 저장소는 220ms 를 기다렸다 답하는데 그 `Future.delayed` 는 프레임을
+    //    예약하지 않아서, pumpAndSettle 은 응답을 안 기다리고 바로 돌아온다.
+    //    게다가 여기서는 **두 번 기다려야 한다** — 쓰기(setFavorite)가 한 번,
+    //    그 뒤 invalidate 로 다시 부르는 조회(fetchFavorites)가 또 한 번이다.
+    //    한 번만 기다리면 "눌렀는데 안 바뀐다" 로 읽히는데, 앱이 아니라 기다림이
+    //    모자란 것이다 (브라우저에서는 누르는 즉시 반영되는 것을 눈으로 확인했다).
+    await tester.tap(find.text('동해'));
+    await tester.pump(const Duration(milliseconds: 400));   // 쓰기
+    await tester.pump(const Duration(milliseconds: 400));   // 다시 조회
+    await tester.pumpAndSettle();
+
+    expect(find.bySemanticsLabel(RegExp('즐겨찾기됨')), findsNWidgets(2));
+    expect(find.bySemanticsLabel(RegExp('즐겨찾기 안 함')), findsNWidgets(2));
+
+    semantics.dispose();
+  });
+
   testWidgets('즐겨찾기가 하나도 없으면 첫 권역으로 연다', (tester) async {
     await pumpApp(tester);
 
