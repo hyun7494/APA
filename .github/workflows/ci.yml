@@ -46,6 +46,33 @@ jobs:
       - name: 테스트
         run: ./gradlew check --no-daemon
 
+      # ★ **통합 테스트가 정말 돌았는지 확인한다.**
+      #
+      # 태그로 갈라 놨기 때문에, 설정이 어긋나 `integrationTest` 가 **한 개도 못 찾는
+      # 상태가 되어도 초록으로 지나간다.** 아무것도 안 도는 것과 다 통과하는 것이
+      # 화면에서 똑같아 보이는 게 이 구조의 값이자 함정이다.
+      #
+      # 저장소 소유자가 아니면 CI 로그도 리포트 아티팩트도 API 로 못 받는다(403/401).
+      # 그러니 **결과를 읽어서 판단하지 말고, 어긋나면 빌드가 깨지게** 해 둔다.
+      - name: 통합 테스트가 실제로 돌았는지
+        run: |
+          count() {
+            find . -path "*/build/test-results/$1/*.xml" -print0 2>/dev/null               | xargs -0 -r grep -ho 'tests="[0-9]*"'               | tr -dc '0-9
+' | awk '{s+=$1} END {print s+0}'
+          }
+          unit=$(count test)
+          integration=$(count integrationTest)
+          echo "단위 $unit개 · 통합 $integration개" | tee -a "$GITHUB_STEP_SUMMARY"
+
+          if [ "$integration" -eq 0 ]; then
+            echo "::error::통합 테스트가 한 개도 안 돌았다. 태그 설정이나 Testcontainers 를 볼 것"
+            exit 1
+          fi
+          if [ "$unit" -eq 0 ]; then
+            echo "::error::단위 테스트가 한 개도 안 돌았다"
+            exit 1
+          fi
+
       # 깨졌을 때 이유를 보려면 리포트가 있어야 한다. 로그만으로는 스택이 잘린다.
       - name: 테스트 리포트 보관
         if: always()
