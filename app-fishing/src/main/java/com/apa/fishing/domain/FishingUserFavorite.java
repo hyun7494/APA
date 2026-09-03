@@ -33,6 +33,20 @@ public class FishingUserFavorite {
     @Column(name = "region_group_id", nullable = false)
     private Long regionGroupId;
 
+    /**
+     * 즐겨찾기 한 줄을 만든다.
+     *
+     * <p>오랫동안 <b>만드는 길이 없었다</b> — 표도 조회도 있는데 생성자가 protected 뿐이라
+     * 행이 늘 0 이었고, 마이페이지의 칩·개수·메뉴가 그 0 을 그리고 있었다. 이 저장소가
+     * 계속 걷어낸 "읽는 쪽만 있고 쓰는 쪽이 없는" 모양이다.
+     */
+    public static FishingUserFavorite of(Long userId, Long regionGroupId) {
+        FishingUserFavorite favorite = new FishingUserFavorite();
+        favorite.userId = userId;
+        favorite.regionGroupId = regionGroupId;
+        return favorite;
+    }
+
     /** 복합 기본키 (user_id, region_group_id). */
     public record Key(Long userId, Long regionGroupId) implements Serializable {
 

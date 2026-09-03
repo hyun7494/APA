@@ -400,6 +400,35 @@ class RemoteFishingRepository implements FishingRepository {
     }
   }
 
+  @override
+  Future<List<RegionGroup>> fetchFavorites() async {
+    // 비로그인은 서버를 부르지 않는다 — 401 을 받아 예외로 다루면 마이페이지가
+    // 통째로 오류 화면이 된다. 로그인 안 한 사람에게 즐겨찾기는 그냥 없는 것이다.
+    if (!await _client.isLoggedIn) return const [];
+    try {
+      final res = await _dio.get<List<dynamic>>('/fishing/me/favorites');
+      return _regionsOf(res.data);
+    } on DioException catch (e) {
+      if (e.response?.statusCode == 401) return const [];
+      rethrow;
+    }
+  }
+
+  @override
+  Future<List<RegionGroup>> setFavorite(int regionGroupId,
+      {required bool on}) async {
+    final path = '/fishing/me/favorites/$regionGroupId';
+    final res = on
+        ? await _dio.put<List<dynamic>>(path)
+        : await _dio.delete<List<dynamic>>(path);
+    return _regionsOf(res.data);
+  }
+
+  List<RegionGroup> _regionsOf(List<dynamic>? data) =>
+      (data ?? const [])
+          .map((e) => RegionGroup.fromJson(e as Map<String, dynamic>))
+          .toList();
+
   /// 쓰기 실패를 화면에 띄울 한 줄로 바꾼다.
   ///
   /// 서버가 문구를 주면 그대로 쓴다 — "제목을 입력해 주세요"가 "실패했어요"보다 언제나 낫다.

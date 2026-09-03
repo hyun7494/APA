@@ -6,6 +6,7 @@ import '../screens/board_screen.dart';
 import '../screens/catch_new_screen.dart';
 import '../screens/catch_success_screen.dart';
 import '../screens/collection_screen.dart';
+import '../screens/favorite_regions_screen.dart';
 import '../screens/home_screen.dart';
 import '../screens/legal_screen.dart';
 import '../screens/login_screen.dart';
@@ -173,6 +174,10 @@ GoRouter createAppRouter() => GoRouter(
         StatefulShellBranch(
           routes: [
             GoRoute(path: '/profile', builder: (_, _) => const ProfileScreen()),
+            GoRoute(
+              path: '/favorites',
+              builder: (_, _) => const FavoriteRegionsScreen(),
+            ),
             GoRoute(
               path: '/settings',
               builder: (_, _) => const SettingsScreen(),

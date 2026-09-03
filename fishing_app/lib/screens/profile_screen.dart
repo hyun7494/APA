@@ -11,6 +11,7 @@ import '../widgets/app_buttons.dart';
 import '../widgets/app_card.dart';
 import '../widgets/async_view.dart';
 import '../widgets/collection_progress.dart';
+import '../widgets/pill_chip.dart';
 import '../widgets/reveal.dart';
 
 /// 마이페이지 — 프로필 히어로, 통계, 메뉴.
@@ -22,11 +23,9 @@ class ProfileScreen extends ConsumerWidget {
 
   static const _menu = <({AppIcon icon, String label, String? route})>[
     (icon: AppIcon.book, label: '내 조과 기록', route: '/collection'),
-    // ⚠️ `즐겨찾는 지역` 을 뺐다 (2026-08-30). `알림 설정` 과 **똑같은 경우**다 —
-    //    `fishing_user_favorites` 표는 V1 이 만들어 뒀고 프로필 조회가 읽기까지 하는데,
-    //    **넣는 엔드포인트가 없다** (컨트롤러에 favorite 이 한 줄도 없고 행은 0 이다).
-    //    누르면 "준비 중" 스낵바만 뜨는 메뉴, 언제나 0 인 통계, 절대 안 그려지는 칩 줄
-    //    셋이 같이 딸려 있었다. 즐겨찾기를 붙일 때 이 셋을 함께 되살릴 것.
+    // 2026-09-03 에 되살렸다 — 쓰는 엔드포인트가 생겼다 (계약서 3-7-5).
+    // 걷어냈던 셋(메뉴·통계 칸·칩 줄)이 함께 돌아왔다.
+    (icon: AppIcon.bookmark, label: '즐겨찾는 지역', route: '/favorites'),
     // ⚠️ `알림 설정` 을 뺐다 (2026-08-25). 켜고 끌 알림이 **하나도 없다** — FCM 이
     //    앱에도 서버에도 없고, `auth.user_fcm_tokens` 는 V1 이 만들어 둔 빈 표다.
     //    아무것도 안 하는 토글을 두면 사용자는 알림이 안 오는 것을 고장으로 받아들인다.
@@ -307,12 +306,42 @@ class _Body extends ConsumerWidget {
                   _Stat(value: profile.catchCount, label: '조과 기록'),
                   const VerticalDivider(width: 1),
                   _Stat(value: profile.postCount, label: '작성 글'),
-                  // 즐겨찾기 칸은 뺐다 — 위 _menu 주석 참고. 언제나 0 이었다.
+                  const VerticalDivider(width: 1),
+                  _Stat(value: profile.favoriteCount, label: '즐겨찾기'),
                 ],
               ),
             ),
           ),
         ),
+
+        // 즐겨찾는 지역 칩. 2026-09-03 에 되살렸다 (위 _menu 주석 참고).
+        //
+        // 하나도 없으면 **줄째로 감춘다.** 빈 자리에 "없어요" 를 띄우면 화면만
+        // 길어지고, 어차피 바로 위 통계의 0 과 메뉴가 같은 말을 이미 하고 있다.
+        if (profile.favoriteRegions.isNotEmpty) ...[
+          const SizedBox(height: AppSpacing.gap),
+          Reveal(
+            index: 4,
+            child: AppCard(
+              padding: const EdgeInsets.fromLTRB(18, 16, 18, 18),
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Text('즐겨찾는 지역', style: AppText.rowLabel),
+                  const SizedBox(height: 12),
+                  Wrap(
+                    spacing: 8,
+                    runSpacing: 8,
+                    children: [
+                      for (final region in profile.favoriteRegions)
+                        StaticPill(label: region.name),
+                    ],
+                  ),
+                ],
+              ),
+            ),
+          ),
+        ],
         const SizedBox(height: AppSpacing.section),
 
         // 메뉴 — 한 장의 카드 안에 행으로 묶는다. 카드를 따로 쌓으면

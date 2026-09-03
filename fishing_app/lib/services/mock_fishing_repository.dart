@@ -427,7 +427,43 @@ class MockFishingRepository implements FishingRepository {
   @override
   Future<Profile?> fetchProfile() async {
     await Future.delayed(_latency);
-    return MockData.profile;
+    // ⚠️ 즐겨찾기는 목에서도 **바뀐 것을 반영해야 한다.** 고정값을 돌려주면
+    //    별을 눌러도 마이페이지의 개수·칩이 안 따라와서, 서버에서만 되는
+    //    것처럼 보이고 목으로 화면을 보는 내내 고장으로 읽힌다.
+    final base = MockData.profile;
+    return Profile(
+      nickname: base.nickname,
+      level: base.level,
+      levelTitle: base.levelTitle,
+      catchCount: base.catchCount,
+      postCount: base.postCount,
+      favoriteCount: _favorites.length,
+      favoriteRegions: _favoriteRegions,
+    );
+  }
+
+  /// 즐겨찾는 권역 id. 목에서도 상태가 남아야 별이 눌린 채로 있는다.
+  final Set<int> _favorites = {...MockData.profile.favoriteRegions.map((r) => r.id)};
+
+  List<RegionGroup> get _favoriteRegions =>
+      MockData.regions.where((r) => _favorites.contains(r.id)).toList();
+
+  @override
+  Future<List<RegionGroup>> fetchFavorites() async {
+    await Future.delayed(_latency);
+    return _favoriteRegions;
+  }
+
+  @override
+  Future<List<RegionGroup>> setFavorite(int regionGroupId,
+      {required bool on}) async {
+    await Future.delayed(_latency);
+    if (on) {
+      _favorites.add(regionGroupId);
+    } else {
+      _favorites.remove(regionGroupId);
+    }
+    return _favoriteRegions;
   }
 
   // ── 도감 조립 ───────────────────────────────────────────────

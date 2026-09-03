@@ -1787,6 +1787,84 @@ void main() {
     expect(find.text('띠 설정'), findsNothing);
     // 알림 설정도 뺐다 — 켜고 끌 알림이 하나도 없다 (FCM 미도입).
     expect(find.text('알림 설정'), findsNothing);
+    // 즐겨찾기는 2026-09-03 에 되살렸다 — 쓰는 엔드포인트가 생겼다.
+    expect(find.text('즐겨찾는 지역'), findsWidgets);
+    expect(find.text('즐겨찾기'), findsOneWidget);
+  });
+
+  // ── 즐겨찾는 지역 ─────────────────────────────────────────────
+
+  testWidgets('★ 즐겨찾기를 빼면 마이페이지의 개수와 칩이 함께 줄어든다', (tester) async {
+    await pumpApp(tester);
+
+    await tester.tap(find.text('마이'));
+    await tester.pumpAndSettle();
+    // 목은 동해·남해·제주 셋으로 시작한다.
+    expect(find.text('3'), findsWidgets);
+
+    await tester.tap(find.text('즐겨찾는 지역').last);
+    await tester.pumpAndSettle();
+
+    await tester.tap(find.text('동해'));
+    await tester.pumpAndSettle();
+
+    // ⚠️ `pageBack()` 은 이 앱에서 안 통한다 — 쿠퍼티노/머티리얼 기본 뒤로 버튼을
+    //    찾는데 여기는 BackRow 의 커스텀 아이콘이다. 그 아이콘을 직접 누른다.
+    await tester.tap(find.byType(IconTapButton));
+    await tester.pumpAndSettle();
+
+    // 개수와 칩이 **함께** 따라와야 한다. 하나만 갱신되면 화면 안에서 값이 어긋난다.
+    expect(find.text('2'), findsWidgets);
+    expect(find.text('남해'), findsOneWidget);
+    expect(find.text('제주'), findsOneWidget);
+    expect(find.text('동해'), findsNothing);
+  });
+
+  /// ★ **즐겨찾기가 하는 일이 이것이다.**
+  ///
+  /// 이게 없으면 즐겨찾기는 마이페이지의 칩 몇 개로 끝나는 장식이다 — 표시만 하고
+  /// 아무 일도 안 하는 값은 이 저장소가 계속 걷어낸 모양이다.
+  ///
+  /// ⚠️ 목의 첫 즐겨찾기가 **첫 권역과 같으면**(동해) 이 검사가 헛돈다. 그래서 동해를
+  /// 먼저 빼고 본다 — 그때 지수 화면이 두 번째 권역이 아니라 **남은 즐겨찾기**로
+  /// 열려야 한다.
+  testWidgets('★ 즐겨찾는 권역이 낚시 지수 화면의 기본이 된다', (tester) async {
+    await pumpApp(tester);
+
+    await tester.tap(find.text('마이'));
+    await tester.pumpAndSettle();
+    await tester.tap(find.text('즐겨찾는 지역').last);
+    await tester.pumpAndSettle();
+
+    // 남은 즐겨찾기는 남해·제주. 목록의 첫 권역은 여전히 동해다.
+    await tester.tap(find.text('동해'));
+    await tester.pumpAndSettle();
+
+    await tester.tap(find.text('지수'));
+    await tester.pumpAndSettle();
+
+    expect(find.text('사량도 옥동'), findsOneWidget);
+    expect(find.text('구룡포 방파제'), findsNothing);
+  });
+
+  testWidgets('즐겨찾기가 하나도 없으면 첫 권역으로 연다', (tester) async {
+    await pumpApp(tester);
+
+    await tester.tap(find.text('마이'));
+    await tester.pumpAndSettle();
+    await tester.tap(find.text('즐겨찾는 지역').last);
+    await tester.pumpAndSettle();
+
+    for (final name in ['동해', '남해', '제주']) {
+      await tester.tap(find.text(name));
+      await tester.pumpAndSettle();
+    }
+
+    await tester.tap(find.text('지수'));
+    await tester.pumpAndSettle();
+
+    // 즐겨찾기가 비면 예전 규칙(첫 권역)으로 물러선다 — 빈 화면이 되면 안 된다.
+    expect(find.text('구룡포 방파제'), findsOneWidget);
   });
 
   // ── 고객센터 ──────────────────────────────────────────────────

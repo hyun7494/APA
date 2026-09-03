@@ -31,19 +31,38 @@ final fishingRepositoryProvider = Provider<FishingRepository>((ref) {
 /// 가 목록의 첫 그룹으로 떨어지게 한다.
 final selectedRegionIdProvider = StateProvider<int?>((ref) => null);
 
-/// 실제로 보여줄 지역 — 고른 것이 있으면 그것, 없으면 **목록의 첫 그룹**이다.
+/// 즐겨찾는 권역. 비로그인이면 빈 목록이다 (저장소가 서버를 안 부른다).
+final favoritesProvider = FutureProvider<List<RegionGroup>>(
+  (ref) => ref.watch(fishingRepositoryProvider).fetchFavorites(),
+);
+
+/// 실제로 보여줄 지역 — 고른 것 → **즐겨찾는 권역** → 목록의 첫 그룹 순이다.
 ///
 /// 지역 목록을 아직 못 받았으면 null 이고, 그때는 포인트를 부르지 않는다.
+///
+/// ★ 즐겨찾기가 여기에 걸려 있다. 이게 없으면 즐겨찾기는 마이페이지의 칩 몇 개로
+/// 끝나는 **장식**이다 — 표시만 하고 아무 일도 안 하는 값은 이 저장소가 계속
+/// 걷어낸 모양이다. 자주 가는 권역이 있는 사람에게는 앱을 열 때마다 그 권역을
+/// 다시 고르는 것이 일이므로, 그 수고를 없애는 것이 즐겨찾기가 할 일이다.
+///
+/// ⚠️ 초기값을 특정 id 로 박으면 안 된다 — [selectedRegionIdProvider] 주석 참고.
 final effectiveRegionIdProvider = Provider<int?>((ref) {
   final picked = ref.watch(selectedRegionIdProvider);
   final regions = ref.watch(regionsProvider).valueOrNull;
 
   // 고른 지역이 목록에 없을 수도 있다 (서버가 지역을 갈아엎은 뒤 앱이 살아 있는 경우).
-  // 그때도 첫 그룹으로 물러선다 — 빈 화면보다 낫다.
+  // 그때도 아래로 물러선다 — 빈 화면보다 낫다.
   if (picked != null && (regions == null || regions.any((r) => r.id == picked))) {
     return picked;
   }
-  return regions == null || regions.isEmpty ? null : regions.first.id;
+  if (regions == null || regions.isEmpty) return null;
+
+  // 즐겨찾기는 아직 안 왔을 수 있다. 기다리지 않고 첫 그룹으로 간다 —
+  // 목록이 잠깐 비어 보이는 것보다 낫고, 도착하면 이 provider 가 다시 계산된다.
+  final favorites = ref.watch(favoritesProvider).valueOrNull ?? const [];
+  final favorite = favorites.where((f) => regions.any((r) => r.id == f.id));
+
+  return favorite.isEmpty ? regions.first.id : favorite.first.id;
 });
 
 /// 게시판 탭. null = 전체

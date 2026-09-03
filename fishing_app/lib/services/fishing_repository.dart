@@ -138,6 +138,19 @@ abstract interface class FishingRepository {
   /// GET /fishing/me/profile — 비로그인이면 null
   Future<Profile?> fetchProfile();
 
+  /// GET /fishing/me/favorites — 즐겨찾는 권역. 비로그인이면 빈 목록이다.
+  Future<List<RegionGroup>> fetchFavorites();
+
+  /// PUT · DELETE /fishing/me/favorites/{regionGroupId} (계약서 3-7-5).
+  ///
+  /// ★ **토글이 아니라 원하는 상태를 보낸다.** 토글이면 응답이 유실돼 앱이 재시도할 때
+  /// 도로 꺼진다 — 별을 한 번 눌렀는데 두 번 누른 결과가 된다. 별을 누르는 쪽은 언제나
+  /// 원하는 최종 상태를 알고 있으므로 그걸 그대로 보낸다.
+  ///
+  /// 둘 다 **갱신된 전체 목록**을 돌려준다. 화면이 자기 쪽에서 더하고 빼며 상태를
+  /// 지어내면 다른 기기에서 바꾼 것이 반영되지 않아 조금씩 어긋난다.
+  Future<List<RegionGroup>> setFavorite(int regionGroupId, {required bool on});
+
   /// GET /fishing/users/{userId} — 남의 공개 프로필 (계약서 3-10).
   ///
   /// **게시판 활동만** 온다. 조과·도감·사진은 본인만 본다 (약관 10조 2항).
