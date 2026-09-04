@@ -1,6 +1,10 @@
 plugins {
 	id 'java'
-	id 'org.springframework.boot' version '3.4.1' apply false
+	// ⚠️ 판을 올릴 때는 **같은 minor 안에서** 움직일 것 (3.4.x). 3.5 로 넘어가면
+	//    자동설정이 바뀌어 조용히 동작이 달라지는 자리가 생긴다.
+	//    이 줄이 낡으면 톰캣·스프링시큐리티·잭슨이 통째로 낡는다 — 알려진 취약점은
+	//    대개 여기 하나를 올리면 함께 사라진다 (OSV 로 확인할 것).
+	id 'org.springframework.boot' version '3.4.7' apply false
 	id 'io.spring.dependency-management' version '1.1.7' apply false
 }
 

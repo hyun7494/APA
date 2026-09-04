@@ -22,6 +22,9 @@ import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.
  */
 class FavoriteIT extends IntegrationTestBase {
 
+    @org.springframework.beans.factory.annotation.Autowired
+    private com.apa.fishing.service.FavoriteService favoriteService;
+
     private static final long USER = 7001L;
     private static final String NICK = "즐겨찾는사람";
 
@@ -80,6 +83,45 @@ class FavoriteIT extends IntegrationTestBase {
         remove(USER, 동해).andExpect(status().isOk()).andExpect(jsonPath("$.length()").value(0));
         remove(USER, 동해).andExpect(status().isOk()).andExpect(jsonPath("$.length()").value(0));
         assertThat(countOf("fishing_user_favorites")).isZero();
+    }
+
+    /**
+     * ★ <b>"있나 보고 없으면 넣는다" 는 경쟁에 진다.</b>
+     *
+     * <p>동시에 열두 번 보냈더니 절반 넘게 <b>500</b> 이었다 — 둘 다 없다고 보고 둘 다
+     * 넣으려 들어 복합 기본키에 걸린 것이다. 사용자는 북마크를 한 번 눌렀을 뿐인데
+     * "바꾸지 못했어요" 를 보고, 정작 값은 들어가 있다.
+     *
+     * <p>MockMvc 는 요청을 같은 스레드에서 처리해서 이 경쟁을 재현하지 못한다. 그래서
+     * <b>서비스를 직접 여러 스레드로 부른다</b> — 검사하려는 것이 HTTP 계층이 아니라
+     * 그 아래의 쓰기이기 때문이다.
+     */
+    @Test
+    @DisplayName("★ 동시에 넣어도 500 이 안 나고 하나만 남는다")
+    void concurrentAddIsSafe() throws Exception {
+        int threads = 12;
+        var pool = java.util.concurrent.Executors.newFixedThreadPool(threads);
+        var start = new java.util.concurrent.CountDownLatch(1);
+        var failures = new java.util.concurrent.ConcurrentLinkedQueue<Throwable>();
+
+        for (int i = 0; i < threads; i++) {
+            pool.submit(() -> {
+                try {
+                    start.await();
+                    favoriteService.add(USER, 동해);
+                } catch (Throwable t) {
+                    failures.add(t);
+                }
+            });
+        }
+        start.countDown();
+        pool.shutdown();
+        assertThat(pool.awaitTermination(30, java.util.concurrent.TimeUnit.SECONDS)).isTrue();
+
+        assertThat(failures)
+                .as("동시에 넣었을 때 터진 것들 — 하나라도 있으면 사용자에게 500 이 간다")
+                .isEmpty();
+        assertThat(countOf("fishing_user_favorites")).isEqualTo(1);
     }
 
     // ───────────────────────────────────────────────────── 경계

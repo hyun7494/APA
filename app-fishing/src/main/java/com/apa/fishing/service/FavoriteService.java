@@ -5,6 +5,7 @@ import com.apa.fishing.dto.RegionGroupResponse;
 import com.apa.fishing.repository.FishingRegionRepository;
 import com.apa.fishing.repository.FishingUserFavoriteRepository;
 import lombok.RequiredArgsConstructor;
+import lombok.extern.slf4j.Slf4j;
 import org.springframework.http.HttpStatus;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
@@ -24,6 +25,7 @@ import java.util.List;
  * 별을 한 번 눌렀는데 결과가 두 번 누른 것이 된다. 별을 누르는 쪽은 언제나 원하는
  * 최종 상태를 알고 있으므로, 그 상태를 그대로 보내게 하고 여러 번 보내도 같게 만든다.
  */
+@Slf4j
 @Service
 @RequiredArgsConstructor
 @Transactional(readOnly = true)
@@ -41,17 +43,21 @@ public class FavoriteService {
     /**
      * 넣는다. 이미 있으면 아무 일도 없다.
      *
-     * <p>중복 저장을 막으려고 미리 조회하지 않고 {@code existsById} 하나로 끝낸다 —
-     * 어차피 복합 기본키가 마지막 방어선이다.
+     * <p>★ <b>"있나 보고 없으면 넣는다" 는 경쟁에 진다.</b> 두 요청이 동시에 오면 둘 다
+     * 없다고 보고 둘 다 넣으려 들어서, 뒤엣것이 복합 기본키에 걸려 <b>500</b> 이 된다.
+     * 실제로 12번을 한꺼번에 보내니 절반 넘게 500 이었다. 사용자는 북마크를 한 번
+     * 눌렀을 뿐인데 "바꾸지 못했어요" 를 보게 되고, 정작 값은 들어가 있다.
+     *
+     * <p>★ <b>예외를 잡는 것으로는 못 고친다.</b> INSERT 가 기본키에 걸리는 순간
+     * Postgres 가 그 트랜잭션을 무효로 만들어서, 잡아 넘겨도 뒤따르는 조회가
+     * {@code current transaction is aborted} 로 죽는다. <b>충돌 자체가 안 나게</b>
+     * 한 문장으로 넣는다 (저장소의 {@code insertIfAbsent} 주석 참고).
      */
     @Transactional
     public List<RegionGroupResponse> add(Long userId, Long regionGroupId) {
         requireRegion(regionGroupId);
 
-        var key = new FishingUserFavorite.Key(userId, regionGroupId);
-        if (!favoriteRepository.existsById(key)) {
-            favoriteRepository.save(FishingUserFavorite.of(userId, regionGroupId));
-        }
+        favoriteRepository.insertIfAbsent(userId, regionGroupId);
         return myFavorites(userId);
     }
 
