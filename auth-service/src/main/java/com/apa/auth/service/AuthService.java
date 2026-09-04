@@ -120,7 +120,8 @@ public class AuthService {
     @Transactional
     public TokenResponse signUp(EmailSignUpRequest request) {
         String email = EmailAddress.require(request.email());
-        String rawPassword = PasswordPolicy.require(request.password());
+        // 이메일을 함께 넘긴다 — 아이디와 같은 비밀번호를 막으려면 필요하다.
+        String rawPassword = PasswordPolicy.require(request.password(), email);
         String appId = normalizeAppId(request.appId());
 
         // ★ 적어 낸 이름과 우리가 지어 준 이름을 **다르게** 다룬다.

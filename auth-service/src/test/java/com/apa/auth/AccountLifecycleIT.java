@@ -245,6 +245,52 @@ class AccountLifecycleIT extends IntegrationTestBase {
         assertThat(wrongPassword).isEqualTo(noSuchUser);
     }
 
+    /**
+     * ★ <b>아무 제한도 없었다.</b> 틀린 비밀번호로 60번을 연속으로 넣어도 전부 401 이고
+     * 잠금도 지연도 없었으며, 그 뒤 맞는 비밀번호가 그대로 통했다.
+     *
+     * <p>여기서 보는 것은 "몇 번 만에 막히나" 가 아니라 <b>언젠가 막히기는 하는가</b>다.
+     * 한도(기본 10)를 조정해도 이 검사는 살아 있어야 한다.
+     */
+    @Test
+    @DisplayName("★ 틀린 비밀번호를 계속 넣으면 결국 막힌다 (429)")
+    void repeatedFailuresGetRateLimited() throws Exception {
+        signUpOk("brute@example.com", "무차별대상");
+
+        int limited = 0;
+        for (int i = 0; i < 30; i++) {
+            var result = mvc.perform(post("/auth/login/email").contentType("application/json")
+                            .content(jsonOf(Map.of("email", "brute@example.com",
+                                    "password", "틀린비번" + i, "appId", "fishing"))))
+                    .andReturn();
+            if (result.getResponse().getStatus() == 429) {
+                limited++;
+            }
+        }
+        assertThat(limited)
+                .as("30번을 틀렸는데 한 번도 안 막혔다 — 무차별 대입을 그대로 받는다")
+                .isPositive();
+
+        // ⚠️ **맞는 비밀번호도 잠긴 동안에는 막힌다.** 그게 잠금의 뜻이다 —
+        //    여기서 통과시키면 공격자는 맞힌 순간 들어가므로 막은 의미가 없다.
+        mvc.perform(post("/auth/login/email").contentType("application/json")
+                        .content(jsonOf(Map.of("email", "brute@example.com",
+                                "password", "hyun1234!", "appId", "fishing"))))
+                .andExpect(status().isTooManyRequests());
+    }
+
+    @Test
+    @DisplayName("흔한 비밀번호로는 가입할 수 없다")
+    void rejectsCommonPasswordAtSignUp() throws Exception {
+        var body = Map.of("email", "weak@example.com", "password", "12345678",
+                "nickname", "약한비번", "appId", "fishing", "consents", allRequired());
+
+        mvc.perform(post("/auth/signup").contentType("application/json").content(jsonOf(body)))
+                .andExpect(status().isBadRequest());
+
+        assertThat(countOf("users")).isZero();
+    }
+
     @Test
     @DisplayName("dev-login 은 꺼져 있다 — 켜지면 누구나 userId=1 토큰을 받는다")
     void devLoginIsOffByDefault() throws Exception {

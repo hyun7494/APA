@@ -1,6 +1,9 @@
 package com.apa.auth.controller;
 
 import com.apa.auth.dto.EmailLoginRequest;
+import com.apa.auth.exception.UnauthorizedException;
+import com.apa.auth.service.LoginAttemptGuard;
+import jakarta.servlet.http.HttpServletRequest;
 import com.apa.auth.dto.EmailSignUpRequest;
 import com.apa.auth.dto.LoginRequestDto;
 import com.apa.auth.dto.LoginResponseDto;
@@ -24,6 +27,7 @@ public class AuthController {
 
     private final AuthService authService;
     private final DevLoginService devLoginService;
+    private final LoginAttemptGuard loginAttempts;
 
     /** 자체 회원가입 (이메일 + 비밀번호). 가입과 동시에 토큰을 내려 바로 로그인 상태가 된다. */
     @PostMapping("/signup")
@@ -43,10 +47,37 @@ public class AuthController {
         return ResponseEntity.noContent().build();
     }
 
-    /** 자체 가입 계정 로그인. */
+    /**
+     * 자체 가입 계정 로그인.
+     *
+     * <p>★ <b>무차별 대입을 여기서 센다.</b> 예전엔 아무 제한이 없어서 틀린 비밀번호를
+     * 몇 번이고 넣을 수 있었다 ({@link LoginAttemptGuard}).
+     */
     @PostMapping("/login/email")
-    public ResponseEntity<TokenResponse> loginWithEmail(@RequestBody EmailLoginRequest request) {
-        return ResponseEntity.ok(authService.loginWithEmail(request));
+    public ResponseEntity<TokenResponse> loginWithEmail(@RequestBody EmailLoginRequest request,
+                                                        HttpServletRequest http) {
+        String ip = clientIpOf(http);
+        loginAttempts.check(request.email(), ip);
+        try {
+            TokenResponse token = authService.loginWithEmail(request);
+            loginAttempts.recordSuccess(request.email(), ip);
+            return ResponseEntity.ok(token);
+        } catch (UnauthorizedException e) {
+            loginAttempts.recordFailure(request.email(), ip);
+            throw e;
+        }
+    }
+
+    /**
+     * 요청을 보낸 곳.
+     *
+     * <p>⚠️ <b>{@code X-Forwarded-For} 는 헤더라 아무나 적어 보낼 수 있다.</b> 프록시 뒤에
+     * 있지 않다면 그걸 믿는 순간 공격자가 매 요청 다른 값을 넣어 출발지 집계를 무력화한다.
+     * 그래서 여기서는 <b>일부러 소켓 주소만</b> 쓴다. 리버스 프록시를 앞에 두면 그때
+     * {@code server.forward-headers-strategy=native} 로 부트가 신뢰 경계를 다루게 할 것.
+     */
+    private static String clientIpOf(HttpServletRequest http) {
+        return http.getRemoteAddr();
     }
 
     /**

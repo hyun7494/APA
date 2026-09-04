@@ -36,6 +36,17 @@ public class GlobalExceptionHandler {
         return detail;
     }
 
+    /**
+     * 로그인 시도 초과.
+     *
+     * <p><b>401 과 갈라 둔다.</b> 401 로 뭉개면 앱이 "비밀번호가 틀렸다" 로 안내해서,
+     * 사용자가 맞는 비밀번호를 넣고도 계속 실패하는 이유를 모른 채 더 두드린다.
+     */
+    @ExceptionHandler
+    public ProblemDetail handleTooManyAttempts(TooManyAttemptsException e) {
+        return problem(HttpStatus.TOO_MANY_REQUESTS, e.getMessage(), "TOO_MANY_ATTEMPTS");
+    }
+
     @ExceptionHandler
     public ResponseEntity<String> handleUnauthorized(UnauthorizedException e) {
         return ResponseEntity

@@ -33,17 +33,16 @@ import java.util.regex.Pattern;
 @RequiredArgsConstructor
 public class PhotoStorageService {
 
-    /** 저장된 사진이 서빙되는 경로. DB {@code photo_url} 에 이 형태로 들어간다. */
-    /** 조과 인증샷. <b>본인만 열람</b>이라 인증이 걸린 경로다. */
-    public static final String PUBLIC_PATH = "/fishing/me/photos/";
-
     /**
-     * 게시글 사진. <b>누구나 열람</b>이다 — 글 자체가 공개고, 사진은 글쓴이가 공개하려고 붙인 것이다.
+     * 저장된 사진이 서빙되는 경로. DB {@code photo_url} 에 이 형태로 들어간다.
      *
-     * <p>같은 폴더에 같은 방식으로 저장한다. 접근 정책을 가르는 것은 <b>URL 앞부분뿐</b>이고,
-     * 그 경로를 SecurityConfig 가 열어 두느냐 막느냐로 결정된다.
+     * <p>경로와 폴더는 {@link PhotoScope} 가 함께 들고 있다 — 둘이 갈리면 접근 정책이
+     * 새는 자리가 생긴다 (그 열거의 주석 참고).
      */
-    public static final String BOARD_PATH = "/fishing/board/photos/";
+    public static final String PUBLIC_PATH = PhotoScope.CATCH.urlPrefix();
+
+    /** 게시글 사진. <b>누구나 열람</b>이다 — 글 자체가 공개고 글쓴이가 붙인 것이다. */
+    public static final String BOARD_PATH = PhotoScope.BOARD.urlPrefix();
 
     private static final String THUMB_SUFFIX = "_thumb";
     private static final String EXTENSION = ".jpg";
@@ -68,11 +67,15 @@ public class PhotoStorageService {
      * @throws UnsupportedImageException 형식·크기가 받을 수 없는 것일 때 (호출부가 400 으로 바꾼다)
      */
     public String store(MultipartFile file) {
+        return store(file, PhotoScope.CATCH);
+    }
+
+    private String store(MultipartFile file, PhotoScope scope) {
         validate(file);
 
         byte[] source = read(file);
         String name = UUID.randomUUID() + EXTENSION;
-        Path dir = storageDir();
+        Path dir = storageDir(scope);
 
         byte[] full = PhotoTransform.toJpeg(source, properties.maxEdge(), properties.quality());
         byte[] thumb = PhotoTransform.toJpeg(source, properties.thumbEdge(), properties.quality());
@@ -86,28 +89,40 @@ public class PhotoStorageService {
             log.warn("썸네일 저장 실패 (원본은 저장됨): {}", name, e);
         }
 
-        log.debug("조과 사진 저장: {} ({}KB → {}KB)", name, source.length / 1024, full.length / 1024);
-        return PUBLIC_PATH + name;
+        log.debug("사진 저장: {}/{} ({}KB → {}KB)",
+                scope.directory(), name, source.length / 1024, full.length / 1024);
+        return scope.urlPrefix() + name;
     }
 
     /**
-     * 게시글 사진 저장. {@link #store} 와 같은 파일을 만들고 <b>공개 경로</b>로 주소만 바꾼다.
+     * 게시글 사진 저장.
+     *
+     * <p>★ <b>예전에는 {@link #store} 를 그대로 부르고 URL 앞부분만 바꿨다.</b> 그래서 두
+     * 종류가 한 폴더에 섞였고, 인증 없는 게시판 경로로 <b>남의 조과 인증샷을 그대로 받아
+     * 갈 수 있었다.</b> 이제 폴더부터 다르다.
      *
      * @return DB 에 넣을 URL ({@link #BOARD_PATH} + 파일명)
      */
     public String storeForBoard(MultipartFile file) {
-        return BOARD_PATH + fileNameOf(store(file));
+        return store(file, PhotoScope.BOARD);
     }
 
-    /** 서빙용 읽기. 파일이 없으면 빈 값이다 — 호출부가 404 로 바꾼다. */
-    public Optional<byte[]> load(String fileName, boolean thumb) {
+    /**
+     * 서빙용 읽기. 파일이 없으면 빈 값이다 — 호출부가 404 로 바꾼다.
+     *
+     * <p>★ <b>범위를 반드시 받는다.</b> 이 인자가 없던 시절에는 파일명만 보고 읽어서,
+     * 게시판(인증 없음) 경로로 조과 인증샷(본인만)을 꺼낼 수 있었다. 이제 요청한 범위의
+     * 폴더 밖은 <b>존재 자체를 모른다.</b>
+     */
+    public Optional<byte[]> load(PhotoScope scope, String fileName, boolean thumb) {
         if (!STORED_NAME.matcher(fileName).matches()) {
             return Optional.empty();
         }
-        Path path = storageDir().resolve(thumb ? thumbName(fileName) : fileName);
+        Path dir = storageDir(scope);
+        Path path = dir.resolve(thumb ? thumbName(fileName) : fileName);
         // 썸네일 저장이 실패했던 사진은 썸네일만 없다. 원본으로 떨어뜨린다.
         if (thumb && !Files.exists(path)) {
-            path = storageDir().resolve(fileName);
+            path = dir.resolve(fileName);
         }
         if (!Files.exists(path)) {
             return Optional.empty();
@@ -126,20 +141,30 @@ public class PhotoStorageService {
      * 기획서 3-3 이 삭제를 필수 기능으로 못박은 이유가 그것이다.
      */
     public void delete(String photoUrl) {
+        PhotoScope scope = PhotoScope.of(photoUrl);
         String fileName = fileNameOf(photoUrl);
-        if (fileName == null) {
+        if (scope == null || fileName == null) {
             return;
         }
-        deleteQuietly(storageDir().resolve(fileName));
-        deleteQuietly(storageDir().resolve(thumbName(fileName)));
+        Path dir = storageDir(scope);
+        deleteQuietly(dir.resolve(fileName));
+        deleteQuietly(dir.resolve(thumbName(fileName)));
     }
 
-    /** {@code /fishing/me/photos/{uuid}.jpg} → {@code {uuid}.jpg}. 우리가 저장한 형태가 아니면 null. */
+    /**
+     * {@code /fishing/me/photos/{uuid}.jpg} → {@code {uuid}.jpg}.
+     * 우리가 저장한 형태가 아니면 null.
+     *
+     * <p>⚠️ <b>예전에는 조과 경로만 벗겨낼 줄 알았다.</b> 그래서 게시글 사진을 지우라고
+     * 하면 null 이 나와 {@link #delete} 가 조용히 되돌아갔고, <b>지운 글의 사진이 디스크에
+     * 남아 공개 URL 로 계속 열렸다.</b> 이제 두 경로를 다 안다.
+     */
     public static String fileNameOf(String photoUrl) {
-        if (photoUrl == null || !photoUrl.startsWith(PUBLIC_PATH)) {
+        PhotoScope scope = PhotoScope.of(photoUrl);
+        if (scope == null) {
             return null;
         }
-        String name = photoUrl.substring(PUBLIC_PATH.length());
+        String name = photoUrl.substring(scope.urlPrefix().length());
         return STORED_NAME.matcher(name).matches() ? name : null;
     }
 
@@ -170,8 +195,13 @@ public class PhotoStorageService {
         }
     }
 
-    private Path storageDir() {
-        Path dir = Path.of(properties.dir());
+    /** 저장 루트. 마이그레이션이 옛 평평한 배치를 찾을 때도 쓴다. */
+    Path rootDir() {
+        return Path.of(properties.dir());
+    }
+
+    Path storageDir(PhotoScope scope) {
+        Path dir = rootDir().resolve(scope.directory());
         try {
             Files.createDirectories(dir);
         } catch (IOException e) {

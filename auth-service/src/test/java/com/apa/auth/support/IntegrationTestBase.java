@@ -66,6 +66,12 @@ public abstract class IntegrationTestBase {
     }
 
     @Autowired protected MockMvc mvc;
+
+    /**
+     * 시도 제한은 스프링 빈이라 <b>검사 사이에 상태가 남는다.</b> 비우지 않으면 무차별
+     * 대입 검사가 걸어 둔 잠금 때문에 뒤 검사들이 429 로 죽는다 — 실제로 그렇게 깨졌다.
+     */
+    @Autowired private com.apa.auth.service.LoginAttemptGuard loginAttempts;
     @Autowired protected ObjectMapper json;
     @Autowired private JdbcTemplate jdbc;
 
@@ -76,6 +82,11 @@ public abstract class IntegrationTestBase {
      * <p>⚠️ {@code users} 를 먼저 지우면 FK 가 막는다 — 자식부터 지운다.
      * (운영에서 계정을 지울 일이 있을 때도 같은 순서다.)
      */
+    @BeforeEach
+    void resetLoginAttempts() {
+        loginAttempts.clear();
+    }
+
     @BeforeEach
     void resetDatabase() {
         String url = jdbc.execute((org.springframework.jdbc.core.ConnectionCallback<String>)

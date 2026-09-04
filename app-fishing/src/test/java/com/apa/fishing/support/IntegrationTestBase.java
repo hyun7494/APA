@@ -59,6 +59,10 @@ public abstract class IntegrationTestBase {
         registry.add("spring.datasource.password", POSTGRES::getPassword);
         registry.add("jwt.secret", () -> JWT_SECRET);
 
+        // 탈퇴자 꼬리표의 소금. 기본값이 없어 부팅이 실패하므로 테스트도 줘야 한다
+        // (그 기본값이 저장소에 박혀 있던 것이 취약점이었다 — WithdrawnName 주석 참고).
+        registry.add("fishing.withdrawn.secret", () -> "integration-test-withdrawn-secret");
+
         // ⚠️ 공공 API 키를 **비워 둔다.** 있으면 부팅 직후 지수 배치가 51곳 × 외부 API 를
         //    때리기 시작한다 (약 60초). 테스트가 남의 서버에 의존하면 안 되고, 무엇보다
         //    기상청이 느린 날 테스트가 덩달아 느려진다. 배치는 키가 없으면 스스로 건너뛴다.

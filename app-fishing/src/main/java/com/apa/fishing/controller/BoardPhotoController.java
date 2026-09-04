@@ -1,5 +1,6 @@
 package com.apa.fishing.controller;
 
+import com.apa.fishing.service.PhotoScope;
 import com.apa.fishing.service.PhotoStorageService;
 import lombok.RequiredArgsConstructor;
 import org.springframework.http.CacheControl;
@@ -23,7 +24,10 @@ import java.time.Duration;
  * 비로그인도 읽는다 (기획서 5-5). 인증을 걸면 <b>로그인하지 않은 사람에게는 글의 사진이
  * 전부 깨져 보인다.</b>
  *
- * <p>파일은 같은 폴더에 같은 방식으로 저장된다 — 다른 것은 접근 정책과 그것을 나타내는 URL 뿐이다.
+ * <p>★ <b>파일은 이제 다른 폴더에 저장된다.</b> 예전에는 한 폴더에 섞어 두고 접근 정책을
+ * URL 앞부분으로만 갈랐는데, 그러면 <b>여기로 조과 인증샷을 요청하는 것을 막을 수가 없다.</b>
+ * 실제로 뚫렸다 — 소유자 확인이 걸린 경로에서는 401·404 인 파일이 여기서는 200 이었다.
+ * 폴더가 경계가 되면 이 컨트롤러는 비공개 사진의 존재 자체를 모른다 ({@link PhotoScope}).
  */
 @RestController
 @RequestMapping(BoardPhotoController.PATH)
@@ -43,7 +47,10 @@ public class BoardPhotoController {
     @GetMapping("/{fileName}")
     public ResponseEntity<byte[]> photo(@PathVariable String fileName,
                                         @RequestParam(defaultValue = "false") boolean thumb) {
-        return photoStorage.load(fileName, thumb)
+        // ★ 범위를 못박는다. 이 경로에는 인증이 없으므로, 여기서 조과 폴더에 닿을 수
+        //   있으면 그 순간 **본인만 보는 인증샷이 공개된다.** 실제로 그랬다 —
+        //   같은 파일을 `/fishing/me/photos/` 로는 401·404, 여기로는 200 이었다.
+        return photoStorage.load(PhotoScope.BOARD, fileName, thumb)
                 .map(bytes -> ResponseEntity.ok()
                         .contentType(MediaType.IMAGE_JPEG)
                         .cacheControl(CacheControl.maxAge(CACHE_TTL).cachePublic())

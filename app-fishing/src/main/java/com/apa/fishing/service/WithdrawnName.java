@@ -32,11 +32,32 @@ public class WithdrawnName {
 
     private final byte[] secret;
 
+    /** 되짚기를 실제로 막는 최소 길이. 짧으면 비밀값 자체를 전수 대입할 수 있다. */
+    private static final int MIN_SECRET_LENGTH = 16;
+
     /**
-     * @param secret 해시에 섞는 서버 비밀값. <b>없으면 id 를 되짚을 수 있다</b> —
-     *               user_id 가 작은 정수라 소금이 없으면 전수 대입이 순식간이다.
+     * @param secret 해시에 섞는 서버 비밀값.
+     *
+     * <p>★ <b>기본값이 없다.</b> 예전엔 {@code apa-local-dev} 가 박혀 있었는데, 공개
+     * 저장소라 그 값을 아는 누구나 {@code SHA256(비밀값 + id)} 를 1 부터 돌려
+     * <b>꼬리표를 내부 user_id 로 되짚을 수 있었다.</b> user_id 가 작은 정수라
+     * 전수 대입이 순식간이다 — 실제로 {@code 탈퇴한 사용자 69b6} 에서 4번을 복원했다.
+     *
+     * <p>더 나쁜 건 이 값이 <b>어디에서도 주입되지 않아</b> 늘 그 기본값으로 돌았다는
+     * 것이다. 익명화를 하고 있다고 믿는 채로 안 하고 있었다.
+     *
+     * <p>{@code JWT_SECRET} 과 같은 규칙을 쓴다 — 없으면 부팅이 실패하는 편이 낫다.
      */
-    public WithdrawnName(@Value("${fishing.withdrawn.secret:apa-local-dev}") String secret) {
+    public WithdrawnName(@Value("${fishing.withdrawn.secret}") String secret) {
+        if (secret == null || secret.isBlank()) {
+            throw new IllegalStateException(
+                    "WITHDRAWN_SECRET 이 필요하다 — 없으면 탈퇴자 꼬리표를 user_id 로 되짚을 수 있다");
+        }
+        if (secret.length() < MIN_SECRET_LENGTH) {
+            throw new IllegalStateException(
+                    "WITHDRAWN_SECRET 이 너무 짧다 (%d자 이상): 지금 %d자"
+                            .formatted(MIN_SECRET_LENGTH, secret.length()));
+        }
         this.secret = secret.getBytes(StandardCharsets.UTF_8);
     }
 

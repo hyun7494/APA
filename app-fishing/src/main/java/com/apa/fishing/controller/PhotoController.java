@@ -2,6 +2,7 @@ package com.apa.fishing.controller;
 
 import com.apa.common.security.AuthenticatedUser;
 import com.apa.fishing.service.CatchService;
+import com.apa.fishing.service.PhotoScope;
 import com.apa.fishing.service.PhotoStorageService;
 import lombok.RequiredArgsConstructor;
 import org.springframework.http.CacheControl;
@@ -57,7 +58,7 @@ public class PhotoController {
             throw new ResponseStatusException(HttpStatus.NOT_FOUND, "사진을 찾을 수 없습니다");
         }
 
-        return photoStorage.load(fileName, thumb)
+        return photoStorage.load(PhotoScope.CATCH, fileName, thumb)
                 .map(bytes -> ResponseEntity.ok()
                         .contentType(MediaType.IMAGE_JPEG)
                         // 본인만 보는 사진이라 공유 캐시에 남으면 안 된다
