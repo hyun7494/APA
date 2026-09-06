@@ -126,7 +126,9 @@ KST 라 맞아 보이지만 그대로 올리면 글·조과의 작성 시각과 
 | `JWT_SECRET` | **없음 (부팅 실패)** | 32바이트 이상. **두 서비스가 같은 값** |
 | `WITHDRAWN_SECRET` | **없음 (부팅 실패)** | 16자 이상. 탈퇴자 꼬리표 해시의 소금. **한 번 정하면 바꾸지 말 것** — 바꾸면 이미 가려진 글의 꼬리표가 전부 달라진다 |
 | `DB_HOST`·`DB_PORT`·`DB_NAME`·`DB_USER` | localhost:5432/apa/apa_user | 도커는 `postgres` |
-| `DB_PASSWORD` | 없음 | 필수 |
+| `DB_PASSWORD` | 없음 | 필수. **앱 역할**(비-슈퍼유저)의 비밀번호 |
+| `DB_ADMIN_PASSWORD` | 없음 | 필수. **DB 관리자**(슈퍼유저)의 비밀번호. 앱은 안 쓴다 |
+| `BIND_HOST` | `127.0.0.1` | 도커가 포트를 열 주소. **기본이 루프백이다** — 같은 망의 실기기로 붙어야 할 때만 `0.0.0.0` |
 | `AUTH_DEV_LOGIN` | **false** | 켜면 누구나 userId=1 토큰을 받아간다 |
 | `CORS_ALLOWED_ORIGINS` | `localhost:*` | **실제 도메인만** |
 | `PHOTO_DIR` | `data/photos` | 볼륨 경로 |
@@ -166,6 +168,27 @@ docker compose logs -f app-fishing
 ⚠️ app-fishing 은 부팅 직후 지수 배치(51곳 × 공공 API, 약 60초)를 돈다. 그동안
 healthy 로 안 바뀌므로 `start_period` 를 120초로 잡아 뒀다.
 
+### DB 역할 — 앱은 슈퍼유저가 아니다
+
+postgres 이미지는 `POSTGRES_USER` 를 **부트스트랩 슈퍼유저**로 만든다. 앱이 그 계정을
+그대로 쓰면, 앱이 한 번 뚫렸을 때 DB 전체를 잃는다 — 슈퍼유저는 `COPY ... FROM PROGRAM`
+으로 **DB 컨테이너 안에서 명령을 실행**할 수 있고 서버 파일도 읽는다.
+
+    apa_admin (POSTGRES_USER)   슈퍼유저. 부트스트랩과 사람이 하는 유지보수용
+    apa_user  (DB_USER)         NOSUPERUSER. 서비스들이 쓴다. apa DB 의 소유자
+
+앱 역할이 **DB 소유자**인 것은 Flyway 가 스키마와 표를 만들어야 하기 때문이다.
+소유자라도 슈퍼유저가 아닌 것이 요점이다 — 자기 데이터는 다루되 서버는 못 건드린다.
+
+역할은 `docker/db-init/10-app-role.sh` 가 만든다. ⚠️ **그 스크립트는 데이터 디렉터리가
+비어 있을 때만 돈다.** 쓰던 볼륨에 적용하려면 한 번 비울 것:
+
+```bash
+docker compose --env-file ../apa-secrets.env down
+docker volume rm apa_pgdata      # ⚠️ apa_photos 는 건드리지 말 것 (인증샷이 들어 있다)
+docker compose --env-file ../apa-secrets.env up -d
+```
+
 ## 보안에서 지키는 것
 
 한 번씩 실제로 뚫렸던 자리다. 고칠 때 이 근거를 먼저 볼 것.
@@ -180,6 +203,12 @@ healthy 로 안 바뀌므로 `start_period` 를 120초로 잡아 뒀다.
   ⚠️ 메모리에 세므로 인스턴스가 하나일 때만 온전하다 — 늘릴 때 함께 옮길 것
 - **비밀번호는 구성 규칙 대신 흔한 것을 막는다** — 대문자·특수문자를 강제하면 `Password1!`
   로 몰릴 뿐이고 `12345678` 은 그대로 통과한다 (NIST SP 800-63B)
+- **앱 DB 역할은 슈퍼유저가 아니다** — 위 절 참고. 확인은
+  `SELECT rolsuper FROM pg_roles WHERE rolname = current_user` 로 한다
+- **포트는 루프백에 묶는다** — 도커는 `"5433:5432"` 라고만 쓰면 `0.0.0.0` 에 열어서
+  같은 와이파이의 아무나 DB 에 붙을 수 있다. `BIND_HOST` 로만 넓힌다
+- **의존성 판을 놀리지 않는다** — 부트 패치 판만 올려도 톰캣·스프링시큐리티·잭슨이
+  함께 올라간다. 확인은 OSV(`api.osv.dev`)에 판을 넣어 물어보면 된다
 - **X-Forwarded-For 를 믿지 않는다** — 헤더라 아무나 적어 보낸다. 리버스 프록시를 앞에 둘
   때 `server.forward-headers-strategy` 로 신뢰 경계를 명시할 것
 

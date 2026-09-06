@@ -11,16 +11,32 @@ services:
     image: postgres:16
     environment:
       POSTGRES_DB: ${DB_NAME:-apa}
-      POSTGRES_USER: ${DB_USER:-apa_user}
-      POSTGRES_PASSWORD: ${DB_PASSWORD:?DB_PASSWORD 가 필요하다}
+
+      # ★ **부트스트랩 슈퍼유저다. 앱은 이걸 쓰지 않는다.**
+      #    postgres 이미지는 POSTGRES_USER 를 슈퍼유저로 만드는데, 앱이 그 계정을
+      #    그대로 쓰면 앱이 한 번 뚫렸을 때 DB 전체를 잃는다 — 슈퍼유저는
+      #    `COPY ... FROM PROGRAM` 으로 **DB 컨테이너 안에서 명령을 실행**할 수 있다.
+      #    그래서 관리자와 앱 역할을 가르고, 앱 역할은 아래 init 스크립트가 만든다.
+      POSTGRES_USER: ${DB_ADMIN_USER:-apa_admin}
+      POSTGRES_PASSWORD: ${DB_ADMIN_PASSWORD:?DB_ADMIN_PASSWORD 가 필요하다 (DB 관리자)}
+
+      # init 스크립트가 만들 앱 역할. 서비스들이 쓰는 값과 같아야 한다.
+      APP_DB_USER: ${DB_USER:-apa_user}
+      APP_DB_PASSWORD: ${DB_PASSWORD:?DB_PASSWORD 가 필요하다 (앱 계정)}
       TZ: Asia/Seoul
     volumes:
       # 이름 있는 볼륨이다. `docker compose down` 으로는 안 지워진다 —
       # 지우려면 `down -v` 를 명시해야 한다.
       - pgdata:/var/lib/postgresql/data
+      # ⚠️ 여기 스크립트는 **데이터 디렉터리가 비어 있을 때만** 돈다.
+      #    이미 쓰던 볼륨에 적용하려면 `docker volume rm apa_pgdata` 로 한 번 비울 것
+      #    (사진 볼륨 apa_photos 는 건드리지 말 것).
+      - ./docker/db-init:/docker-entrypoint-initdb.d:ro
     healthcheck:
       # ⚠️ 포트가 열리는 것과 **질의를 받는 것**은 다르다. pg_isready 로 봐야
       #    Flyway 가 붙는 순간 준비돼 있다.
+      # ⚠️ **앱 역할로 본다.** 관리자로 보면 init 스크립트가 실패해 앱 역할이 없을 때도
+      #    healthy 가 되어, 서비스들이 붙었다가 인증 실패로 죽는다.
       test: ["CMD-SHELL", "pg_isready -U ${DB_USER:-apa_user} -d ${DB_NAME:-apa}"]
       interval: 5s
       timeout: 3s
