@@ -1,3 +1,11 @@
 /gradlew text eol=lf
 *.bat text eol=crlf
 *.jar binary
+
+# 컨테이너·리눅스에서 도는 셸 스크립트는 반드시 LF 로.
+#
+# ⚠️ 이 저장소는 `core.autocrlf=true` 인 윈도에서 개발한다. 규칙이 없으면 체크아웃될 때
+#    CRLF 가 붙어 셔뱅 끝에 캐리지 리턴이 남고, 리눅스는 그걸 파일 이름의 일부로 읽어서
+#    "no such file or directory" 로 죽는다. 스크립트는 멀쩡해 보이는데 실행만 안 되므로
+#    원인을 찾기 고약하다 — `gradlew` 실행 권한 때와 같은 종류의 함정이다.
+*.sh text eol=lf
