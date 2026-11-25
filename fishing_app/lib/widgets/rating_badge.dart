@@ -52,10 +52,8 @@ class RatingScoreBadge extends StatelessWidget {
       ),
       child: Text(
         rating.score,
-        style: AppText.badge.copyWith(
+        style: AppText.badgeStrong.copyWith(
           color: rating.foreground,
-          fontSize: 14,
-          fontWeight: FontWeight.w800,
         ),
       ),
     );

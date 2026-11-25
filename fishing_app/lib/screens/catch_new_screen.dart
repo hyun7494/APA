@@ -837,7 +837,7 @@ class _SpeciesPickerState extends State<_SpeciesPicker> {
               margin: const EdgeInsets.only(top: 10, bottom: 6),
               decoration: BoxDecoration(
                 color: AppColors.fill,
-                borderRadius: BorderRadius.circular(999),
+                borderRadius: BorderRadius.circular(AppRadius.pill),
               ),
             ),
             Padding(

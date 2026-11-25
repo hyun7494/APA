@@ -170,7 +170,7 @@ class _PostDetailScreenState extends ConsumerState<PostDetailScreen> {
               padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
               decoration: BoxDecoration(
                 color: post.category.color.withValues(alpha: 0.12),
-                borderRadius: BorderRadius.circular(6),
+                borderRadius: BorderRadius.circular(AppRadius.small),
               ),
               child: Text(
                 post.category.label,
@@ -266,7 +266,7 @@ class _PostDetailScreenState extends ConsumerState<PostDetailScreen> {
               height: 44,
               decoration: BoxDecoration(
                 color: AppColors.fill,
-                borderRadius: BorderRadius.circular(12),
+                borderRadius: BorderRadius.circular(AppRadius.inset),
               ),
               child: TextField(
                 controller: _comment,
@@ -298,7 +298,7 @@ class _PostDetailScreenState extends ConsumerState<PostDetailScreen> {
                 alignment: Alignment.center,
                 decoration: BoxDecoration(
                   color: AppColors.emphasis,
-                  borderRadius: BorderRadius.circular(12),
+                  borderRadius: BorderRadius.circular(AppRadius.inset),
                 ),
                 child: _sending
                     ? SizedBox(

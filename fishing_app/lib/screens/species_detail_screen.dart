@@ -164,7 +164,6 @@ class _Body extends ConsumerWidget {
                 Text(
                   species.nameSci,
                   style: AppText.badgeSmall.copyWith(
-                    fontSize: 11,
                     color: AppColors.muted,
                   ),
                 ),
@@ -466,7 +465,7 @@ class _RecordRow extends StatelessWidget {
             width: 52,
             height: 52,
             child: ClipRRect(
-              borderRadius: BorderRadius.circular(12),
+              borderRadius: BorderRadius.circular(AppRadius.inset),
               child: AuthedPhoto(
                 path: record.coverPhotoUrl,
                 rare: rare,
@@ -486,7 +485,7 @@ class _RecordRow extends StatelessWidget {
                   children: [
                     Text(
                       record.lengthCm?.toStringAsFixed(1) ?? '—',
-                      style: AppText.numberMedium.copyWith(fontSize: 17),
+                      style: AppText.numberSmall,
                     ),
                     // 길이가 없으면 단위도 빼야 "— cm" 가 되지 않는다.
                     if (record.lengthCm != null) ...[

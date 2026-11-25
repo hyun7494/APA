@@ -145,7 +145,6 @@ class _Body extends StatelessWidget {
                 Text(
                   profile.nickname,
                   style: AppText.screenTitle.copyWith(
-                    fontSize: 21,
                     color: AppColors.onAccent,
                   ),
                   maxLines: 1,

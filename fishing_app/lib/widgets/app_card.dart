@@ -264,7 +264,7 @@ class IconValueCard extends StatelessWidget {
               children: [
                 Text(
                   label,
-                  style: AppText.caption.copyWith(fontSize: 12.5),
+                  style: AppText.captionSmall,
                   maxLines: 1,
                   overflow: TextOverflow.ellipsis,
                 ),
@@ -274,10 +274,7 @@ class IconValueCard extends StatelessWidget {
                   alignment: Alignment.centerLeft,
                   child: Text(
                     value,
-                    style: AppText.numberMedium.copyWith(
-                      fontSize: 15,
-                      letterSpacing: -0.3,
-                    ),
+                    style: AppText.numberTiny,
                     maxLines: 1,
                   ),
                 ),

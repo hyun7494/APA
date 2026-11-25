@@ -339,7 +339,7 @@ class _BusyButton extends StatelessWidget {
       alignment: Alignment.center,
       decoration: BoxDecoration(
         color: AppColors.emphasis,
-        borderRadius: BorderRadius.circular(14),
+        borderRadius: BorderRadius.circular(AppRadius.control),
       ),
       child: SizedBox(
         width: 20,
@@ -407,7 +407,7 @@ class _LinkDialogState extends State<_LinkDialog> {
           Container(
             decoration: BoxDecoration(
               color: AppColors.fill,
-              borderRadius: BorderRadius.circular(12),
+              borderRadius: BorderRadius.circular(AppRadius.inset),
             ),
             padding: const EdgeInsets.symmetric(horizontal: 14),
             height: 50,

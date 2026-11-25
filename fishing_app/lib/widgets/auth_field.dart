@@ -68,7 +68,7 @@ class _AuthFieldState extends State<AuthField> {
         padding: const EdgeInsets.symmetric(horizontal: 16),
         decoration: BoxDecoration(
           color: AppColors.surface,
-          borderRadius: BorderRadius.circular(14),
+          borderRadius: BorderRadius.circular(AppRadius.control),
           border: Border.all(
             color: focused ? AppColors.accent : Colors.transparent,
             width: 1.5,
@@ -172,7 +172,7 @@ class AuthErrorBox extends StatelessWidget {
         padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 12),
         decoration: BoxDecoration(
           color: AppColors.alert.withValues(alpha: 0.07),
-          borderRadius: BorderRadius.circular(12),
+          borderRadius: BorderRadius.circular(AppRadius.inset),
           border: Border.all(color: AppColors.alert.withValues(alpha: 0.25)),
         ),
         child: Row(

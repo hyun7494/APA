@@ -41,11 +41,22 @@ abstract final class AppText {
   static TextStyle get numberMedium =>
       _f(19, FontWeight.w700, 1.2, -0.57, tabular: true);
 
+  /// 작은 카드·통계 칸의 수치 (17)
+  static TextStyle get numberSmall =>
+      _f(17, FontWeight.w700, 1.2, -0.57, tabular: true);
+
+  /// 큰 숫자 옆 분모·아이콘 칩의 값 — "/36" (15)
+  static TextStyle get numberTiny =>
+      _f(15, FontWeight.w700, 1.2, -0.3, tabular: true);
+
   /// 앱바 타이틀 (17)
   static TextStyle get appBarTitle => _f(17, FontWeight.w700, 1.3, -0.43);
 
   /// 섹션 제목 — "내 도감", "내 기록" (16)
   static TextStyle get sectionTitle => _f(16, FontWeight.w700, 1.35, -0.32);
+
+  /// 목록 묶음 제목 — 검색 결과·권역 목록 (15)
+  static TextStyle get listTitle => _f(15, FontWeight.w700, 1.35, -0.32);
 
   /// 리스트 행의 값 (16)
   static TextStyle get rowValue => _f(16, FontWeight.w700, 1.35, -0.32);
@@ -85,6 +96,16 @@ abstract final class AppText {
 
   /// 배지 (13)
   static TextStyle get badge => _f(13, FontWeight.w700, 1.2, -0.13);
+
+  /// 강조 배지 — 4점 만점 점수 (14)
+  static TextStyle get badgeStrong => _f(14, FontWeight.w800, 1.2, -0.14);
+
+  /// 좁은 자리의 배지 · 주간 막대 날짜 (12)
+  static TextStyle get badgeCompact => _f(12, FontWeight.w700, 1.2, -0.12);
+
+  /// 작은 캡션 — 아이콘 칩 라벨 (12)
+  static TextStyle get captionSmall =>
+      _f(12, FontWeight.w600, 1.4, -0.12, color: AppColors.muted);
 
   /// 작은 배지 · 사진 위 카운트 (11)
   static TextStyle get badgeSmall => _f(11, FontWeight.w700, 1.2, 0);

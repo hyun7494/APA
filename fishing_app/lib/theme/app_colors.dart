@@ -155,11 +155,20 @@ abstract final class AppRadius {
   /// 썸네일
   static const thumb = 14.0;
 
+  /// 높이 54 짜리 입력칸 · 큰 버튼
+  static const control = 14.0;
+
+  /// 카드 안에 눌러 넣은 면 — 회색 입력칸, 알림 상자, 작은 썸네일
+  static const inset = 12.0;
+
   /// 아이콘 칩
   static const iconChip = 11.0;
 
-  /// 필터 칩 · 사각 버튼 — 시안은 알약이 아니라 라운드 사각이다
+  /// 필터 칩 · 사각 버튼 · 막대그래프 — 시안은 알약이 아니라 라운드 사각이다
   static const chip = 10.0;
+
+  /// 작은 태그 · 체크박스 · 주간 막대
+  static const small = 6.0;
 
   /// 완전 둥근 배지
   static const pill = 999.0;

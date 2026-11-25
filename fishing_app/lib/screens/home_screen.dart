@@ -431,8 +431,7 @@ class _FieldGuideTile extends StatelessWidget {
                 const SizedBox(width: 5),
                 Text(
                   data == null ? '' : '/${data.total}',
-                  style: AppText.numberMedium.copyWith(
-                    fontSize: 15,
+                  style: AppText.numberTiny.copyWith(
                     color: AppColors.faint,
                   ),
                 ),

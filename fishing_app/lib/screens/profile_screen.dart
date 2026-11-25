@@ -232,7 +232,6 @@ class _Body extends ConsumerWidget {
                       Text(
                         profile.nickname,
                         style: AppText.screenTitle.copyWith(
-                          fontSize: 21,
                           color: AppColors.onAccent,
                         ),
                         overflow: TextOverflow.ellipsis,
@@ -277,7 +276,7 @@ class _Body extends ConsumerWidget {
                     Expanded(child: Text('도감 진행률', style: AppText.rowLabel)),
                     Text(
                       summary == null ? '—' : '${summary!.owned}',
-                      style: AppText.numberMedium.copyWith(fontSize: 17),
+                      style: AppText.numberSmall,
                     ),
                     Text(
                       summary == null ? '' : ' / ${summary!.total}',

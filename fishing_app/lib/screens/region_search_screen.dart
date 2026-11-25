@@ -299,7 +299,7 @@ class _SpotRow extends StatelessWidget {
               children: [
                 Text(
                   spot.name,
-                  style: AppText.sectionTitle.copyWith(fontSize: 15),
+                  style: AppText.listTitle,
                   overflow: TextOverflow.ellipsis,
                 ),
                 const SizedBox(height: 3),
@@ -349,7 +349,7 @@ class _RegionRow extends StatelessWidget {
               children: [
                 Text(
                   region.name,
-                  style: AppText.sectionTitle.copyWith(fontSize: 15),
+                  style: AppText.listTitle,
                   overflow: TextOverflow.ellipsis,
                 ),
                 const SizedBox(height: 3),

@@ -205,7 +205,7 @@ class _SignUpScreenState extends ConsumerState<SignUpScreen> {
                   alignment: Alignment.center,
                   decoration: BoxDecoration(
                     color: AppColors.emphasis,
-                    borderRadius: BorderRadius.circular(14),
+                    borderRadius: BorderRadius.circular(AppRadius.control),
                   ),
                   child: SizedBox(
                     width: 20,
@@ -409,7 +409,7 @@ class _ConsentRow extends StatelessWidget {
                       height: 20,
                       decoration: BoxDecoration(
                         color: checked ? AppColors.accent : AppColors.surface,
-                        borderRadius: BorderRadius.circular(6),
+                        borderRadius: BorderRadius.circular(AppRadius.small),
                         border: Border.all(
                           color: checked ? AppColors.accent : AppColors.muted,
                           width: 1.6,

@@ -169,7 +169,6 @@ class _Body extends StatelessWidget {
                       Text(
                         species.nameSci,
                         style: AppText.badgeSmall.copyWith(
-                          fontSize: 11,
                           color: AppColors.muted,
                         ),
                       ),
@@ -213,7 +212,7 @@ class _Body extends StatelessWidget {
                       ),
                       Text(
                         '${summary!.owned}',
-                        style: AppText.numberMedium.copyWith(fontSize: 17),
+                        style: AppText.numberSmall,
                       ),
                       Text(
                         ' / ${summary!.total}',

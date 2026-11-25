@@ -100,7 +100,7 @@ class _DayTile extends StatelessWidget {
                     child: Container(
                       decoration: BoxDecoration(
                         color: rating.foreground,
-                        borderRadius: BorderRadius.circular(6),
+                        borderRadius: BorderRadius.circular(AppRadius.small),
                       ),
                     ),
                   ),
@@ -112,9 +112,8 @@ class _DayTile extends StatelessWidget {
           // 날짜는 일(日)만. 7칸에 "8/27"을 넣으면 글자가 줄어들어 오히려 안 읽힌다.
           Text(
             '${day.date.day}',
-            style: AppText.badgeSmall.copyWith(
+            style: AppText.badgeCompact.copyWith(
               color: isToday ? AppColors.ink : AppColors.muted,
-              fontSize: 12,
             ),
             maxLines: 1,
           ),

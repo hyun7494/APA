@@ -65,7 +65,6 @@ class PrimaryButton extends StatelessWidget {
                   label,
                   style: AppText.rowValue.copyWith(
                     color: AppColors.onAccent,
-                    fontSize: 16,
                   ),
                   maxLines: 1,
                   overflow: TextOverflow.ellipsis,
@@ -121,7 +120,6 @@ class SecondaryButton extends StatelessWidget {
                 label,
                 style: AppText.rowValue.copyWith(
                   color: AppColors.sub,
-                  fontSize: 16,
                 ),
                 maxLines: 1,
                 overflow: TextOverflow.ellipsis,
