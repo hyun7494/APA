@@ -510,8 +510,18 @@ class _RecordRow extends StatelessWidget {
           ),
           // 고치기를 지우기 **왼쪽**에 둔다. 되돌릴 수 없는 쪽이 바깥 끝이라
           // 손이 미끄러져도 삭제부터 눌리지 않는다.
-          IconTapButton(icon: AppIcon.pencil, onPressed: onEdit, size: 32),
-          IconTapButton(icon: AppIcon.trash, onPressed: onDelete, size: 32),
+          IconTapButton(
+            icon: AppIcon.pencil,
+            label: '기록 고치기',
+            onPressed: onEdit,
+            size: 32,
+          ),
+          IconTapButton(
+            icon: AppIcon.trash,
+            label: '기록 지우기',
+            onPressed: onDelete,
+            size: 32,
+          ),
         ],
       ),
     );

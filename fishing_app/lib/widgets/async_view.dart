@@ -187,7 +187,11 @@ class BackRow extends StatelessWidget {
     padding: const EdgeInsets.symmetric(horizontal: AppSpacing.screen),
     child: Row(
       children: [
-        IconTapButton(icon: AppIcon.chevronLeft, onPressed: onTap),
+        IconTapButton(
+          icon: AppIcon.chevronLeft,
+          label: label,
+          onPressed: onTap,
+        ),
         const SizedBox(width: 12),
         Expanded(child: Text(label, style: AppText.rowLabel)),
         ?trailing,

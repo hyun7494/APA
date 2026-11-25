@@ -698,26 +698,23 @@ class _PhotoStrip extends StatelessWidget {
             right: 4,
             top: 4,
             // x 아이콘뿐이라 읽어 줄 글자가 없다 — 스크린 리더에 이름을 준다.
-            child: Semantics(
-              label: '사진 빼기',
-              button: true,
-              child: PressScale(
-                onTap: () => onRemove(index),
-                scale: 0.86,
-                child: Container(
-                  width: 24,
-                  height: 24,
-                  alignment: Alignment.center,
-                  decoration: BoxDecoration(
-                    color: AppColors.scrim,
-                    shape: BoxShape.circle,
-                  ),
-                  child: LineIcon(
-                    AppIcon.close,
-                    size: 13,
-                    color: AppColors.onScrim,
-                    stroke: 2,
-                  ),
+            child: PressScale(
+              onTap: () => onRemove(index),
+              semanticLabel: '사진 빼기',
+              scale: 0.86,
+              child: Container(
+                width: 24,
+                height: 24,
+                alignment: Alignment.center,
+                decoration: BoxDecoration(
+                  color: AppColors.scrim,
+                  shape: BoxShape.circle,
+                ),
+                child: LineIcon(
+                  AppIcon.close,
+                  size: 13,
+                  color: AppColors.onScrim,
+                  stroke: 2,
                 ),
               ),
             ),

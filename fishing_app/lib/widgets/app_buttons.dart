@@ -188,6 +188,7 @@ class IconTapButton extends StatelessWidget {
   const IconTapButton({
     super.key,
     required this.icon,
+    required this.label,
     required this.onPressed,
     this.color,
     this.size = 21,
@@ -196,6 +197,9 @@ class IconTapButton extends StatelessWidget {
   });
 
   final AppIcon icon;
+
+  /// 스크린 리더가 읽을 이름 — 아이콘뿐이라 이게 없으면 이름 없는 버튼이 된다.
+  final String label;
 
   /// null 이면 눌리지 않고 흐리게 보인다 — 다른 버튼들과 같은 규칙이다.
   /// 빈 콜백을 넘기면 눌리는 것처럼 보이면서 아무 일도 안 한다.
@@ -216,6 +220,7 @@ class IconTapButton extends StatelessWidget {
   Widget build(BuildContext context) {
     return PressScale(
       onTap: onPressed,
+      semanticLabel: label,
       scale: 0.88,
       child: Opacity(
         opacity: onPressed == null ? 0.35 : 1,

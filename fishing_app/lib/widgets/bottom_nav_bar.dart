@@ -75,6 +75,7 @@ class _Tab extends StatelessWidget {
 
     return PressScale(
       onTap: onTap,
+      selected: active,
       scale: 0.9,
       child: Column(
         mainAxisSize: MainAxisSize.min,

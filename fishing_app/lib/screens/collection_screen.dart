@@ -40,6 +40,7 @@ class CollectionScreen extends ConsumerWidget {
               actions: [
                 IconTapButton(
                   icon: AppIcon.search,
+                  label: '어종 검색',
                   onPressed: () => ScaffoldMessenger.of(context).showSnackBar(
                     const SnackBar(content: Text('어종 검색은 준비 중입니다')),
                   ),

@@ -89,13 +89,10 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
               alignment: Alignment.centerLeft,
               child: Padding(
                 padding: const EdgeInsets.only(left: 8, top: 4),
-                child: Semantics(
+                child: IconTapButton(
+                  icon: AppIcon.chevronLeft,
                   label: '나중에 하기',
-                  button: true,
-                  child: IconTapButton(
-                    icon: AppIcon.chevronLeft,
-                    onPressed: auth.isBusy ? null : () => _skip(context),
-                  ),
+                  onPressed: auth.isBusy ? null : () => _skip(context),
                 ),
               ),
             ),

@@ -211,6 +211,7 @@ class _PostDetailScreenState extends ConsumerState<PostDetailScreen> {
 
     return PressScale(
       onTap: () => _toggleLike(post),
+      selected: liked,
       scale: 0.96,
       child: Container(
         height: 46,

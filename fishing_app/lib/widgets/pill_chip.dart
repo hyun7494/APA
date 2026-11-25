@@ -23,6 +23,7 @@ class SquareChip extends StatelessWidget {
   Widget build(BuildContext context) {
     return PressScale(
       onTap: onTap,
+      selected: selected,
       scale: 0.95,
       child: AnimatedContainer(
         duration: AppMotion.fast,
