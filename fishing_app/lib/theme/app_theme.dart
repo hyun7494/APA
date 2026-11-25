@@ -1,6 +1,5 @@
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
-import 'package:google_fonts/google_fonts.dart';
 
 import 'app_colors.dart';
 import 'app_typography.dart';
@@ -36,6 +35,7 @@ abstract final class AppTheme {
   static ThemeData build(AppPalette palette) {
     final base = ThemeData(
       useMaterial3: true,
+      fontFamily: AppText.family,
       brightness: palette.brightness,
       colorScheme:
           ColorScheme.fromSeed(
@@ -51,9 +51,10 @@ abstract final class AppTheme {
     );
 
     return base.copyWith(
-      textTheme: GoogleFonts.gothicA1TextTheme(
-        base.textTheme,
-      ).apply(bodyColor: palette.ink, displayColor: palette.ink),
+      textTheme: base.textTheme.apply(
+        bodyColor: palette.ink,
+        displayColor: palette.ink,
+      ),
       appBarTheme: AppBarTheme(
         backgroundColor: Colors.transparent,
         surfaceTintColor: Colors.transparent,

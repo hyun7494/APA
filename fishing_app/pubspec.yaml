@@ -37,7 +37,6 @@ dependencies:
   flutter_riverpod: ^2.6.1
   go_router: ^17.4.0
   dio: ^5.11.0
-  google_fonts: ^8.2.1
   intl: 0.20.2
   flutter_secure_storage: ^10.3.1
   flutter_localizations:
@@ -70,6 +69,22 @@ flutter:
   # included with your application, so that you can use the icons in
   # the material Icons class.
   uses-material-design: true
+
+  # Pretendard 1.3.9 (SIL OFL 1.1) — 시안 서체. 쓰는 굵기 넷만 넣는다 (각 1.5MB).
+  # 라이선스 전문을 함께 배포해야 하므로 에셋으로 싣는다.
+  assets:
+    - assets/fonts/Pretendard-OFL.txt
+  fonts:
+    - family: Pretendard
+      fonts:
+        - asset: assets/fonts/Pretendard-Regular.otf
+          weight: 400
+        - asset: assets/fonts/Pretendard-SemiBold.otf
+          weight: 600
+        - asset: assets/fonts/Pretendard-Bold.otf
+          weight: 700
+        - asset: assets/fonts/Pretendard-ExtraBold.otf
+          weight: 800
 
   # To add assets to your application, add an assets section, like this:
   # assets:

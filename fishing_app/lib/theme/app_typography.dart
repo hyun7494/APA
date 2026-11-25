@@ -1,5 +1,4 @@
 import 'package:flutter/material.dart';
-import 'package:google_fonts/google_fonts.dart';
 
 import 'app_colors.dart';
 
@@ -8,13 +7,16 @@ import 'app_colors.dart';
 /// 시안은 `Pretendard` 한 벌로만 짰다. 영문 모노스페이스 라벨을 전부 걷어낸
 /// 판이라 서체가 둘일 이유가 없다.
 ///
-/// **Pretendard는 google_fonts에 없어서 `Gothic A1`으로 대체했다.**
-/// 같은 계열(기하학적 한글 산세리프)이고 w100~w900을 모두 제공해서 시안이
-/// 쓰는 750·800 굵기를 낼 수 있다. 실제 Pretendard를 쓰려면 폰트 파일을
-/// `assets/fonts/`에 넣고 pubspec에 등록한 뒤 이 파일의 [_font]만 바꾸면 된다.
+/// 폰트 파일은 `assets/fonts/` 에 **앱과 함께 싣는다** (pubspec `fonts:`). 예전엔
+/// google_fonts 로 Gothic A1 을 실행 중에 받아 와서, 첫 실행·오프라인에서 기본
+/// 서체로 떴다가 바뀌었다. ⚠️ 실린 굵기는 400·600·700·800 넷뿐이다 — 다른 굵기를
+/// 쓰면 가까운 것으로 대체되니, 필요하면 파일부터 더할 것.
 ///
 /// 숫자는 별도 서체 대신 [FontFeature.tabularFigures]로 자릿수를 맞춘다.
 abstract final class AppText {
+  /// pubspec `fonts:` 의 family 이름
+  static const family = 'Pretendard';
+
   // ── 제목 ──────────────────────────────────────────────────────
   /// 홈 지수 등급 — 화면에서 가장 큰 글자 (38)
   static TextStyle get ratingHuge => _f(38, FontWeight.w800, 1, -1.7);
@@ -106,7 +108,8 @@ abstract final class AppText {
     double spacing, {
     Color? color,
     bool tabular = false,
-  }) => GoogleFonts.gothicA1(
+  }) => TextStyle(
+    fontFamily: family,
     fontSize: size,
     fontWeight: weight,
     height: height,
