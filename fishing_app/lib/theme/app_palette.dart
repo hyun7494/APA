@@ -30,6 +30,7 @@ class AppPalette {
     required this.accentDark,
     required this.accentSoft,
     required this.gold,
+    required this.goldText,
     required this.goldSoft,
     required this.alert,
     required this.chipBlueBg,
@@ -44,6 +45,7 @@ class AppPalette {
     required this.silhouetteGold,
     required this.lockedGoldText,
     required this.scrim,
+    required this.onScrim,
     required this.hairline,
   });
 
@@ -66,7 +68,14 @@ class AppPalette {
   final Color muted;
   final Color faint;
   final Color disabled;
+
+  /// 주색·강조색 면 위의 글자. 다크 주색(#10B981)은 밝아서 흰 글자가 2.5:1
+  /// 밖에 안 나온다 — 그래서 다크에서는 어두운 잉크다 (7.3:1).
+  /// 사진·반투명 막 위는 [onScrim] 을 쓴다.
   final Color onAccent;
+
+  /// [scrim] · 사진 위의 글자. 모드와 상관없이 흰색이다.
+  final Color onScrim;
 
   /// 가장 세게 강조하는 색 — 주 버튼·선택된 칩의 면, 선택된 탭의 아이콘.
   ///
@@ -80,6 +89,10 @@ class AppPalette {
   final Color accentDark;
   final Color accentSoft;
   final Color gold;
+
+  /// 글자·아이콘으로 쓰는 골드. [gold] 는 흰 바탕에서 2.3:1 이라 면과 테두리에만
+  /// 쓰고, 읽어야 하는 자리는 이걸 쓴다 (라이트 4.5:1 이상).
+  final Color goldText;
   final Color goldSoft;
   final Color alert;
 
@@ -114,16 +127,17 @@ class AppPalette {
     ink2: Color(0xFF3D464B),
     body: Color(0xFF4E585E),
     sub: Color(0xFF5B6469),
-    label: Color(0xFF6B747A),
-    muted: Color(0xFF9BA3A8),
-    faint: Color(0xFFB5BBBF),
+    label: Color(0xFF5B6469),
+    muted: Color(0xFF687278),
+    faint: Color(0xFF687278),
     disabled: Color(0xFFC3C9CD),
     onAccent: Color(0xFFFFFFFF),
     emphasis: Color(0xFF111417),
-    accent: Color(0xFF0B9E82),
-    accentDark: Color(0xFF0A8A72),
+    accent: Color(0xFF097F68),
+    accentDark: Color(0xFF097E68),
     accentSoft: Color(0xFFE9F7F3),
     gold: Color(0xFFE0A02C),
+    goldText: Color(0xFF946716),
     goldSoft: Color(0xFFFBF6EC),
     alert: Color(0xFFF0483E),
     chipBlueBg: Color(0xFFEEF2FE),
@@ -138,14 +152,18 @@ class AppPalette {
     silhouetteGold: Color(0xFFEBDCBF),
     lockedGoldText: Color(0xFFD3C6A6),
     scrim: Color(0x9E111417),
+    onScrim: Color(0xFFFFFFFF),
     hairline: Color(0x0F111417),
   );
 
   /// 숯색 배경 위에 한 톤 밝은 카드.
   ///
   /// 라이트를 그대로 반전한 게 아니다. 어두운 면에서는 같은 채도라도 색이 더
-  /// 튀어 보여서 주색을 #0B9E82 → #10B981 로 올리고(대비 확보), 반대로 회색
-  /// 계단은 흰색 쪽으로 몰지 않고 #6B7280~#9CA3AF 사이에서 눌러 둔다.
+  /// 튀어 보여서 주색을 #097F68 → #10B981 로 올리고(대비 확보), 반대로 회색
+  /// 계단은 흰색 쪽으로 몰지 않고 #818896~#9CA3AF 사이에서 눌러 둔다.
+  ///
+  /// 글자색은 두 판 모두 놓이는 면 위에서 4.5:1 이상이다 (2026-11-25 조정 —
+  /// 시안 값은 캡션 2.6:1, 비활성 탭 1.9:1 이었다). [disabled] 만 예외다.
   static const dark = AppPalette(
     brightness: Brightness.dark,
     bg: Color(0xFF111417),
@@ -159,16 +177,17 @@ class AppPalette {
     body: Color(0xFF9CA3AF),
     sub: Color(0xFF9CA3AF),
     label: Color(0xFF9CA3AF),
-    muted: Color(0xFF6B7280),
-    faint: Color(0xFF6B7280),
+    muted: Color(0xFF818896),
+    faint: Color(0xFF818896),
     disabled: Color(0xFF4B5563),
-    onAccent: Color(0xFFFFFFFF),
+    onAccent: Color(0xFF111417),
     emphasis: Color(0xFF10B981),
     accent: Color(0xFF10B981),
     // 라이트에서는 주색의 "진한 끝"이지만 다크에서는 밝은 끝이어야 읽힌다.
     accentDark: Color(0xFF34D399),
     accentSoft: Color(0xFF1A3834),
     gold: Color(0xFFF59E0B),
+    goldText: Color(0xFFF59E0B),
     goldSoft: Color(0xFF3B2A10),
     alert: Color(0xFFF87171),
     chipBlueBg: Color(0xFF213045),
@@ -183,6 +202,7 @@ class AppPalette {
     silhouetteGold: Color(0xFF92400E),
     lockedGoldText: Color(0xFFD97706),
     scrim: Color(0xB3000000),
+    onScrim: Color(0xFFFFFFFF),
     hairline: Color(0x0DFFFFFF),
   );
 }

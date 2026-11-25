@@ -361,7 +361,7 @@ class _PostNewScreenState extends ConsumerState<PostNewScreen> {
                     child: Text(
                       '사진 바꾸기',
                       style: AppText.badgeSmall.copyWith(
-                        color: AppColors.onAccent,
+                        color: AppColors.onScrim,
                       ),
                     ),
                   ),

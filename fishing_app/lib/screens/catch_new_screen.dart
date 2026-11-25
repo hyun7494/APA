@@ -280,7 +280,7 @@ class _CatchNewScreenState extends ConsumerState<CatchNewScreen> {
                   LineIcon(
                     AppIcon.trophy,
                     size: 13,
-                    color: AppColors.gold,
+                    color: AppColors.goldText,
                     stroke: 1.5,
                   ),
                 ],
@@ -690,7 +690,7 @@ class _PhotoStrip extends StatelessWidget {
                 // 첫 장이 도감 표지가 된다는 걸 알려 준다.
                 child: Text(
                   '대표',
-                  style: AppText.badgeSmall.copyWith(color: AppColors.onAccent),
+                  style: AppText.badgeSmall.copyWith(color: AppColors.onScrim),
                 ),
               ),
             ),
@@ -715,7 +715,7 @@ class _PhotoStrip extends StatelessWidget {
                   child: LineIcon(
                     AppIcon.close,
                     size: 13,
-                    color: AppColors.onAccent,
+                    color: AppColors.onScrim,
                     stroke: 2,
                   ),
                 ),
@@ -781,7 +781,7 @@ class _LegalSizeNotice extends StatelessWidget {
             child: LineIcon(
               AppIcon.info,
               size: 15,
-              color: AppColors.gold,
+              color: AppColors.goldText,
               stroke: 1.4,
             ),
           ),
@@ -790,7 +790,7 @@ class _LegalSizeNotice extends StatelessWidget {
             child: Text(
               '${species.name}은 ${species.minLegalSize!.toStringAsFixed(0)}cm 이하 '
               '포획이 제한됩니다. 방류를 권장합니다.',
-              style: AppText.caption.copyWith(color: AppColors.gold),
+              style: AppText.caption.copyWith(color: AppColors.goldText),
             ),
           ),
         ],

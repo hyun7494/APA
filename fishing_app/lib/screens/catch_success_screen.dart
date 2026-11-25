@@ -86,7 +86,7 @@ class _Body extends StatelessWidget {
               Text(
                 rare ? '희귀 어종 획득' : '새로 채운 칸',
                 style: AppText.cardLabel.copyWith(
-                  color: rare ? AppColors.gold : AppColors.accentDark,
+                  color: rare ? AppColors.goldText : AppColors.accentDark,
                 ),
               ),
               const SizedBox(height: 10),
@@ -142,7 +142,7 @@ class _Body extends StatelessWidget {
                           child: Text(
                             record.lengthLabel,
                             style: AppText.badgeSmall.copyWith(
-                              color: AppColors.onAccent,
+                              color: AppColors.onScrim,
                             ),
                           ),
                         ),
@@ -186,7 +186,7 @@ class _Body extends StatelessWidget {
                       // "기록 안 함 cm" 가 되지 않는다.
                       record.lengthCm?.toStringAsFixed(1) ?? '—',
                       style: AppText.numberLarge.copyWith(
-                        color: rare ? AppColors.gold : AppColors.accentDark,
+                        color: rare ? AppColors.goldText : AppColors.accentDark,
                       ),
                     ),
                     Text('cm', style: AppText.unit),

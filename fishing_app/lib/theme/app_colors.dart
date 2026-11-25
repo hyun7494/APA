@@ -69,7 +69,7 @@ abstract final class AppColors {
   /// 화살표 · 미기록 라벨
   static Color get disabled => _palette.disabled;
 
-  /// 주색 면 위 글자
+  /// 주색·강조색 면 위 글자 (다크에서는 어두운 잉크)
   static Color get onAccent => _palette.onAccent;
 
   /// 주 버튼·선택된 칩의 면, 선택된 탭 — 라이트는 잉크, 다크는 주색.
@@ -88,6 +88,9 @@ abstract final class AppColors {
 
   /// 희귀 등급 골드
   static Color get gold => _palette.gold;
+
+  /// 글자·아이콘으로 쓰는 골드 — [gold] 는 면·테두리용
+  static Color get goldText => _palette.goldText;
 
   /// 희귀 칸 배경
   static Color get goldSoft => _palette.goldSoft;
@@ -116,6 +119,9 @@ abstract final class AppColors {
 
   /// 사진 위에 얹는 반투명 배지
   static Color get scrim => _palette.scrim;
+
+  /// [scrim] · 사진 위 글자 (항상 흰색)
+  static Color get onScrim => _palette.onScrim;
 }
 
 /// 보더 대신 면으로 나누므로 그림자는 아주 얕게만 쓴다.

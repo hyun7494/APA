@@ -100,13 +100,13 @@ class _Body extends ConsumerWidget {
                       LineIcon(
                         AppIcon.trophy,
                         size: 12,
-                        color: AppColors.gold,
+                        color: AppColors.goldText,
                         stroke: 1.5,
                       ),
                       const SizedBox(width: 5),
                       Text(
                         '희귀',
-                        style: AppText.badge.copyWith(color: AppColors.gold),
+                        style: AppText.badge.copyWith(color: AppColors.goldText),
                       ),
                     ],
                   ),
@@ -533,7 +533,7 @@ class _PhotoBadge extends StatelessWidget {
     ),
     child: Text(
       text,
-      style: AppText.badgeSmall.copyWith(color: AppColors.onAccent),
+      style: AppText.badgeSmall.copyWith(color: AppColors.onScrim),
     ),
   );
 }

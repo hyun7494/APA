@@ -70,7 +70,7 @@ class PhotoCountBadge extends StatelessWidget {
       ),
       child: Text(
         label,
-        style: AppText.badgeSmall.copyWith(color: AppColors.onAccent),
+        style: AppText.badgeSmall.copyWith(color: AppColors.onScrim),
       ),
     );
   }
