@@ -87,7 +87,9 @@ class _RecordedFace extends StatelessWidget {
               height: 20,
               decoration: BoxDecoration(
                 shape: BoxShape.circle,
-                color: AppColors.gold,
+                // 면용 [AppColors.gold] 위 흰 아이콘은 2.3:1 — 진한 골드로 4.99:1
+                // (다크는 두 값이 같아 그대로)
+                color: AppColors.goldText,
               ),
               child: Center(
                 child: LineIcon(

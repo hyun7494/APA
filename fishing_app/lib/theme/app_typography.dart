@@ -107,20 +107,20 @@ abstract final class AppText {
   static TextStyle get captionSmall =>
       _f(12, FontWeight.w600, 1.4, -0.12, color: AppColors.muted);
 
-  /// 작은 배지 · 사진 위 카운트 (11)
-  static TextStyle get badgeSmall => _f(11, FontWeight.w700, 1.2, 0);
+  /// 작은 배지 · 사진 위 카운트 (12)
+  static TextStyle get badgeSmall => _f(12, FontWeight.w700, 1.2, 0);
 
-  /// 하단 탭 라벨 (11)
+  /// 하단 탭 라벨 (12)
   static TextStyle get navLabel =>
-      _f(11, FontWeight.w600, 1.2, 0, color: AppColors.faint);
+      _f(12, FontWeight.w600, 1.2, 0, color: AppColors.faint);
 
-  /// 섹션을 여는 작은 라벨 — "사진", "제목", "메모" (10).
+  /// 섹션을 여는 작은 라벨 — "사진", "제목", "메모" (12).
   ///
   /// ⚠️ **자간을 넣지 않는다.** 시안의 `letter-spacing:.2em` 을 그대로 옮겼었는데,
   /// 그건 "PHOTOS" 같은 라틴 대문자용이다. 한글에 걸면 글자가 뜯어져서
   /// `이 메 일`·`사 진`·`댓 글` 로 읽힌다. 쓰는 자리가 전부 한글이라 0 으로 되돌렸다.
   static TextStyle get overline =>
-      _f(10, FontWeight.w700, 1.2, 0, color: AppColors.muted);
+      _f(12, FontWeight.w700, 1.2, 0, color: AppColors.muted);
 
   static TextStyle _f(
     double size,
